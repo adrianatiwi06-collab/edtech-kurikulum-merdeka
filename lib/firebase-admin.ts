@@ -19,7 +19,7 @@ export function getAdminApp() {
         }),
       });
     } else {
-      adminApp = admin.apps[0];
+      adminApp = admin.apps[0] || undefined;
     }
   }
   return adminApp;
