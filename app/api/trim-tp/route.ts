@@ -8,12 +8,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Get API keys - simple approach
 const API_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '').split(/[,\n\s]+/).filter(Boolean);
 
-// Model fallback cascade - gunakan models/ prefix seperti generate-tp
+// Model fallback cascade - TANPA models/ prefix untuk GoogleGenerativeAI direct
 const FALLBACK_MODELS = [
-  'models/gemini-1.5-flash',       // Paling stabil & cepat
-  'models/gemini-1.5-flash-002',   // Versi spesifik
-  'models/gemini-1.5-pro',         // Fallback ke Pro
-  'models/gemini-1.5-pro-002'      // Fallback terakhir
+  'gemini-1.5-flash',       // Paling stabil & cepat
+  'gemini-1.5-flash-002',   // Versi spesifik
+  'gemini-1.5-pro',         // Fallback ke Pro
+  'gemini-1.5-pro-002'      // Fallback terakhir
 ];
 
 // Simple in-memory key rotation with ban tracking
@@ -99,8 +99,17 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
     }
 
     // Build prompt untuk trim TP
-    const prompt = buildTrimTPPrompt(tpText, maxLength, allowSplit, grade, subject);
-    console.log('[TrimTP] Prompt built, length:', prompt.length);
+    let prompt: string;
+    try {
+      prompt = buildTrimTPPrompt(tpText, maxLength, allowSplit, grade, subject);
+      console.log('[TrimTP] Prompt built, length:', prompt.length);
+    } catch (promptError: any) {
+      console.error('[TrimTP] Error building prompt:', promptError);
+      return NextResponse.json(
+        { success: false, error: 'Gagal membuat prompt', code: 'PROMPT_ERROR' },
+        { status: 500 }
+      );
+    }
 
     // Try models and keys dengan simple rotation
     let responseText: string | null = null;
@@ -120,7 +129,7 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
         }
 
         try {
-          console.log(`[TrimTP] Trying ${fallbackModel.replace('models/', '')} with key #${currentKeyIndex + 1}`);
+          console.log(`[TrimTP] Trying ${fallbackModel} with key #${currentKeyIndex + 1}`);
           const client = new GoogleGenerativeAI(key);
           const model = client.getGenerativeModel({ 
             model: fallbackModel,
@@ -131,12 +140,14 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
             },
           });
 
+          console.log('[TrimTP] Sending request to Gemini API...');
           const response = await model.generateContent(prompt);
+          console.log('[TrimTP] Got response from Gemini API');
           const resolvedResponse = await response.response;
           responseText = resolvedResponse.text();
           
           if (responseText) {
-            console.log(`[TrimTP] Success with ${fallbackModel.replace('models/', '')}`);
+            console.log(`[TrimTP] Success with ${fallbackModel}, response length: ${responseText.length}`);
             modelSuccess = true;
             break; // Success, exit key loop
           }
