@@ -54,9 +54,11 @@ function banKey(key: string) {
 }
 
 export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequest, { userId }) => {
+  console.log('[TrimTP] POST request received, userId:', userId);
   try {
     // Check quota status first
     const quotaStatus = getQuotaStatus();
+    console.log('[TrimTP] Quota status:', quotaStatus);
     
     if (quotaStatus.isQuotaExhausted) {
       return NextResponse.json(
@@ -94,12 +96,15 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
 
     // Build prompt untuk trim TP
     const prompt = buildTrimTPPrompt(tpText, maxLength, allowSplit, grade, subject);
+    console.log('[TrimTP] Prompt built, length:', prompt.length);
 
     // Try with API key rotation
     let responseText: string | null = null;
     let lastError: any = null;
+    console.log('[TrimTP] Starting API key rotation, total keys:', RAW_KEYS.length);
     
     for (let attempt = 0; attempt < RAW_KEYS.length; attempt++) {
+      console.log('[TrimTP] Attempt', attempt + 1, 'of', RAW_KEYS.length);
       const key = getNextKey();
       if (!key) {
         return NextResponse.json(
@@ -109,10 +114,12 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
       }
 
       try {
+        console.log('[TrimTP] Initializing GoogleGenerativeAI with key...');
         const genAI = new GoogleGenerativeAI(key);
         
         // Try each fallback model until one works
         let modelSuccess = false;
+        console.log('[TrimTP] Trying', FALLBACK_MODELS.length, 'fallback models');
         for (const modelName of FALLBACK_MODELS) {
           try {
             console.log(`[TrimTP] Trying model: ${modelName}`);
@@ -238,7 +245,10 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
     });
 
   } catch (error: any) {
-    console.error('[TrimTP API] Error:', error);
+    console.error('[TrimTP API] Top-level error caught:', error);
+    console.error('[TrimTP API] Error name:', error?.name);
+    console.error('[TrimTP API] Error message:', error?.message);
+    console.error('[TrimTP API] Error stack:', error?.stack?.substring(0, 500));
     
     // Handle Gemini API errors
     const errorMessage = error.message || 'Unknown error';
