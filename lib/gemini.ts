@@ -3,6 +3,7 @@ import { AVAILABLE_MODELS } from './models';
 import IORedis from 'ioredis';
 import { getPhaseLanguageGuide } from './constants/phase-specific-rules';
 import { executeWithContextAwareRetry, RetryStrategy, getRetryPromptModification } from './utils/context-aware-retry';
+import { normalizeTPOutput, calculateQualityScore, getImprovementSuggestions } from './utils/output-normalizer';
 
 // API Key rotation manager
 const RAW_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '').split(/[,\n\s]+/).filter(Boolean);
@@ -650,62 +651,8 @@ async function executeGenerateLearningGoals(
   const gradeLevel = gradeLower.includes('1') || gradeLower.includes('2') || gradeLower.includes('fase a') ? 'FASE_A' :
                      gradeLower.includes('3') || gradeLower.includes('4') || gradeLower.includes('fase b') ? 'FASE_B' : 'FASE_C';
 
-  const gradeGuidelines: any = {
-    'FASE_A': {
-      language: 'Gunakan bahasa sangat sederhana, kata-kata sehari-hari, benda konkret yang familiar anak',
-      example: 'Peserta didik mampu membandingkan dua bilangan 1-20 menggunakan simbol > dan < dengan benar',
-      exampleABCD: 'A: Peserta didik | B: membandingkan | C: menggunakan simbol > dan < | D: dengan benar',
-      exampleRapor: 'Dapat membandingkan dua bilangan 1-20 dengan benar (52 karakter)',
-      exampleRaporBreakdown: 'A: [dihilangkan] | B: membandingkan | C: [diringkas dalam objek] | D: dengan benar',
-      bloomLevel: 'C1-C2 (Mengingat & Memahami)',
-      kko: [
-        '✅ GUNAKAN KKO SEDERHANA: menyebutkan, menunjukkan, menghitung, membandingkan (2 objek sederhana), mengelompokkan (benda konkret)',
-        '⚠️ JIKA GUNAKAN KKO TINGGI, SEDERHANAKAN KONTEKSNYA:',
-        '   - "membandingkan" → OK jika: "membandingkan 2 bilangan", "membandingkan besar-kecil"',
-        '   - "mengidentifikasi" → GANTI: "menunjukkan", "menyebutkan"',
-        '   - "menganalisis" → GANTI: "melihat perbedaan", "membandingkan"',
-        '   - "mendeskripsikan" → GANTI: "menceritakan dengan kalimat pendek"'
-      ],
-      kkoExample: 'menyebutkan, menunjukkan, menghitung, membandingkan (sederhana), mengelompokkan',
-      cognitive: 'Anak usia 6-8 tahun baru belajar mengingat dan memahami konsep dasar. Fokus pada kemampuan mengenal, menyebut, menghitung, dan membandingkan hal-hal konkret (maksimal 2 objek).'
-    },
-    'FASE_B': {
-      language: 'Gunakan bahasa sederhana, konsep konkret dengan sedikit istilah sederhana',
-      example: 'Peserta didik mampu menjelaskan proses pertumbuhan tanaman dari biji hingga berbunga melalui observasi langsung dengan runtut',
-      exampleABCD: 'A: Peserta didik | B: menjelaskan | C: melalui observasi langsung | D: dengan runtut',
-      exampleRapor: 'Dapat menjelaskan proses pertumbuhan tanaman dengan runtut (59 karakter)',
-      exampleRaporBreakdown: 'A: [dihilangkan] | B: menjelaskan | C: [dihilangkan] | D: dengan runtut',
-      bloomLevel: 'C1-C3 (Mengingat, Memahami & Menerapkan)',
-      kko: [
-        '✅ GUNAKAN: menjelaskan, membandingkan (beberapa objek), mengelompokkan (berdasarkan kriteria), menerapkan, mempraktikkan, menghitung (operasi kompleks)',
-        '⚠️ JIKA GUNAKAN KKO TINGGI, PASTIKAN KONTEKS KONKRET:',
-        '   - "menganalisis" → OK jika: "menganalisis pola sederhana", "menganalisis data tabel sederhana"',
-        '   - "mengidentifikasi" → OK jika objeknya familiar dan konkret',
-        '   - "mengevaluasi" → GANTI: "memilih yang paling tepat", "menentukan yang benar"'
-      ],
-      kkoExample: 'menjelaskan, membandingkan, mengelompokkan, menerapkan, mengidentifikasi (konkret)',
-      cognitive: 'Anak usia 9-10 tahun sudah bisa menjelaskan konsep sederhana, membandingkan beberapa hal, dan menerapkan dalam situasi konkret.'
-    },
-    'FASE_C': {
-      language: 'Gunakan bahasa menengah, konsep lebih berkembang namun tetap jelas',
-      example: 'Peserta didik mampu menganalisis hubungan sebab-akibat antara gaya dan gerak benda berdasarkan percobaan sederhana dengan tepat',
-      exampleABCD: 'A: Peserta didik | B: menganalisis | C: berdasarkan percobaan sederhana | D: dengan tepat',
-      exampleRapor: 'Dapat menganalisis hubungan gaya dan gerak benda dengan tepat (61 karakter)',
-      exampleRaporBreakdown: 'A: [dihilangkan] | B: menganalisis | C: [dihilangkan] | D: dengan tepat',
-      bloomLevel: 'C1-C4 (Mengingat, Memahami, Menerapkan & Menganalisis)',
-      kko: [
-        '✅ GUNAKAN: menganalisis (hubungan sederhana), membandingkan (multi aspek), mengkategorikan, menyimpulkan, memecahkan masalah, mengidentifikasi',
-        '⚠️ JIKA GUNAKAN KKO TINGGI, PASTIKAN TIDAK TERLALU ABSTRAK:',
-        '   - "mengevaluasi" → OK jika: "mengevaluasi solusi sederhana", tapi HINDARI "mengevaluasi teori kompleks"',
-        '   - "merancang" → OK jika: "merancang percobaan sederhana", tapi HINDARI "merancang sistem"',
-        '   - "mensintesis" → GANTI: "menyimpulkan", "menggabungkan informasi"'
-      ],
-      kkoExample: 'menganalisis (sederhana), membandingkan, mengkategorikan, menyimpulkan, memecahkan masalah',
-      cognitive: 'Anak usia 11-12 tahun sudah mulai berpikir analitis pada level dasar. Bisa menganalisis hubungan sebab-akibat sederhana dan memecahkan masalah konkret dengan beberapa variabel.'
-    }
-  };
-
-  const guideline = gradeGuidelines[gradeLevel] || gradeGuidelines['FASE_B'];
+  // ✅ OPTIMIZATION: Load only the specific phase rules needed (reduces prompt by ~40%)
+  const phaseRules = getPhaseLanguageGuide(gradeLevel);
 
   // Add length constraint instruction if maxLength100 is true
   const lengthConstraint = maxLength100 
@@ -1039,38 +986,8 @@ Gunakan kerangka ABCD (Robert F. Mager) untuk merumuskan TP yang jelas dan teruk
 4. Pastikan setiap TP memiliki minimal komponen A-B-C (Audience-Behavior-Condition)
 5. Komponen D (Degree) WAJIB disertakan kecuali jika toggle 100 karakter aktif
 
-📚 TAKSONOMI BLOOM & PERKEMBANGAN KOGNITIF UNTUK ${gradeLevel}:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 Tingkat Kognitif: ${guideline.bloomLevel}
-🧠 Pemahaman Perkembangan: ${guideline.cognitive}
+${phaseRules}
 
-✅ KATA KERJA OPERASIONAL (KKO) YANG TEPAT:
-${guideline.kko.map((k: string) => `   ${k}`).join('\n')}
-
-📌 Contoh KKO yang Sesuai Fase Ini:
-   ${guideline.kkoExample}
-
-💡 Contoh TP untuk ${gradeLevel}:
-
-${maxLength100 ? `📋 FORMAT RAPOR (Max 100 karakter - Toggle AKTIF):
-   "${guideline.exampleRapor}"
-   
-   Breakdown:
-   ${guideline.exampleRaporBreakdown}
-   
-   ⚠️ Perhatikan: Audience (A) dihilangkan, Condition (C) dihilangkan/diringkas,
-   tetapi Behavior (B) dan Degree (D) TETAP DIPERTAHANKAN!` : `📋 FORMAT LENGKAP ABCD (Toggle TIDAK aktif):
-   "${guideline.example}"
-   
-   Breakdown ABCD:
-   ${guideline.exampleABCD}
-   
-   ✅ Semua komponen A-B-C-D lengkap untuk perencanaan pembelajaran`}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-5. 🎯 PENYESUAIAN BAHASA & KOMPLEKSITAS:
-   ${guideline.language}
-   
 6. 📝 TIPS MERUMUSKAN KOMPONEN ABCD:
    - Komponen C (Condition): Jelaskan metode/media/konteks pembelajaran
      Contoh: "melalui pengamatan gambar", "dengan menggunakan tabel", "setelah membaca teks"
@@ -1097,61 +1014,75 @@ INSTRUKSI KHUSUS PENGELOLAAN MATERI POKOK (WAJIB DIPATUHI):
 ${outputFormat}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧠 SELF-VALIDATION CHECKLIST (SEBELUM OUTPUT):
+🧠 ENHANCED SELF-VALIDATION WITH CHAIN-OF-THOUGHT (WAJIB):
 
-SEBELUM memberikan output final, lakukan self-check internal:
+⚠️ CRITICAL: Sebelum output JSON, WAJIB lakukan internal reasoning step-by-step:
 
-1. ✓ PRIORITAS UNSUR KEBAHASAAN (JIKA ADA):
-   - Apakah ada topik "Unsur Kebahasaan", "Tanda Baca", "Penggunaan Kata", "Tata Bahasa"?
-   - JIKA ADA: Apakah TP pertama (tp_1) mengcover unsur kebahasaan?
-   - JIKA TIDAK: GANTI TP pertama dengan TP tentang unsur kebahasaan
-   - Unsur kebahasaan HARUS jadi TP #1, bukan TP terakhir!
+╔═══════════════════════════════════════════════════════════════╗
+║ STEP 1: CONTENT ANALYSIS                                      ║
+╚═══════════════════════════════════════════════════════════════╝
+Q1: Berapa banyak topik UTAMA dalam materi?
+   → Internal: [List topik, hitung jumlah]
+   → Decision: Jika >4 topik → perlu merge topik sejenis
 
-2. ✓ Jumlah TP per bab:
-   - HARUS 4 TP (WAJIB)
-   - Jangan 2, jangan 5+
-   - Jika hanya 2 → tambahkan 1 TP lagi
-   - Jika 5+ → pilih 4 terbaik
+Q2: Apakah ada "Unsur Kebahasaan" atau topik teknis?
+   → Internal: [Cek keywords: tanda baca, ejaan, aturan, rumus]
+   → Decision: Jika YA → HARUS jadi TP #1 (Keranjang B)
 
-3. ✓ Format ABCD untuk SETIAP TP:
-   - [A] Ada "Peserta didik"? ✓
-   - [B] Ada KKO yang jelas? ✓
-   - [C] Ada kondisi/konteks? ✓
-   - [D] Ada standar penguasaan? ✓
-   - Jika ada yang hilang → TAMBAHKAN
+Q3: Materi ini cocok untuk semester berapa?${semesterSelection === 'both' ? `
+   → Internal: [Identifikasi materi fundamental vs lanjutan]
+   → Decision: Fundamental → Sem1, Lanjutan → Sem2` : `
+   → Decision: Semua masuk ${semesterSelection === 'semester1' ? 'Semester 1' : 'Semester 2'}`}
 
-4. ✓ Fokus Materi Pokok (JIKA ADA):${materiPokok ? `
-   - Apakah SEMUA topik dalam "FOKUS MATERI POKOK" tercakup dalam TP?
-   - Jangan ada topik yang terlewat!
-   - Jika ada topik yang terlewat → TAMBAHKAN TP baru untuk topik tersebut
-   - Prioritas: Cakupan topik LEBIH PENTING daripada "maksimal 4 TP"
-   - Jika perlu > 4 TP untuk cover semua topik → BUAT sampai semua tercakup` : `
-   - (Tidak ada materi pokok khusus, gunakan 4-keranjang methodology)`}
+╔═══════════════════════════════════════════════════════════════╗
+║ STEP 2: TP FORMULATION (ABCD Check)                          ║
+╚═══════════════════════════════════════════════════════════════╝
+Untuk SETIAP TP yang akan dibuat:
 
-5. ✓ KKO Sesuai Fase:
-   - Untuk ${gradeLevel}: Hanya gunakan KKO yang diizinkan
-   - JANGAN gunakan KKO tingkat tinggi yang tidak sesuai
-   - Setiap KKO HARUS jelas dan observable
+✓ [A] AUDIENCE: "Peserta didik mampu..." → PRESENT?
+✓ [B] BEHAVIOR: KKO ${gradeLevel} valid → CHECKED?
+   → ${gradeLevel === 'FASE_A' ? 'menyebutkan, menunjukkan, menghitung' : gradeLevel === 'FASE_B' ? 'menjelaskan, menerapkan, mengidentifikasi' : 'menganalisis, menyimpulkan, memecahkan'}
+✓ [C] CONDITION: Metode/media pembelajaran → ADDED?
+   → Contoh: "melalui pengamatan", "dengan menggunakan tabel"
+✓ [D] DEGREE: Standar keberhasilan → SPECIFIED?
+   → Contoh: "dengan benar", "minimal 5", "sesuai prosedur"
 
-6. ✓ Panjang TP:
-   - Untuk ${gradeLevel}: Max 15-20 kata
-   - Hitung setiap TP
-   - Jika terlalu panjang → SINGKAT tanpa kehilangan makna
+${maxLength100 ? '✓ [LENGTH] Max 100 karakter → COUNTED?' : '✓ [LENGTH] Max 20 kata → COUNTED?'}
 
-7. ✓ Distribusi Semester:
-   - Semester 1 dan 2 SEIMBANG? 
-   - Tidak terlalu condong ke satu semester?
-   - Jika tidak → REBALANCE
+╔═══════════════════════════════════════════════════════════════╗
+║ STEP 3: COVERAGE VERIFICATION                                 ║
+╚═══════════════════════════════════════════════════════════════╝${materiPokok ? `
+Q: Apakah SEMUA topik Materi Pokok tercakup?
+   → Internal: [${materiPokok.split(',').slice(0, 3).join(', ')}...]
+   → Cross-check: Setiap topik punya TP? → YES/NO
+   → Action: Jika NO → tambah TP atau merge ke TP existing` : `
+Q: Apakah 3 keranjang (A/B/C) terwakili?
+   → Internal: [A: Konsep inti, B: Teknis/aturan, C: Aplikasi]
+   → Check: Min 1 TP per keranjang → YES/NO`}
 
-8. ✓ Kelengkapan:
-   - Semua field JSON ada (chapter, tp_count, tp_1-4, keranjang, cakupan_materi)?
-   - Tidak ada field yang kosong?
-   - JSON valid dan parseable?
+╔═══════════════════════════════════════════════════════════════╗
+║ STEP 4: QUALITY ASSURANCE                                     ║
+╚═══════════════════════════════════════════════════════════════╝
+Q1: Apakah TP terlalu DETAIL/MICRO?
+   → BAD: "Menyebutkan perasaan tokoh Kiki" ❌
+   → GOOD: "Mengidentifikasi perasaan tokoh dalam cerita" ✅
 
-⚠️ PENTING: Jika ADA MASALAH di poin manapun → PERBAIKI SENDIRI sebelum output final.
-Hanya berikan JSON output jika SEMUA 6 checklist sudah PASSED.
-Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+Q2: Apakah TP menggunakan kata FORBIDDEN?
+   → ${gradeLevel === 'FASE_A' ? 'regulasi, esensial, paradigma' : gradeLevel === 'FASE_B' ? 'signifikan, elaborasi' : 'epistemologi, sintesis teori'} → NOT PRESENT?
+
+Q3: Apakah JSON structure VALID?
+   → chapter: string, tp_count: number, tp_N: string, keranjang_N: string
+   → All required fields → PRESENT?
+
+╔═══════════════════════════════════════════════════════════════╗
+║ STEP 5: FINAL OUTPUT DECISION                                 ║
+╚═══════════════════════════════════════════════════════════════╝
+Jika SEMUA checks PASSED → OUTPUT JSON
+Jika ADA yang FAILED → REVISE internal dulu, JANGAN output
+
+⚠️ INGAT: Output HANYA JSON valid tanpa markdown, tanpa penjelasan.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
 
   // Use context-aware retry strategy
   return executeWithContextAwareRetry(async (strategy: RetryStrategy, attemptNumber: number) => {
@@ -1192,7 +1123,7 @@ Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
           throw new Error('EMPTY_SEMESTER_1: AI failed to generate valid learning objectives for Semester 1.');
         }
         const count = parsed.semester1.reduce((sum: number, ch: any) => sum + countTpsInChapter(ch), 0);
-        console.log(`[TP Validation] ✅ Semester 1 selected - ${count} TPs generated`);
+        console.log(`[TP Validation] Semester 1 selected - ${count} TPs generated`);
         parsed.semester2 = [];  // Explicitly empty semester2
       } else if (semesterSelection === 'semester2') {
         if (!validateSem2.valid || !parsed.semester2 || parsed.semester2.length === 0) {
@@ -1200,7 +1131,7 @@ Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
           throw new Error('EMPTY_SEMESTER_2: AI failed to generate valid learning objectives for Semester 2.');
         }
         const count = parsed.semester2.reduce((sum: number, ch: any) => sum + countTpsInChapter(ch), 0);
-        console.log(`[TP Validation] ✅ Semester 2 selected - ${count} TPs generated`);
+        console.log(`[TP Validation] Semester 2 selected - ${count} TPs generated`);
         parsed.semester1 = [];  // Explicitly empty semester1
       } else {
         // 'both' - both semesters should have data
@@ -1214,7 +1145,7 @@ Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
         }
       }
       
-      // ✅ VALIDATION: Calculate semester distribution (only for 'both' selection)
+      // VALIDATION: Calculate semester distribution (only for 'both' selection)
       const sem1Count = parsed.semester1.reduce((sum: number, ch: any) => sum + countTpsInChapter(ch), 0);
       const sem2Count = parsed.semester2.reduce((sum: number, ch: any) => sum + countTpsInChapter(ch), 0);
       const totalCount = sem1Count + sem2Count;
@@ -1228,7 +1159,7 @@ Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
         // Optional: Warn if imbalance is extreme (>60:40)
         const balance = Math.abs(sem1Count - sem2Count) / Math.max(sem1Count, sem2Count);
         if (balance > 0.5) {
-          console.warn(`[TP Validation] ⚠️ Imbalance detected: ${sem1Count} vs ${sem2Count} (${(balance*100).toFixed(1)}% difference)`);
+          console.warn(`[TP Validation] WARNING - Imbalance detected: ${sem1Count} vs ${sem2Count} (${(balance*100).toFixed(1)}% difference)`);
         }
       }
       
@@ -1391,9 +1322,29 @@ Jangan tambahkan penjelasan atau teks lainnya selain JSON valid.
         }
       }
       
+      // ✅ NEW: Apply output normalization for consistency and quality
+      console.log('[TP Generation] Normalizing output...');
+      const normalizationResult = normalizeTPOutput(parsed, gradeLevel, maxLength100);
+      
+      if (normalizationResult.warnings.length > 0) {
+        console.warn('[TP Normalization] Warnings:', normalizationResult.warnings.slice(0, 5));
+      }
+      
+      if (normalizationResult.corrections.length > 0) {
+        console.log('[TP Normalization] Applied corrections:', normalizationResult.corrections.slice(0, 5));
+      }
+      
+      const qualityScore = calculateQualityScore(normalizationResult);
+      console.log(`[TP Quality] Score: ${qualityScore}/100`);
+      
+      const suggestions = getImprovementSuggestions(normalizationResult);
+      if (suggestions.length > 0) {
+        console.log('[TP Suggestions]', suggestions[0]);
+      }
+      
       console.log('[TP Generation] Converting to backward-compatible format...');
-      const converted = convertToBackwardCompatibleFormat(parsed);
-      console.log('[TP Generation] ✅ Conversion successful');
+      const converted = convertToBackwardCompatibleFormat(normalizationResult.normalized);
+      console.log('[TP Generation] Conversion successful');
       return converted;
     } catch (parseError: any) {
       // ✅ ENHANCED RETRY: With limit and graceful fallback
@@ -1475,20 +1426,20 @@ Contoh SALAH:
           // ✅ Graceful Fallback: Return partial result instead of failing
           if (semesterSelection === 'semester1') {
             if (validateSem1.valid && retryParsed.semester1?.length > 0) {
-              console.log('[TP Generation] ✅ Retry successful - semester1 populated');
+              console.log('[TP Generation] Retry successful - semester1 populated');
               retryParsed.semester2 = [];  // Explicitly empty
               return convertToBackwardCompatibleFormat(retryParsed);
             }
           } else if (semesterSelection === 'semester2') {
             if (validateSem2.valid && retryParsed.semester2?.length > 0) {
-              console.log('[TP Generation] ✅ Retry successful - semester2 populated');
+              console.log('[TP Generation] Retry successful - semester2 populated');
               retryParsed.semester1 = [];  // Explicitly empty
               return convertToBackwardCompatibleFormat(retryParsed);
             }
           } else {
             // 'both' mode
             if (validateSem1.valid && validateSem2.valid && retryParsed.semester1?.length > 0 && retryParsed.semester2?.length > 0) {
-              console.log('[TP Generation] ✅ Retry successful - both semesters populated');
+              console.log('[TP Generation] Retry successful - both semesters populated');
               return retryParsed;
             }
             // Graceful fallback: Return what we have if at least one semester is valid
