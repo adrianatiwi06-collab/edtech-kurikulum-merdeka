@@ -143,50 +143,60 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50 p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-violet-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+      <div className="absolute top-40 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+      <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-72 h-72 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-2000"></div>
+      
+      <Card className="w-full max-w-md glass glow z-10 border-0">
+        <CardHeader className="space-y-3 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl glow float">
+              <span className="text-3xl">📚</span>
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-extrabold text-gradient">
             EdTech Kurikulum Merdeka
           </CardTitle>
-          <CardDescription className="text-center">
-            {isSignUp ? 'Buat akun baru' : 'Login ke akun Anda'}
+          <CardDescription className="text-center text-base font-medium text-gray-600">
+            {isSignUp ? '✨ Buat akun baru dan mulai perjalanan Anda' : '👋 Selamat datang kembali!'}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             {isSignUp && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nama Lengkap *</label>
+                <label className="text-sm font-semibold text-gray-700">Nama Lengkap *</label>
                 <Input
                   type="text"
                   placeholder="Masukkan nama lengkap"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className={errors.displayName ? 'border-red-500' : ''}
+                  className={`input-elegant ${errors.displayName ? 'border-red-500 ring-red-500/30' : ''}`}
                 />
                 {errors.displayName && (
-                  <p className="text-xs text-red-600">{errors.displayName}</p>
+                  <p className="text-xs text-red-600 font-medium">{errors.displayName}</p>
                 )}
               </div>
             )}
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email *</label>
+              <label className="text-sm font-semibold text-gray-700">Email *</label>
               <Input
                 type="email"
                 placeholder="email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={errors.email ? 'border-red-500' : ''}
+                className={`input-elegant ${errors.email ? 'border-red-500 ring-red-500/30' : ''}`}
               />
               {errors.email && (
-                <p className="text-xs text-red-600">{errors.email}</p>
+                <p className="text-xs text-red-600 font-medium">{errors.email}</p>
               )}
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium">Password *</label>
+              <label className="text-sm font-semibold text-gray-700">Password *</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -217,33 +227,37 @@ export default function LoginPage() {
             )}
 
             {errors.general && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                {errors.general}
+              <div className="p-4 text-sm text-red-600 bg-red-50/80 backdrop-blur-sm border-2 border-red-300 rounded-xl font-medium">
+                ⚠️ {errors.general}
               </div>
             )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading || googleLoading}>
-              {loading ? 'Memproses...' : isSignUp ? 'Daftar' : 'Login'}
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 btn-elegant shadow-lg" 
+              disabled={loading || googleLoading}
+            >
+              {loading ? '⏳ Memproses...' : isSignUp ? '🚀 Daftar Sekarang' : '✨ Masuk'}
             </Button>
             
             <div className="relative w-full">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t-2 border-gray-200" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">Atau</span>
+              <div className="relative flex justify-center text-sm font-semibold uppercase">
+                <span className="bg-white px-4 text-gray-500">Atau lanjutkan dengan</span>
               </div>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full h-12 text-base font-semibold border-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 smooth-transition hover:border-blue-400"
               onClick={handleGoogleSignIn}
               disabled={loading || googleLoading}
             >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -261,19 +275,21 @@ export default function LoginPage() {
                   fill="#EA4335"
                 />
               </svg>
-              {googleLoading ? 'Memproses...' : 'Login dengan Google'}
+              {googleLoading ? '⏳ Memproses...' : 'Login dengan Google'}
             </Button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setErrors({});
-              }}
-              className="text-sm text-primary hover:underline"
-            >
-              {isSignUp ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}
-            </button>
+            <div className="pt-2 border-t-2 border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setErrors({});
+                }}
+                className="text-sm font-semibold text-violet-600 hover:text-pink-600 transition-colors duration-300 hover:underline"
+              >
+                {isSignUp ? '← Sudah punya akun? Login di sini' : '→ Belum punya akun? Daftar sekarang'}
+              </button>
+            </div>
           </CardFooter>
         </form>
       </Card>
