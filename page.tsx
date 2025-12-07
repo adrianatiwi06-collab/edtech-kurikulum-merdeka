@@ -10,14 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Save } from 'lucide-react';
 import { calculateTotalScore } from '@/lib/utils';
-import { ExamTemplate } from '@/types';
-
-interface QuestionBank {
-  id: string;
-  examTitle: string;
-  subject: string;
-  questions: any;
-}
+import { ExamTemplate, QuestionBank } from '@/types';
 
 interface Class {
   id: string;
