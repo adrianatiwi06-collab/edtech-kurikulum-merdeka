@@ -11,6 +11,7 @@ import * as crypto from 'crypto';
 // Optional: Import nodemailer if available
 let nodemailer: any;
 try {
+  // eslint-disable-next-line global-require
   nodemailer = require('nodemailer');
 } catch {
   // nodemailer not installed - will use console logging as fallback

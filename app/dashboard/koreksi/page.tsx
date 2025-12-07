@@ -443,7 +443,7 @@ export default function KoreksiPage() {
           gradeData.question_bank_id = selectedQB.id;
           
           // Add TP mapping from question bank for analysis (if available)
-          if (selectedQB.question_tp_mapping && selectedQB.question_tp_mapping.length > 0) {
+          if (selectedQB.question_tp_mapping && Array.isArray(selectedQB.question_tp_mapping) && selectedQB.question_tp_mapping.length > 0) {
             gradeData.tp_mapping = selectedQB.question_tp_mapping;
           }
         }
