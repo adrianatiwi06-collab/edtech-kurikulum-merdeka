@@ -5,13 +5,16 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-export default function VerifyEmailPendingPage() {
+// Force dynamic rendering to avoid prerender error with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function VerifyEmailPendingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -153,5 +156,17 @@ export default function VerifyEmailPendingPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function VerifyEmailPendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <VerifyEmailPendingContent />
+    </Suspense>
   );
 }
