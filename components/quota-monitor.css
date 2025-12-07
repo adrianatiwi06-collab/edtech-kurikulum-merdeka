@@ -1,0 +1,32 @@
+/* Quota Monitor Progress Bar Styles */
+.quota-progress-bar {
+  width: 100%;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.quota-progress-fill {
+  height: 0.5rem;
+  border-radius: 9999px;
+  transition: width 0.3s ease-in-out;
+}
+
+/* Dynamic width via data attribute */
+.quota-progress-fill[data-percentage="0"] { width: 0%; }
+.quota-progress-fill[data-percentage="10"] { width: 10%; }
+.quota-progress-fill[data-percentage="20"] { width: 20%; }
+.quota-progress-fill[data-percentage="30"] { width: 30%; }
+.quota-progress-fill[data-percentage="40"] { width: 40%; }
+.quota-progress-fill[data-percentage="50"] { width: 50%; }
+.quota-progress-fill[data-percentage="60"] { width: 60%; }
+.quota-progress-fill[data-percentage="70"] { width: 70%; }
+.quota-progress-fill[data-percentage="80"] { width: 80%; }
+.quota-progress-fill[data-percentage="90"] { width: 90%; }
+.quota-progress-fill[data-percentage="100"] { width: 100%; }
+
+/* For any percentage in between */
+.quota-progress-fill[data-percentage] {
+  width: calc(var(--percentage) * 1%);
+}
