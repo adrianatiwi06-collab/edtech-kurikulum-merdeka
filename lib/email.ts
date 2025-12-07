@@ -19,15 +19,42 @@ try {
 
 // Initialize Firebase Admin if not already done
 let app = getApps()[0];
-if (!app) {
-  app = initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON || '{}')),
-    projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-  });
-}
+let db: any;
+let auth: any;
 
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Only initialize if required environment variables are available
+const hasAdminConfig = process.env.FIREBASE_ADMIN_SDK_JSON || 
+  (process.env.FIREBASE_ADMIN_PROJECT_ID && 
+   process.env.FIREBASE_ADMIN_CLIENT_EMAIL && 
+   process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+
+if (!app && hasAdminConfig) {
+  try {
+    if (process.env.FIREBASE_ADMIN_SDK_JSON) {
+      // Method 1: Using service account JSON
+      const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON);
+      app = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id || process.env.FIREBASE_ADMIN_PROJECT_ID,
+      });
+    } else {
+      // Method 2: Using individual environment variables
+      const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      app = initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID!,
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL!,
+          privateKey: privateKey!,
+        }),
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+      });
+    }
+    db = getFirestore(app);
+    auth = getAuth(app);
+  } catch (error) {
+    console.warn('[Firebase Admin] Failed to initialize:', error);
+  }
+}
 
 /**
  * Email verification record in Firestore
@@ -147,6 +174,10 @@ export async function createVerificationRecord(
   email: string,
   expiryHours: number = 24
 ): Promise<{ token: string; record: EmailVerificationRecord }> {
+  if (!db) {
+    throw new Error('Firebase Admin not initialized. Please configure FIREBASE_ADMIN credentials.');
+  }
+
   const token = generateVerificationToken();
   const tokenHash = hashToken(token);
   const now = new Date();
@@ -173,6 +204,11 @@ export async function createVerificationRecord(
  * Returns user email if valid, null if invalid/expired
  */
 export async function verifyEmailToken(userId: string, token: string): Promise<string | null> {
+  if (!db || !auth) {
+    console.error('[EMAIL_VERIFICATION] Firebase Admin not initialized');
+    return null;
+  }
+
   try {
     const doc = await db.collection('email_verifications').doc(userId).get();
 
@@ -240,6 +276,11 @@ export async function resendVerificationEmail(
   userId: string,
   appUrl: string
 ): Promise<boolean> {
+  if (!db) {
+    console.error('[EMAIL_VERIFICATION] Firebase Admin not initialized');
+    return false;
+  }
+
   try {
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
@@ -289,6 +330,11 @@ export async function resendVerificationEmail(
  * Check if user email is verified
  */
 export async function isEmailVerified(userId: string): Promise<boolean> {
+  if (!auth) {
+    console.error('[EMAIL_VERIFICATION] Firebase Admin not initialized');
+    return false;
+  }
+
   try {
     const user = await auth.getUser(userId);
     return user.emailVerified;

@@ -19,15 +19,42 @@ try {
 
 // Initialize Firebase Admin if not already done
 let app = getApps()[0];
-if (!app) {
-  app = initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON || '{}')),
-    projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-  });
-}
+let db: any;
+let auth: any;
 
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Only initialize if required environment variables are available
+const hasAdminConfig = process.env.FIREBASE_ADMIN_SDK_JSON || 
+  (process.env.FIREBASE_ADMIN_PROJECT_ID && 
+   process.env.FIREBASE_ADMIN_CLIENT_EMAIL && 
+   process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+
+if (!app && hasAdminConfig) {
+  try {
+    if (process.env.FIREBASE_ADMIN_SDK_JSON) {
+      // Method 1: Using service account JSON
+      const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK_JSON);
+      app = initializeApp({
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.project_id || process.env.FIREBASE_ADMIN_PROJECT_ID,
+      });
+    } else {
+      // Method 2: Using individual environment variables
+      const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      app = initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID!,
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL!,
+          privateKey: privateKey!,
+        }),
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+      });
+    }
+    db = getFirestore(app);
+    auth = getAuth(app);
+  } catch (error) {
+    console.warn('[Firebase Admin] Failed to initialize:', error);
+  }
+}
 
 /**
  * Email verification record in Firestore
