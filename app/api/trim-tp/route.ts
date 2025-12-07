@@ -5,11 +5,8 @@ import { logAuditFromServer } from '@/lib/audit';
 import { getQuotaStatus } from '@/lib/gemini';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Get API keys for rotation
+// Get API keys for rotation - JANGAN throw error di top level!
 const RAW_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '').split(/[,\n\s]+/).filter(Boolean);
-if (RAW_KEYS.length === 0) {
-  throw new Error('No Gemini API key found');
-}
 
 // Model fallback cascade - Prioritaskan model yang valid dan cepat
 const FALLBACK_MODELS = [
@@ -56,7 +53,20 @@ function banKey(key: string) {
 export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequest, { userId }) => {
   console.log('[TrimTP] POST request received, userId:', userId);
   try {
-    // Check quota status first
+    // Validate API keys first - PINDAHKAN KE SINI, BUKAN TOP-LEVEL!
+    if (RAW_KEYS.length === 0) {
+      console.error('[TrimTP] No Gemini API key configured');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'API key tidak dikonfigurasi. Hubungi administrator.',
+          code: 'NO_API_KEY'
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Check quota status
     const quotaStatus = getQuotaStatus();
     console.log('[TrimTP] Quota status:', quotaStatus);
     
