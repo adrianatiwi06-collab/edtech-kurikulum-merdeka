@@ -179,9 +179,9 @@ export default function DashboardPage() {
       title: 'Template Ujian',
       value: stats.templates,
       icon: FileCheck,
-      gradient: 'from-pink-500 to-rose-600',
-      iconColor: 'text-pink-600',
-      bgGradient: 'from-pink-50 to-rose-50',
+      gradient: 'from-indigo-500 to-blue-600',
+      iconColor: 'text-indigo-600',
+      bgGradient: 'from-indigo-50 to-blue-50',
       description: 'Template Tersedia'
     },
     {
@@ -362,7 +362,7 @@ export default function DashboardPage() {
                     <div className={`w-14 h-14 ${action.bgColor} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 smooth-transition float`}>
                       <Icon className={`w-7 h-7 ${action.color}`} />
                     </div>
-                    <CardTitle className="text-xl font-bold group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:to-pink-600 group-hover:bg-clip-text transition-all duration-300">{action.title}</CardTitle>
+                    <CardTitle className="text-xl font-bold group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:to-cyan-500 group-hover:bg-clip-text transition-all duration-300">{action.title}</CardTitle>
                     <CardDescription className="text-sm text-gray-600 font-medium">{action.description}</CardDescription>
                   </CardHeader>
                 </Card>

@@ -143,16 +143,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50 p-4 relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-indigo-50 p-4 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute top-20 left-10 w-72 h-72 bg-violet-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-      <div className="absolute top-40 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+      <div className="absolute top-40 right-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
       <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-72 h-72 bg-cyan-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-2000"></div>
       
       <Card className="w-full max-w-md glass glow z-10 border-0">
         <CardHeader className="space-y-3 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl glow float">
+            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl glow float">
               <span className="text-3xl">📚</span>
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function LoginPage() {
           <CardFooter className="flex flex-col space-y-4">
             <Button 
               type="submit" 
-              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 btn-elegant shadow-lg" 
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 btn-elegant shadow-lg" 
               disabled={loading || googleLoading}
             >
               {loading ? '⏳ Memproses...' : isSignUp ? '🚀 Daftar Sekarang' : '✨ Masuk'}
@@ -285,7 +285,7 @@ export default function LoginPage() {
                   setIsSignUp(!isSignUp);
                   setErrors({});
                 }}
-                className="text-sm font-semibold text-violet-600 hover:text-pink-600 transition-colors duration-300 hover:underline"
+                className="text-sm font-semibold text-violet-600 hover:text-cyan-600 transition-colors duration-300 hover:underline"
               >
                 {isSignUp ? '← Sudah punya akun? Login di sini' : '→ Belum punya akun? Daftar sekarang'}
               </button>

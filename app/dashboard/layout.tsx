@@ -60,8 +60,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50">
-      <aside className="w-64 bg-gradient-to-b from-violet-600 via-fuchsia-600 to-pink-600 shadow-2xl flex flex-col relative overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-indigo-50">
+      <aside className="w-64 bg-gradient-to-b from-violet-600 via-blue-600 to-indigo-700 shadow-2xl flex flex-col relative overflow-hidden">
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse"></div>
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         
         <div className="relative p-6 border-b border-white/20 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-white/90 to-white/70 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
+            <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
               <span className="text-2xl">📚</span>
             </div>
             <div>
