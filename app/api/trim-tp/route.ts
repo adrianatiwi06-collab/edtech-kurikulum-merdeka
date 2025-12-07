@@ -11,12 +11,12 @@ if (RAW_KEYS.length === 0) {
   throw new Error('No Gemini API key found');
 }
 
-// Model fallback cascade - use stable, widely available models
+// Model fallback cascade - Prioritaskan model yang valid dan cepat
 const FALLBACK_MODELS = [
-  'gemini-1.5-flash',          // Stable and widely available (primary)
-  'gemini-1.5-flash-latest',   // Latest 1.5
-  'gemini-1.5-pro-latest',     // Pro latest
-  'gemini-1.5-pro'             // Pro model as last resort
+  'gemini-1.5-flash',       // Paling stabil & cepat
+  'gemini-1.5-flash-002',   // Versi spesifik (sering lebih bagus)
+  'gemini-1.5-pro',         // Fallback ke Pro jika Flash overload
+  'gemini-1.5-pro-002'      // Fallback terakhir
 ];
 
 // Simple key rotation without Redis dependency
