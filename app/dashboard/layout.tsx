@@ -60,44 +60,53 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <aside className="w-64 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 shadow-2xl flex flex-col">
-        <div className="p-6 border-b border-slate-700/50">
+    <div className="flex h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50">
+      <aside className="w-64 bg-gradient-to-b from-violet-600 via-fuchsia-600 to-pink-600 shadow-2xl flex flex-col relative overflow-hidden">
+        {/* Animated background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+        
+        <div className="relative p-6 border-b border-white/20 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-110">
-              <span className="text-xl">📚</span>
+            <div className="w-12 h-12 bg-gradient-to-br from-white/90 to-white/70 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
+              <span className="text-2xl">📚</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">EdTech</h1>
-              <p className="text-xs text-slate-400">Kurikulum Merdeka</p>
+              <h1 className="text-xl font-bold text-white drop-shadow-lg">EdTech</h1>
+              <p className="text-xs text-white/80 font-medium">Kurikulum Merdeka</p>
             </div>
           </div>
         </div>
         
-        <nav className="flex-1 py-4 overflow-hidden">
+        <nav className="relative flex-1 py-4 overflow-y-auto overflow-x-hidden">
           <button
             onClick={() => handleNavigation('/dashboard')}
-            className={`w-full flex items-center gap-3 px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1 ${
-              pathname === '/dashboard' ? 'bg-slate-800 text-white border-l-4 border-blue-500' : ''
+            className={`relative w-full flex items-center gap-3 px-6 py-3.5 text-white/90 hover:text-white transition-all duration-300 group ${
+              pathname === '/dashboard' ? 'bg-white/20 backdrop-blur-sm shadow-lg border-l-4 border-white' : 'hover:bg-white/10'
             }`}
           >
-            <Home className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-            <span className="font-medium">Dashboard</span>
+            <Home className="w-5 h-5 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
+            <span className="font-semibold">Dashboard</span>
+            {pathname === '/dashboard' && (
+              <div className="absolute right-4 w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            )}
           </button>
 
           <div className="mt-2">
             <button
               onClick={() => setMasterDataOpen(!masterDataOpen)}
-              className="w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1"
+              className="w-full flex items-center justify-between px-6 py-3.5 text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group"
             >
               <div className="flex items-center gap-3">
-                <Database className="w-5 h-5 transition-transform duration-300" />
-                <span className="font-medium">Master Data</span>
+                <Database className="w-5 h-5 transition-transform duration-300 group-hover:scale-125" />
+                <span className="font-semibold">Master Data</span>
               </div>
               {masterDataOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />}
             </button>
             {masterDataOpen && (
-              <div className="bg-slate-900/30 border-l-2 border-slate-700 ml-6">
+              <div className="bg-white/5 border-l-2 border-white/30 ml-6">
                 <button
                   onClick={() => handleNavigation('/dashboard/master-data')}
                   className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${

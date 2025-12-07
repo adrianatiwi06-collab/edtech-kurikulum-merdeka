@@ -161,32 +161,36 @@ export default function DashboardPage() {
       title: 'Total TP',
       value: stats.totalTP,
       icon: BookOpen,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      gradient: 'from-violet-500 to-purple-600',
+      iconColor: 'text-violet-600',
+      bgGradient: 'from-violet-50 to-purple-50',
       description: 'Tujuan Pembelajaran'
     },
     {
       title: 'Bank Soal',
       value: stats.bankSoal,
       icon: FileText,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      gradient: 'from-emerald-500 to-teal-600',
+      iconColor: 'text-emerald-600',
+      bgGradient: 'from-emerald-50 to-teal-50',
       description: 'Total Soal'
     },
     {
       title: 'Template Ujian',
       value: stats.templates,
       icon: FileCheck,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
+      gradient: 'from-pink-500 to-rose-600',
+      iconColor: 'text-pink-600',
+      bgGradient: 'from-pink-50 to-rose-50',
       description: 'Template Tersedia'
     },
     {
       title: 'Nilai Tersimpan',
       value: stats.grades,
       icon: BarChart3,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      gradient: 'from-amber-500 to-orange-600',
+      iconColor: 'text-amber-600',
+      bgGradient: 'from-amber-50 to-orange-50',
       description: 'Total Penilaian'
     }
   ];
@@ -276,50 +280,62 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Welcome Section */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gradient">Dashboard</h1>
-          <p className="mt-3 text-gray-600 text-lg">
-            Selamat datang, {user?.email?.split('@')[0] || 'Guru'} ✨
-          </p>
+      <div className="mb-10 relative">
+        <div className="glass p-8 rounded-3xl">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-5xl font-extrabold text-gradient">Dashboard</h1>
+              <p className="text-xl text-gray-700 font-medium">
+                Selamat datang kembali, <span className="text-gradient-blue">{user?.email?.split('@')[0] || 'Guru'}</span> ✨
+              </p>
+              <p className="text-sm text-gray-500">Kelola pembelajaran dengan mudah dan efisien</p>
+            </div>
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
+              size="lg"
+              className="gap-2 btn-elegant bg-white/80 backdrop-blur-sm border-2 hover:bg-gradient-to-r hover:from-violet-50 hover:to-pink-50"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Refresh
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={handleRefresh}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {loading ? (
           // Loading skeleton
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse glass">
               <CardHeader>
-                <div className="w-12 h-12 bg-gray-200 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-24"></div>
+                <div className="w-14 h-14 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl mb-4 shimmer"></div>
+                <div className="h-4 bg-gray-200 rounded-lg w-20 mb-3"></div>
+                <div className="h-10 bg-gray-200 rounded-lg w-16 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded-lg w-24"></div>
               </CardHeader>
             </Card>
           ))
         ) : (
-          statsCards.map((stat) => {
+          statsCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.title} className="border-0 shadow-md hover:shadow-lg smooth-transition">
-                <CardHeader>
-                  <div className={`w-12 h-12 ${stat.bgColor} rounded-lg flex items-center justify-center mb-4`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
+              <Card 
+                key={stat.title} 
+                className="card-elegant border-0 glow-hover group overflow-hidden relative"
+                style={{animationDelay: `${index * 100}ms`}}
+              >
+                {/* Animated background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+                
+                <CardHeader className="relative z-10">
+                  <div className={`w-16 h-16 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 smooth-transition glow`}>
+                    <Icon className="w-8 h-8 text-white drop-shadow-lg" />
                   </div>
-                  <CardDescription className="text-sm text-gray-500">{stat.title}</CardDescription>
-                  <CardTitle className="text-3xl font-bold">{stat.value}</CardTitle>
-                  <p className="text-xs text-gray-400 mt-1">{stat.description}</p>
+                  <CardDescription className="text-sm font-semibold text-gray-600">{stat.title}</CardDescription>
+                  <CardTitle className="text-5xl font-extrabold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent">{stat.value}</CardTitle>
+                  <p className="text-xs text-gray-500 mt-2 font-medium">{stat.description}</p>
                 </CardHeader>
               </Card>
             );
@@ -328,20 +344,52 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1 h-8 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full"></div>
+          <h2 className="text-3xl font-bold text-gradient">Quick Actions</h2>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {quickActions.map((action) => {
+          {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <Link key={action.title} href={action.href}>
-                <Card className="card-elegant hover:shadow-xl hover:scale-105 smooth-transition cursor-pointer border-0">
-                  <CardHeader>
-                    <div className={`w-12 h-12 ${action.bgColor} rounded-xl flex items-center justify-center mb-3 shadow-md hover:shadow-lg smooth-transition`}>
-                      <Icon className={`w-6 h-6 ${action.color}`} />
+                <Card className="glass hover:scale-105 smooth-transition cursor-pointer border-0 glow-hover group overflow-hidden relative h-full">
+                  {/* Animated sparkle effect */}
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/40 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  
+                  <CardHeader className="relative z-10 space-y-4">
+                    <div className={`w-14 h-14 ${action.bgColor} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 smooth-transition float`}>
+                      <Icon className={`w-7 h-7 ${action.color}`} />
                     </div>
-                    <CardTitle className="text-lg">{action.title}</CardTitle>
-                    <CardDescription className="text-sm text-gray-600">{action.description}</CardDescription>
+                    <CardTitle className="text-xl font-bold group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-violet-600 group-hover:to-pink-600 group-hover:bg-clip-text transition-all duration-300">{action.title}</CardTitle>
+                    <CardDescription className="text-sm text-gray-600 font-medium">{action.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* All Features Grid */}
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1 h-8 bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full"></div>
+          <h2 className="text-3xl font-bold text-gradient-blue">Semua Fitur</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Link key={feature.title} href={feature.href}>
+                <Card className="card-elegant hover:scale-105 smooth-transition cursor-pointer border-0 glow-hover group h-full">
+                  <CardHeader className="space-y-3">
+                    <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center shadow-md group-hover:shadow-xl smooth-transition`}>
+                      <Icon className={`w-6 h-6 ${feature.color}`} />
+                    </div>
+                    <CardTitle className="text-lg font-bold">{feature.title}</CardTitle>
+                    <CardDescription className="text-sm text-gray-600">{feature.description}</CardDescription>
                   </CardHeader>
                 </Card>
               </Link>
@@ -352,10 +400,10 @@ export default function DashboardPage() {
 
       {/* Recent Activity */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <Clock className="w-6 h-6" />
-          Recent Activity
-        </h2>
+        <div className="flex items-center gap-3 mb-6">
+          <Clock className="w-7 h-7 text-violet-600" />
+          <h2 className="text-3xl font-bold text-gradient">Aktivitas Terbaru</h2>
+        </div>
         <Card className="border-0 shadow-md">
           <CardHeader>
             <CardTitle className="text-lg">Recently Created TP</CardTitle>

@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 100% 98%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 262 83% 58%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 199 89% 48%;
+    --secondary-foreground: 0 0% 100%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 340 82% 52%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 217.2 91.2% 59.8%;
-    --radius: 0.75rem;
+    --ring: 262 83% 58%;
+    --radius: 1rem;
   }
 
   .dark {
@@ -54,44 +54,105 @@
     @apply border-border;
   }
   body {
-    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-foreground antialiased;
+    @apply bg-gradient-to-br from-violet-50 via-sky-50 to-pink-50 text-foreground antialiased;
     min-height: 100vh;
+    background-attachment: fixed;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-violet-400 to-pink-400 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gradient-to-b from-violet-500 to-pink-500;
   }
 }
 
 @layer components {
   /* Card styles */
   .card-elegant {
-    @apply bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200/50;
+    @apply bg-white/90 backdrop-blur-lg shadow-xl hover:shadow-2xl transition-all duration-500 border border-white/60 rounded-2xl;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
   }
   
   /* Button hover effects */
   .btn-elegant {
-    @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1;
   }
   
   /* Input focus styles */
   .input-elegant {
-    @apply focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200;
+    @apply focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 transition-all duration-300 rounded-xl;
   }
   
   /* Table styles */
   .table-elegant {
-    @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-md overflow-hidden;
+    @apply bg-white/95 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-white/60;
   }
   
   /* Gradient text */
   .text-gradient {
-    @apply bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent font-bold;
+  }
+  
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 bg-clip-text text-transparent font-bold;
   }
   
   /* Glass morphism effect */
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl;
+    box-shadow: 0 8px 32px 0 rgba(147, 51, 234, 0.15);
   }
   
   /* Smooth transitions */
   .smooth-transition {
-    @apply transition-all duration-300 ease-in-out;
+    @apply transition-all duration-500 ease-out;
+  }
+  
+  /* Animated gradient background */
+  .gradient-animated {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+  
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  /* Floating animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  
+  /* Glow effect */
+  .glow {
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3),
+                0 0 40px rgba(236, 72, 153, 0.2),
+                0 0 60px rgba(59, 130, 246, 0.1);
+  }
+  
+  .glow-hover:hover {
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.5),
+                0 0 60px rgba(236, 72, 153, 0.3),
+                0 0 90px rgba(59, 130, 246, 0.2);
   }
 }
