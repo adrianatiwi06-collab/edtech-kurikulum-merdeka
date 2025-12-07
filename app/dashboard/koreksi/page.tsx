@@ -17,6 +17,7 @@ interface QuestionBank {
   examTitle: string;
   subject: string;
   questions: any;
+  question_tp_mapping?: any[];
 }
 
 interface Class {
@@ -443,9 +444,8 @@ export default function KoreksiPage() {
           gradeData.question_bank_id = selectedQB.id;
           
           // Add TP mapping from question bank for analysis (if available)
-          const qbWithMapping = selectedQB as any;
-          if (qbWithMapping.question_tp_mapping && Array.isArray(qbWithMapping.question_tp_mapping) && qbWithMapping.question_tp_mapping.length > 0) {
-            gradeData.tp_mapping = qbWithMapping.question_tp_mapping;
+          if (selectedQB.question_tp_mapping && Array.isArray(selectedQB.question_tp_mapping) && selectedQB.question_tp_mapping.length > 0) {
+            gradeData.tp_mapping = selectedQB.question_tp_mapping;
           }
         }
         
