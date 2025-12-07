@@ -90,38 +90,21 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
       );
     }
 
-    // TEMPORARY: Skip AI and use manual trim for debugging
-    console.log('[TrimTP] Using manual trim (AI temporarily disabled for debugging)');
-    const manualTrimmed = tpText.substring(0, maxLength - 3) + '...';
-    
-    await logAuditFromServer(request, userId, 'GENERATE_TP', 'success', 'learning_goals', {
-      metadata: {
-        originalLength: tpText.length,
-        resultLength: manualTrimmed.length,
-        method: 'manual_trim_fallback'
-      }
-    });
-
-    return NextResponse.json({
-      success: true,
-      trimmed: manualTrimmed,
-      splits: [],
-      charCount: manualTrimmed.length,
-      requiresTrim: true,
-      message: 'Manual trim (AI debugging mode)',
-      timestamp: new Date().toISOString()
-    });
-
-    /* TEMPORARILY DISABLED - AI TRIMMING CODE
     // Validate API keys
     if (API_KEYS.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'API key tidak dikonfigurasi', code: 'NO_API_KEY' },
-        { status: 500 }
-      );
+      console.warn('[TrimTP] No API keys configured, using manual trim');
+      const manualTrimmed = tpText.substring(0, maxLength - 3) + '...';
+      return NextResponse.json({
+        success: true,
+        trimmed: manualTrimmed,
+        splits: [],
+        charCount: manualTrimmed.length,
+        requiresTrim: true,
+        message: 'Manual trim (no API key)',
+        timestamp: new Date().toISOString()
+      });
     }
 
-    /* TEMPORARILY DISABLED
     // Build prompt untuk trim TP
     let prompt: string;
     try {
@@ -129,14 +112,18 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
       console.log('[TrimTP] Prompt built, length:', prompt.length);
     } catch (promptError: any) {
       console.error('[TrimTP] Error building prompt:', promptError);
-      return NextResponse.json(
-        { success: false, error: 'Gagal membuat prompt', code: 'PROMPT_ERROR' },
-        { status: 500 }
-      );
+      // Fallback to manual trim
+      const manualTrimmed = tpText.substring(0, maxLength - 3) + '...';
+      return NextResponse.json({
+        success: true,
+        trimmed: manualTrimmed,
+        splits: [],
+        charCount: manualTrimmed.length,
+        requiresTrim: true,
+        timestamp: new Date().toISOString()
+      });
     }
-    */
 
-    /* TEMPORARILY DISABLED - ALL AI CODE
     // Try models and keys dengan simple rotation
     let responseText: string | null = null;
     let lastError: any = null;
@@ -221,12 +208,66 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
         );
       }
       
-      return NextResponse.json(
-        { success: false, error: 'Gagal mendapat respons dari AI. Silakan coba lagi.', code: 'AI_ERROR' },
-        { status: 500 }
-      );
+      // All AI attempts failed, use manual trim as fallback
+      console.warn('[TrimTP] All AI attempts failed, using manual trim fallback');
+      const manualTrimmed = tpText.substring(0, maxLength - 3) + '...';
+      
+      await logAuditFromServer(request, userId, 'GENERATE_TP', 'success', 'learning_goals', {
+        metadata: {
+          originalLength: tpText.length,
+          resultLength: manualTrimmed.length,
+          method: 'manual_fallback_after_ai_failure'
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        trimmed: manualTrimmed,
+        splits: [],
+        charCount: manualTrimmed.length,
+        requiresTrim: true,
+        message: 'Trimmed manually (AI unavailable)',
+        timestamp: new Date().toISOString()
+      });
     }
-    END OF TEMPORARILY DISABLED AI CODE */
+
+    // Parse response with fallback
+    let result: any = null;
+    try {
+      result = parseTrimmingResponse(responseText);
+    } catch (parseError: any) {
+      console.error(`[TrimTP] Parse error:`, parseError?.message);
+      console.error(`[TrimTP] Response was: ${responseText?.substring(0, 200)}`);
+    }
+
+    if (!result) {
+      console.error(`[TrimTP] Failed to parse response, using fallback manual trim`);
+      const manualTrim = tpText.substring(0, maxLength - 3) + '...';
+      result = {
+        trimmed: manualTrim,
+        splits: [],
+        charCount: manualTrim.length
+      };
+    }
+
+    // Log audit
+    await logAuditFromServer(request, userId, 'GENERATE_TP', 'success', 'learning_goals', {
+      metadata: {
+        originalLength: tpText.length,
+        resultLength: result.trimmed?.length || 0,
+        splits: result.splits?.length || 0,
+        method: 'ai_trim'
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      trimmed: result.trimmed,
+      splits: result.splits || [],
+      charCount: result.trimmed?.length || 0,
+      requiresTrim: true,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error: any) {
     console.error('[TrimTP API] Top-level error caught');
