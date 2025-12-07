@@ -11,11 +11,11 @@ if (RAW_KEYS.length === 0) {
   throw new Error('No Gemini API key found');
 }
 
-// Model fallback cascade - try newer models first, fallback to stable
+// Model fallback cascade - use stable, widely available models
 const FALLBACK_MODELS = [
-  'gemini-2.0-flash-exp',      // Experimental 2.0
-  'gemini-1.5-flash',          // Stable and widely available
+  'gemini-1.5-flash',          // Stable and widely available (primary)
   'gemini-1.5-flash-latest',   // Latest 1.5
+  'gemini-1.5-pro-latest',     // Pro latest
   'gemini-1.5-pro'             // Pro model as last resort
 ];
 
@@ -136,7 +136,15 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
             }
           } catch (modelError: any) {
             const modelErrMsg = modelError?.message || '';
-            console.log(`[TrimTP] Model ${modelName} failed: ${modelErrMsg.substring(0, 80)}`);
+            const modelErrStatus = modelError?.status || modelError?.statusCode || '';
+            console.log(`[TrimTP] Model ${modelName} failed [${modelErrStatus}]: ${modelErrMsg.substring(0, 100)}`);
+            
+            // If model not found (404), skip to next model immediately
+            if (modelErrMsg.includes('404') || modelErrMsg.includes('not found') || modelErrMsg.includes('API_NOT_FOUND') || modelErrStatus === 404) {
+              console.log(`[TrimTP] Model ${modelName} not available, trying next...`);
+              lastError = modelError;
+              continue;
+            }
             
             // If this is a quota/rate limit error, don't try other models with same key
             if (modelErrMsg.includes('quota') || modelErrMsg.includes('RESOURCE_EXHAUSTED') || modelErrMsg.includes('429')) {
