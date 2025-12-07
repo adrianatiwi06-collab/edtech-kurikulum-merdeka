@@ -141,7 +141,17 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
           });
 
           console.log('[TrimTP] Sending request to Gemini API...');
-          const response = await model.generateContent(prompt);
+          
+          // Add timeout protection (30 seconds)
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timeout after 30s')), 30000);
+          });
+          
+          const response = await Promise.race([
+            model.generateContent(prompt),
+            timeoutPromise
+          ]) as any;
+          
           console.log('[TrimTP] Got response from Gemini API');
           const resolvedResponse = await response.response;
           responseText = resolvedResponse.text();
@@ -191,15 +201,24 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
       );
     }
 
-    // Parse response
-    const result = parseTrimmingResponse(responseText);
+    // Parse response with fallback
+    let result: any = null;
+    try {
+      result = parseTrimmingResponse(responseText);
+    } catch (parseError: any) {
+      console.error(`[TrimTP] Parse error:`, parseError?.message);
+      console.error(`[TrimTP] Response was: ${responseText?.substring(0, 200)}`);
+    }
 
     if (!result) {
-      console.error(`[TrimTP] Failed to parse response: ${responseText.substring(0, 200)}`);
-      return NextResponse.json(
-        { success: false, error: 'Format respons tidak valid dari AI', code: 'PARSE_ERROR' },
-        { status: 500 }
-      );
+      console.error(`[TrimTP] Failed to parse response, using fallback manual trim`);
+      // Fallback: manual trim if AI parsing fails
+      const manualTrim = tpText.substring(0, maxLength - 3) + '...';
+      result = {
+        trimmed: manualTrim,
+        splits: [],
+        charCount: manualTrim.length
+      };
     }
 
     // Log audit
@@ -222,13 +241,18 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
     });
 
   } catch (error: any) {
-    console.error('[TrimTP API] Top-level error caught:', error);
+    console.error('[TrimTP API] Top-level error caught');
+    console.error('[TrimTP API] Error type:', typeof error);
     console.error('[TrimTP API] Error name:', error?.name);
     console.error('[TrimTP API] Error message:', error?.message);
-    console.error('[TrimTP API] Error stack:', error?.stack?.substring(0, 500));
+    console.error('[TrimTP API] Error code:', error?.code);
+    console.error('[TrimTP API] Error status:', error?.status);
+    if (error?.stack) {
+      console.error('[TrimTP API] Error stack:', error.stack.substring(0, 500));
+    }
     
     // Handle Gemini API errors
-    const errorMessage = error.message || 'Unknown error';
+    const errorMessage = error?.message || String(error) || 'Unknown error';
     let statusCode = 500;
     let errorCode = 'INTERNAL_ERROR';
     let userMessage = 'Terjadi kesalahan saat memproses permintaan';
