@@ -54,7 +54,6 @@ function PasswordStrengthMeter({ password }: { password: string }) {
           className={`h-full transition-all duration-300 ${barColorClass}`}
           style={{ width: `${strength}%` }}
         />
-        />
       </div>
 
       {/* Requirements list */}
