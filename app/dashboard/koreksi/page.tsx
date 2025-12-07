@@ -1,5 +1,6 @@
 'use client';
 
+// Force rebuild for Vercel deployment
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
