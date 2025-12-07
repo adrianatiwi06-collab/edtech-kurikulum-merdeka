@@ -18,7 +18,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signIn: async () => {},
-  signUp: async () => {},
+  signUp: async () => {
+    throw new Error('signUp not implemented');
+  },
   signInWithGoogle: async () => {},
   signOut: async () => {},
 });
