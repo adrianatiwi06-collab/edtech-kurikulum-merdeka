@@ -2,71 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuthAndRateLimit } from '@/lib/auth-middleware';
 import { trimTPLimiter } from '@/lib/rate-limiter';
 import { logAuditFromServer } from '@/lib/audit';
-import { getQuotaStatus } from '@/lib/gemini';
+import { getQuotaStatus, apiKeyManager, chooseAvailableKey, banKeyShared, hashKeyShort, requestQueue } from '@/lib/gemini';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Get API keys for rotation - JANGAN throw error di top level!
-const RAW_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '').split(/[,\n\s]+/).filter(Boolean);
-
-// Model fallback cascade - Prioritaskan model yang valid dan cepat
+// Model fallback cascade - SAMA seperti generate-tp, gunakan models/ prefix
 const FALLBACK_MODELS = [
-  'gemini-1.5-flash',       // Paling stabil & cepat
-  'gemini-1.5-flash-002',   // Versi spesifik (sering lebih bagus)
-  'gemini-1.5-pro',         // Fallback ke Pro jika Flash overload
-  'gemini-1.5-pro-002'      // Fallback terakhir
+  'models/gemini-1.5-flash',       // Paling stabil & cepat
+  'models/gemini-1.5-flash-002',   // Versi spesifik
+  'models/gemini-1.5-pro',         // Fallback ke Pro
+  'models/gemini-1.5-pro-002'      // Fallback terakhir
 ];
-
-// Simple key rotation without Redis dependency
-let keyRotationIndex = 0;
-const bannedKeys = new Map<string, number>();
-const BAN_DURATION_MS = 2 * 60 * 1000; // 2 minutes
-
-function getNextKey(): string | null {
-  const now = Date.now();
-  
-  // Clean up expired bans
-  for (const [key, bannedUntil] of Array.from(bannedKeys.entries())) {
-    if (bannedUntil <= now) {
-      bannedKeys.delete(key);
-    }
-  }
-
-  // Find next available key
-  for (let i = 0; i < RAW_KEYS.length; i++) {
-    keyRotationIndex = (keyRotationIndex + 1) % RAW_KEYS.length;
-    const key = RAW_KEYS[keyRotationIndex];
-    
-    if (!bannedKeys.has(key) || bannedKeys.get(key)! <= now) {
-      return key;
-    }
-  }
-  
-  return null;
-}
-
-function banKey(key: string) {
-  const until = Date.now() + BAN_DURATION_MS;
-  bannedKeys.set(key, until);
-  console.log(`[TrimTP] Key banned until ${new Date(until).toISOString()}`);
-}
 
 export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequest, { userId }) => {
   console.log('[TrimTP] POST request received, userId:', userId);
   try {
-    // Validate API keys first - PINDAHKAN KE SINI, BUKAN TOP-LEVEL!
-    if (RAW_KEYS.length === 0) {
-      console.error('[TrimTP] No Gemini API key configured');
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'API key tidak dikonfigurasi. Hubungi administrator.',
-          code: 'NO_API_KEY'
-        },
-        { status: 500 }
-      );
-    }
-    
-    // Check quota status
+    // Check quota status first
     const quotaStatus = getQuotaStatus();
     console.log('[TrimTP] Quota status:', quotaStatus);
     
@@ -108,33 +58,33 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
     const prompt = buildTrimTPPrompt(tpText, maxLength, allowSplit, grade, subject);
     console.log('[TrimTP] Prompt built, length:', prompt.length);
 
-    // Try with API key rotation
-    let responseText: string | null = null;
-    let lastError: any = null;
-    console.log('[TrimTP] Starting API key rotation, total keys:', RAW_KEYS.length);
-    
-    for (let attempt = 0; attempt < RAW_KEYS.length; attempt++) {
-      console.log('[TrimTP] Attempt', attempt + 1, 'of', RAW_KEYS.length);
-      const key = getNextKey();
-      if (!key) {
-        return NextResponse.json(
-          { success: false, error: 'Semua API key sedang tidak tersedia. Silakan coba lagi.', code: 'NO_AVAILABLE_KEY' },
-          { status: 429 }
-        );
+    // Use request queue dan key manager SAMA seperti generate-tp
+    const responseText = await requestQueue.add(async () => {
+      const allKeys = apiKeyManager.getAllKeys();
+      if (allKeys.length === 0) {
+        throw new Error('No Gemini API keys available');
       }
 
-      try {
-        console.log('[TrimTP] Initializing GoogleGenerativeAI with key...');
-        const genAI = new GoogleGenerativeAI(key);
+      let lastError: any = null;
+
+      // Try each fallback model
+      for (const fallbackModel of FALLBACK_MODELS) {
+        console.log(`[TrimTP] Trying model: ${fallbackModel}`);
+        let lastModelError: any = null;
         
-        // Try each fallback model until one works
-        let modelSuccess = false;
-        console.log('[TrimTP] Trying', FALLBACK_MODELS.length, 'fallback models');
-        for (const modelName of FALLBACK_MODELS) {
+        // For each model, try available API keys
+        for (let attempt = 0; attempt < allKeys.length; attempt++) {
+          const key = await chooseAvailableKey();
+          if (!key) {
+            console.log('[TrimTP] No healthy key available');
+            break;
+          }
+
           try {
-            console.log(`[TrimTP] Trying model: ${modelName}`);
-            const model = genAI.getGenerativeModel({ 
-              model: modelName,
+            console.log(`[TrimTP] Trying ${fallbackModel} with key ${hashKeyShort(key)}`);
+            const client = new GoogleGenerativeAI(key);
+            const model = client.getGenerativeModel({ 
+              model: fallbackModel,
               generationConfig: {
                 temperature: 0.3,
                 maxOutputTokens: 1500,
@@ -144,87 +94,46 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
 
             const response = await model.generateContent(prompt);
             const resolvedResponse = await response.response;
-            responseText = resolvedResponse.text();
+            const text = resolvedResponse.text();
             
-            if (responseText) {
-              console.log(`[TrimTP] Success with model: ${modelName}`);
-              modelSuccess = true;
-              break; // Break model loop
+            if (text) {
+              console.log(`[TrimTP] Success with ${fallbackModel}`);
+              return text; // Success!
             }
-          } catch (modelError: any) {
-            const modelErrMsg = modelError?.message || '';
-            const modelErrStatus = modelError?.status || modelError?.statusCode || '';
-            console.log(`[TrimTP] Model ${modelName} failed [${modelErrStatus}]: ${modelErrMsg.substring(0, 100)}`);
+          } catch (error: any) {
+            lastModelError = error;
+            const errorMessage = error?.message || '';
             
-            // If model not found (404), skip to next model immediately
-            if (modelErrMsg.includes('404') || modelErrMsg.includes('not found') || modelErrMsg.includes('API_NOT_FOUND') || modelErrStatus === 404) {
-              console.log(`[TrimTP] Model ${modelName} not available, trying next...`);
-              lastError = modelError;
+            // If quota error, ban key and try next
+            if (errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('rate limit')) {
+              try { apiKeyManager.banKey(key); } catch (e) { /* ignore */ }
+              try { await banKeyShared(key); } catch (e) { /* ignore */ }
+              console.log(`[TrimTP] Key ${hashKeyShort(key)} quota error, banned and trying next`);
               continue;
             }
             
-            // If this is a quota/rate limit error, don't try other models with same key
-            if (modelErrMsg.includes('quota') || modelErrMsg.includes('RESOURCE_EXHAUSTED') || modelErrMsg.includes('429')) {
-              lastError = modelError;
-              throw modelError; // Throw to outer catch to ban key
-            }
-            
-            // Otherwise, try next model
-            lastError = modelError;
+            // For other errors (like 404), try next key with same model
+            console.log(`[TrimTP] Error with ${fallbackModel}: ${errorMessage.substring(0, 100)}`);
             continue;
           }
         }
         
-        if (modelSuccess && responseText) {
-          break; // Break key loop
-        } else {
-          throw new Error('All models failed for this key');
-        }
-        
-      } catch (error: any) {
-        lastError = error;
-        const errorMsg = error?.message || '';
-        console.log(`[TrimTP] Error with key: ${errorMsg.substring(0, 100)}`);
-        
-        // If quota/rate limit error, ban this key and try next
-        if (errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('429') || errorMsg.includes('rate limit')) {
-          console.log(`[TrimTP] Key quota error, banning and trying next key...`);
-          banKey(key);
-          continue;
-        }
-        
-        // For other errors, log but try next key anyway
-        console.log(`[TrimTP] Non-quota error, trying next key. Error: ${errorMsg.substring(0, 150)}`);
-        continue;
+        // If all keys failed for this model, try next model
+        lastError = lastModelError;
       }
-    }
 
-    if (!responseText) {
+      // All models and keys failed
       const errorMsg = lastError?.message || 'Unknown error';
-      const errorStack = lastError?.stack || '';
-      console.error(`[TrimTP] All keys failed. Last error: ${errorMsg}`);
-      console.error(`[TrimTP] Error stack: ${errorStack.substring(0, 300)}`);
-      
-      // User-friendly error message
-      let userError = 'Gagal mendapat respons dari AI. Silakan coba lagi.';
-      if (errorMsg.includes('models/') || errorMsg.includes('404')) {
-        userError = 'Model AI tidak tersedia. Tim sedang memperbaiki masalah ini.';
-      } else if (errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
-        userError = 'Quota API habis. Silakan coba lagi dalam beberapa menit.';
+      if (errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+        throw new Error('Quota API habis. Silakan coba lagi dalam beberapa menit.');
       }
-      
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: userError,
-          code: 'AI_ERROR',
-          details: process.env.NODE_ENV === 'development' ? errorMsg.substring(0, 200) : undefined
-        },
-        { status: 500 }
-      );
-    }
+      throw new Error(`Gagal mendapat respons dari AI: ${errorMsg}`);
+    });
 
     // Parse response
+    if (!responseText) {
+      throw new Error('No response from AI');
+    }
     const result = parseTrimmingResponse(responseText);
 
     if (!result) {
