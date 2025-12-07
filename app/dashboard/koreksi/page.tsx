@@ -17,7 +17,7 @@ interface QuestionBank {
   examTitle: string;
   subject: string;
   questions: any;
-  question_tp_mapping?: any[];
+  question_tp_mapping?: any[]; // Optional TP mapping
 }
 
 interface Class {
