@@ -11,6 +11,14 @@ if (RAW_KEYS.length === 0) {
   throw new Error('No Gemini API key found');
 }
 
+// Model fallback cascade - try newer models first, fallback to stable
+const FALLBACK_MODELS = [
+  'gemini-2.0-flash-exp',      // Experimental 2.0
+  'gemini-1.5-flash',          // Stable and widely available
+  'gemini-1.5-flash-latest',   // Latest 1.5
+  'gemini-1.5-pro'             // Pro model as last resort
+];
+
 // Simple key rotation without Redis dependency
 let keyRotationIndex = 0;
 const bannedKeys = new Map<string, number>();
@@ -102,24 +110,52 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
 
       try {
         const genAI = new GoogleGenerativeAI(key);
-        const model = genAI.getGenerativeModel({ 
-          model: 'gemini-2.5-flash',
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 1500,
-            responseMimeType: 'application/json',
-          },
-        });
-
-        const response = await model.generateContent(prompt);
-        const resolvedResponse = await response.response;
-        responseText = resolvedResponse.text();
         
-        // Success! Break the loop
-        if (responseText) {
-          console.log(`[TrimTP] Success with key`);
-          break;
+        // Try each fallback model until one works
+        let modelSuccess = false;
+        for (const modelName of FALLBACK_MODELS) {
+          try {
+            console.log(`[TrimTP] Trying model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ 
+              model: modelName,
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1500,
+                responseMimeType: 'application/json',
+              },
+            });
+
+            const response = await model.generateContent(prompt);
+            const resolvedResponse = await response.response;
+            responseText = resolvedResponse.text();
+            
+            if (responseText) {
+              console.log(`[TrimTP] Success with model: ${modelName}`);
+              modelSuccess = true;
+              break; // Break model loop
+            }
+          } catch (modelError: any) {
+            const modelErrMsg = modelError?.message || '';
+            console.log(`[TrimTP] Model ${modelName} failed: ${modelErrMsg.substring(0, 80)}`);
+            
+            // If this is a quota/rate limit error, don't try other models with same key
+            if (modelErrMsg.includes('quota') || modelErrMsg.includes('RESOURCE_EXHAUSTED') || modelErrMsg.includes('429')) {
+              lastError = modelError;
+              throw modelError; // Throw to outer catch to ban key
+            }
+            
+            // Otherwise, try next model
+            lastError = modelError;
+            continue;
+          }
         }
+        
+        if (modelSuccess && responseText) {
+          break; // Break key loop
+        } else {
+          throw new Error('All models failed for this key');
+        }
+        
       } catch (error: any) {
         lastError = error;
         const errorMsg = error?.message || '';
@@ -132,7 +168,7 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
           continue;
         }
         
-        // For other errors, log but try next key anyway (don't rethrow immediately)
+        // For other errors, log but try next key anyway
         console.log(`[TrimTP] Non-quota error, trying next key. Error: ${errorMsg.substring(0, 150)}`);
         continue;
       }
@@ -140,10 +176,25 @@ export const POST = withAuthAndRateLimit(trimTPLimiter, async (request: NextRequ
 
     if (!responseText) {
       const errorMsg = lastError?.message || 'Unknown error';
+      const errorStack = lastError?.stack || '';
       console.error(`[TrimTP] All keys failed. Last error: ${errorMsg}`);
+      console.error(`[TrimTP] Error stack: ${errorStack.substring(0, 300)}`);
+      
+      // User-friendly error message
+      let userError = 'Gagal mendapat respons dari AI. Silakan coba lagi.';
+      if (errorMsg.includes('models/') || errorMsg.includes('404')) {
+        userError = 'Model AI tidak tersedia. Tim sedang memperbaiki masalah ini.';
+      } else if (errorMsg.includes('quota') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+        userError = 'Quota API habis. Silakan coba lagi dalam beberapa menit.';
+      }
       
       return NextResponse.json(
-        { success: false, error: `Gagal mendapat respons dari AI: ${errorMsg.substring(0, 100)}`, code: 'AI_ERROR' },
+        { 
+          success: false, 
+          error: userError,
+          code: 'AI_ERROR',
+          details: process.env.NODE_ENV === 'development' ? errorMsg.substring(0, 200) : undefined
+        },
         { status: 500 }
       );
     }
