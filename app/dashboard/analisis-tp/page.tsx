@@ -467,7 +467,7 @@ export default function AnalisisTPPage() {
           tpData.questions.forEach((q: any) => {
             if (q.type === 'PG') {
               const answerIndex = q.number - 1;
-              if (studentData.mcAnswers && studentData.mcAnswers[answerIndex] === grade.answer_key[answerIndex]) {
+              if (studentData.mcAnswers && studentData.mcAnswers[answerIndex] === grade.answerKey[answerIndex]) {
                 totalScore += 1;
               }
               maxScore += 1;
