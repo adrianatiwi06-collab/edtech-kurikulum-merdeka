@@ -13,6 +13,9 @@ type SourceType = 'template' | 'bank_soal';
 export default function AnalisisTPPage() {
   const { user } = useAuth();
   
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'analisis' | 'rekap'>('analisis');
+  
   const [sourceType, setSourceType] = useState<SourceType>('template');
   const [templates, setTemplates] = useState<ExamTemplate[]>([]);
   const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]);
@@ -22,6 +25,14 @@ export default function AnalisisTPPage() {
   
   const [analysis, setAnalysis] = useState<TPAchievementAnalysis[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Rekap tab states
+  const [rekapStudents, setRekapStudents] = useState<string[]>([]);
+  const [rekapSelectedStudent, setRekapSelectedStudent] = useState('');
+  const [rekapSubjects, setRekapSubjects] = useState<string[]>([]);
+  const [rekapSelectedSubject, setRekapSelectedSubject] = useState('');
+  const [rekapData, setRekapData] = useState<any>(null);
+  const [rekapLoading, setRekapLoading] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -363,6 +374,150 @@ export default function AnalisisTPPage() {
     link.click();
   };
   
+  // Load students and subjects for Rekap tab
+  useEffect(() => {
+    if (user && activeTab === 'rekap') {
+      loadRekapData();
+    }
+  }, [user, activeTab]);
+  
+  const loadRekapData = async () => {
+    if (!user) return;
+    
+    try {
+      // Get all grades with TP mapping
+      const gradesQuery = query(
+        collection(db, 'grades'),
+        where('user_id', '==', user.uid)
+      );
+      const gradesSnapshot = await getDocs(gradesQuery);
+      
+      const studentsSet = new Set<string>();
+      const subjectsSet = new Set<string>();
+      
+      gradesSnapshot.forEach(doc => {
+        const grade = doc.data() as Grade;
+        if (grade.tp_mapping && grade.tp_mapping.length > 0) {
+          // Collect students
+          grade.grades.forEach(g => {
+            studentsSet.add(JSON.stringify({ id: g.studentId, name: g.studentName }));
+          });
+          
+          // Collect subjects
+          if (grade.subject) {
+            subjectsSet.add(grade.subject);
+          }
+        }
+      });
+      
+      const students = Array.from(studentsSet).map(s => JSON.parse(s));
+      setRekapStudents(students.sort((a, b) => a.name.localeCompare(b.name)));
+      setRekapSubjects(Array.from(subjectsSet).sort());
+    } catch (error) {
+      console.error('Error loading rekap data:', error);
+    }
+  };
+  
+  const loadStudentRekapBySubject = async () => {
+    if (!user || !rekapSelectedStudent || !rekapSelectedSubject) return;
+    
+    setRekapLoading(true);
+    
+    try {
+      // Get all grades for this student and subject
+      const gradesQuery = query(
+        collection(db, 'grades'),
+        where('user_id', '==', user.uid),
+        where('subject', '==', rekapSelectedSubject)
+      );
+      const gradesSnapshot = await getDocs(gradesQuery);
+      
+      const tpAchievements: any = {};
+      let totalExams = 0;
+      
+      gradesSnapshot.forEach(doc => {
+        const grade = doc.data() as Grade;
+        if (!grade.tp_mapping || grade.tp_mapping.length === 0) return;
+        
+        const studentData = grade.grades.find(g => g.studentId === rekapSelectedStudent);
+        if (!studentData) return;
+        
+        totalExams++;
+        
+        // Process TP achievements for this exam
+        const tpGroups: any = {};
+        grade.tp_mapping.forEach(mapping => {
+          if (!tpGroups[mapping.tp_id]) {
+            tpGroups[mapping.tp_id] = {
+              tp_text: mapping.tp_text,
+              questions: []
+            };
+          }
+          tpGroups[mapping.tp_id].questions.push({
+            number: mapping.question_number,
+            type: mapping.question_type
+          });
+        });
+        
+        // Calculate achievement for each TP
+        Object.entries(tpGroups).forEach(([tpId, tpData]: [string, any]) => {
+          let totalScore = 0;
+          let maxScore = 0;
+          
+          tpData.questions.forEach((q: any) => {
+            if (q.type === 'PG') {
+              const answerIndex = q.number - 1;
+              if (studentData.answers && studentData.answers[answerIndex] === grade.answer_key[answerIndex]) {
+                totalScore += 1;
+              }
+              maxScore += 1;
+            } else {
+              const essayScore = studentData.essay_scores?.find((es: any) => es.questionNumber === q.number);
+              if (essayScore) {
+                totalScore += essayScore.score;
+                maxScore += essayScore.maxScore;
+              }
+            }
+          });
+          
+          const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+          
+          if (!tpAchievements[tpId]) {
+            tpAchievements[tpId] = {
+              tp_id: tpId,
+              tp_text: tpData.tp_text,
+              achievements: [],
+              average: 0
+            };
+          }
+          
+          tpAchievements[tpId].achievements.push({
+            exam_name: grade.exam_title,
+            percentage: Math.round(percentage)
+          });
+        });
+      });
+      
+      // Calculate averages
+      Object.values(tpAchievements).forEach((tp: any) => {
+        const sum = tp.achievements.reduce((acc: number, a: any) => acc + a.percentage, 0);
+        tp.average = Math.round(sum / tp.achievements.length);
+      });
+      
+      setRekapData({
+        student: rekapStudents.find((s: any) => s.id === rekapSelectedStudent),
+        subject: rekapSelectedSubject,
+        totalExams,
+        tpAchievements: Object.values(tpAchievements)
+      });
+    } catch (error) {
+      console.error('Error loading student rekap:', error);
+      alert('Gagal memuat data rekap');
+    } finally {
+      setRekapLoading(false);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div>
@@ -372,8 +527,35 @@ export default function AnalisisTPPage() {
         </p>
       </div>
       
-      {/* Source Type Selection */}
-      <Card className="p-6">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setActiveTab('analisis')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'analisis'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          📊 Analisis Per Ujian
+        </button>
+        <button
+          onClick={() => setActiveTab('rekap')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'rekap'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          📈 Rekap Ketercapaian TP
+        </button>
+      </div>
+      
+      {/* Tab Content: Analisis Per Ujian */}
+      {activeTab === 'analisis' && (
+        <>
+          {/* Source Type Selection */}
+          <Card className="p-6">
         <label className="block text-sm font-medium mb-3">Sumber Soal</label>
         <div className="flex gap-4">
           <Button
@@ -416,6 +598,7 @@ export default function AnalisisTPPage() {
             <select
               className="w-full p-2 border rounded"
               value={selectedSourceId}
+              aria-label="Pilih Template atau Bank Soal"
               onChange={(e) => {
                 setSelectedSourceId(e.target.value);
                 setSelectedGradeId('');
@@ -444,6 +627,7 @@ export default function AnalisisTPPage() {
             <select
               className="w-full p-2 border rounded"
               value={selectedGradeId}
+              aria-label="Pilih Kelas"
               onChange={(e) => {
                 setSelectedGradeId(e.target.value);
                 setAnalysis([]);
@@ -586,6 +770,230 @@ export default function AnalisisTPPage() {
             </div>
           </div>
         </Card>
+      )}
+        </>
+      )}
+      
+      {/* Tab Content: Rekap Ketercapaian TP */}
+      {activeTab === 'rekap' && (
+        <>
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Rekap Ketercapaian TP Per Siswa</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Lihat rekap pencapaian semua TP untuk satu siswa di mata pelajaran tertentu
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Pilih Siswa</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={rekapSelectedStudent}
+                  aria-label="Pilih Siswa"
+                  onChange={(e) => {
+                    setRekapSelectedStudent(e.target.value);
+                    setRekapData(null);
+                  }}
+                >
+                  <option value="">Pilih Siswa...</option>
+                  {rekapStudents.map((student: any) => (
+                    <option key={student.id} value={student.id}>
+                      {student.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Pilih Mata Pelajaran</label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={rekapSelectedSubject}
+                  aria-label="Pilih Mata Pelajaran"
+                  onChange={(e) => {
+                    setRekapSelectedSubject(e.target.value);
+                    setRekapData(null);
+                  }}
+                >
+                  <option value="">Pilih Mapel...</option>
+                  {rekapSubjects.map((subject) => (
+                    <option key={subject} value={subject}>
+                      {subject}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <Button
+              onClick={loadStudentRekapBySubject}
+              disabled={!rekapSelectedStudent || !rekapSelectedSubject || rekapLoading}
+              className="w-full"
+            >
+              {rekapLoading ? 'Memuat Data...' : '🔍 Tampilkan Rekap'}
+            </Button>
+          </Card>
+          
+          {/* Display Rekap Data */}
+          {rekapData && (
+            <Card className="p-6">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold">{rekapData.student?.name}</h3>
+                <p className="text-muted-foreground">
+                  Mata Pelajaran: <span className="font-semibold">{rekapData.subject}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Berdasarkan {rekapData.totalExams} ujian
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                {rekapData.tpAchievements.map((tp: any, index: number) => (
+                  <div key={tp.tp_id} className="border rounded-lg p-6 bg-muted/30">
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-lg mb-2">
+                        TP {index + 1}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {tp.tp_text}
+                      </p>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Rata-rata Pencapaian</span>
+                        <span className="text-2xl font-bold text-primary">
+                          {tp.average}%
+                        </span>
+                      </div>
+                      
+                      <div className="w-full bg-gray-200 rounded-full h-8">
+                        <div
+                          className={`h-8 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all ${
+                            tp.average >= 85
+                              ? 'bg-green-500'
+                              : tp.average >= 70
+                              ? 'bg-blue-500'
+                              : tp.average >= 50
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{ width: `${tp.average}%` }}
+                        >
+                          {tp.average >= 15 && `${tp.average}%`}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-2">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                            tp.average >= 85
+                              ? 'bg-green-100 text-green-800 border border-green-300'
+                              : tp.average >= 70
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : tp.average >= 50
+                              ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                              : 'bg-red-100 text-red-800 border border-red-300'
+                          }`}
+                        >
+                          {tp.average >= 85
+                            ? '🌟 Sangat Berkembang'
+                            : tp.average >= 70
+                            ? '✅ Berkembang Sesuai Harapan'
+                            : tp.average >= 50
+                            ? '⚠️ Mulai Berkembang'
+                            : '❌ Belum Berkembang'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Detail Per Ujian */}
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-2">Detail Per Ujian:</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {tp.achievements.map((achievement: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="border rounded p-2 bg-white text-xs"
+                          >
+                            <p className="font-medium truncate" title={achievement.exam_name}>
+                              {achievement.exam_name}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {achievement.percentage}%
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Rekomendasi Tindak Lanjut */}
+              <Card className="p-6 mt-6 bg-blue-50 border-blue-200">
+                <h4 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  💡 Rekomendasi Tindak Lanjut
+                </h4>
+                
+                <div className="space-y-4">
+                  {rekapData.tpAchievements
+                    .filter((tp: any) => tp.average < 70)
+                    .map((tp: any, index: number) => (
+                      <div key={tp.tp_id} className="bg-white rounded-lg p-4 border">
+                        <p className="font-medium mb-2">
+                          TP: {tp.tp_text.substring(0, 100)}...
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Pencapaian: {tp.average}%
+                        </p>
+                        <div className="text-sm space-y-1">
+                          {tp.average < 50 && (
+                            <>
+                              <p className="text-red-700 font-medium">
+                                ⚠️ Perlu Intervensi Intensif:
+                              </p>
+                              <ul className="list-disc list-inside text-red-600 space-y-1 ml-2">
+                                <li>Remedial individual dengan pendekatan pembelajaran khusus</li>
+                                <li>Identifikasi kesulitan belajar spesifik siswa</li>
+                                <li>Konsultasi dengan orang tua untuk dukungan belajar di rumah</li>
+                                <li>Latihan soal bertahap dari tingkat mudah ke sulit</li>
+                              </ul>
+                            </>
+                          )}
+                          {tp.average >= 50 && tp.average < 70 && (
+                            <>
+                              <p className="text-yellow-700 font-medium">
+                                📚 Perlu Pengayaan:
+                              </p>
+                              <ul className="list-disc list-inside text-yellow-600 space-y-1 ml-2">
+                                <li>Latihan soal tambahan dengan tingkat kesulitan bertahap</li>
+                                <li>Peer tutoring dengan siswa yang sudah menguasai</li>
+                                <li>Pemberian materi pengayaan dan contoh soal beragam</li>
+                                <li>Monitoring berkala untuk memastikan peningkatan</li>
+                              </ul>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  
+                  {rekapData.tpAchievements.every((tp: any) => tp.average >= 70) && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <p className="text-green-800 font-medium">
+                        ✅ Semua TP sudah tercapai dengan baik! Siswa dapat melanjutkan ke materi berikutnya.
+                      </p>
+                      <p className="text-sm text-green-700 mt-2">
+                        Pertahankan prestasi dengan memberikan tantangan soal yang lebih kompleks untuk pengembangan lebih lanjut.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
