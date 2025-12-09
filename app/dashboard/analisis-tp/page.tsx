@@ -629,7 +629,7 @@ export default function AnalisisTPPage() {
           
           // Process TP groups
           const tpGroups: any = {};
-          grade.tp_mapping.forEach(mapping => {
+          grade.tp_mapping?.forEach(mapping => {
             if (!tpGroups[mapping.tp_id]) {
               tpGroups[mapping.tp_id] = {
                 tp_text: mapping.tp_text,
