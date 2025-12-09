@@ -444,6 +444,20 @@ export default function AnalisisTPPage() {
         
         totalExams++;
         
+        // Get answer keys from template or question bank
+        let answerKeys: string[] = [];
+        if (grade.exam_template_id) {
+          const template = templates.find(t => t.id === grade.exam_template_id);
+          if (template) {
+            answerKeys = template.multiple_choice.answer_keys;
+          }
+        } else if (grade.question_bank_id) {
+          const qb = questionBanks.find(q => q.id === grade.question_bank_id);
+          if (qb) {
+            answerKeys = qb.questions.multipleChoice.map(q => q.correctAnswer);
+          }
+        }
+        
         // Process TP achievements for this exam
         const tpGroups: any = {};
         grade.tp_mapping.forEach(mapping => {
@@ -467,15 +481,17 @@ export default function AnalisisTPPage() {
           tpData.questions.forEach((q: any) => {
             if (q.type === 'PG') {
               const answerIndex = q.number - 1;
-              if (studentData.mcAnswers && studentData.mcAnswers[answerIndex] === grade.answerKey[answerIndex]) {
+              if (studentData.mcAnswers && answerKeys[answerIndex] && 
+                  studentData.mcAnswers[answerIndex] === answerKeys[answerIndex]) {
                 totalScore += 1;
               }
               maxScore += 1;
             } else {
-              const essayScore = studentData.essayScores?.find((es: any) => es.questionNumber === q.number);
-              if (essayScore) {
-                totalScore += essayScore.score;
-                maxScore += essayScore.maxScore;
+              const essayScore = studentData.essayScores?.[q.number - 1];
+              if (essayScore !== undefined) {
+                totalScore += essayScore;
+                // Assume max score for essay is from template/qb, default to 10
+                maxScore += 10;
               }
             }
           });
