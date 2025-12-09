@@ -181,7 +181,7 @@ export default function GenerateSoalPage() {
       const selectedGoals = filteredLearningGoals.filter((lg) => selectedTPs.includes(lg.id));
       const tpTexts = selectedGoals.map((lg) => lg.tp);
 
-      const result = await generateQuestionsAction(tpTexts, {
+      const result = await generateQuestionsAction(tpTexts, subject, {
         multipleChoice: { count: mcCount, weight: mcWeight },
         essay: { count: essayCount, weight: essayWeight },
         difficulty,

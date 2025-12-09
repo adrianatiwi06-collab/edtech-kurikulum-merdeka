@@ -222,6 +222,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <BarChart3 className="w-4 h-4 transition-transform duration-300" />
                   Analisis TP
                 </button>
+                <button
+                  onClick={() => handleNavigation('/dashboard/analisis-nilai')}
+                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
+                    pathname === '/dashboard/analisis-nilai' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  }`}
+                >
+                  <Users className="w-4 h-4 transition-transform duration-300" />
+                  Analisis Nilai Siswa
+                </button>
               </div>
             )}
           </div>

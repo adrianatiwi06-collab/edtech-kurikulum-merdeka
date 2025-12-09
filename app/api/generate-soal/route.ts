@@ -12,7 +12,7 @@ import { generateSoalLimiter } from '@/lib/rate-limiter';
 
 export const POST = withAuthAndRateLimit(generateSoalLimiter, async (request: NextRequest, { userId }) => {
   try {
-    const { learningGoals, questionConfig } = await request.json();
+    const { learningGoals, subject, questionConfig } = await request.json();
 
     if (!learningGoals || !Array.isArray(learningGoals) || learningGoals.length === 0) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export const POST = withAuthAndRateLimit(generateSoalLimiter, async (request: Ne
     }
 
     // Generate questions
-    const result = await generateQuestions(learningGoals, questionConfig);
+    const result = await generateQuestions(learningGoals, subject || '', questionConfig);
 
     // Log successful generation
     await logAuditFromServer(request, userId, 'GENERATE_SOAL', 'success', 'questions', {

@@ -4,6 +4,7 @@ import { generateQuestions } from '@/lib/gemini';
 
 export async function generateQuestionsAction(
   learningGoals: string[],
+  subject: string,
   questionConfig: {
     multipleChoice: { count: number; weight: number };
     essay: { count: number; weight: number };
@@ -36,9 +37,10 @@ export async function generateQuestionsAction(
 ) {
   try {
     console.log('[Generate Soal] Starting with config:', questionConfig);
+    console.log('[Generate Soal] Subject:', subject);
     console.log('[Generate Soal] Learning goals count:', learningGoals.length);
     
-    const result = await generateQuestions(learningGoals, questionConfig);
+    const result = await generateQuestions(learningGoals, subject, questionConfig);
     
     console.log('[Generate Soal] Success! Result:', {
       mcCount: result.multipleChoice?.length || 0,

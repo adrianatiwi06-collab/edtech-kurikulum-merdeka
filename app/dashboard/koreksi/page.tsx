@@ -83,6 +83,7 @@ export default function KoreksiPage() {
   const [examName, setExamName] = useState('');
   const [grades, setGrades] = useState<StudentGrade[]>([]);
   const [savedGradeId, setSavedGradeId] = useState<string | null>(null);
+  const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -94,6 +95,45 @@ export default function KoreksiPage() {
       }
     }
   }, [user, showSavedGrades]);
+
+  // Sync sticky scrollbar with table scroll
+  useEffect(() => {
+    if (step === 3) {
+      // Wait for DOM to be ready
+      setTimeout(() => {
+        const tableContainer = document.getElementById('table-container');
+        const stickyScrollbar = document.getElementById('sticky-scrollbar');
+        
+        if (tableContainer && stickyScrollbar) {
+          // Update scrollbar width
+          setTableScrollWidth(tableContainer.scrollWidth);
+          
+          const syncScroll = () => {
+            stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
+          };
+          
+          const syncScrollReverse = () => {
+            tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
+          };
+          
+          tableContainer.addEventListener('scroll', syncScroll);
+          stickyScrollbar.addEventListener('scroll', syncScrollReverse);
+          
+          // Update width on resize
+          const updateWidth = () => {
+            setTableScrollWidth(tableContainer.scrollWidth);
+          };
+          window.addEventListener('resize', updateWidth);
+          
+          return () => {
+            tableContainer.removeEventListener('scroll', syncScroll);
+            stickyScrollbar.removeEventListener('scroll', syncScrollReverse);
+            window.removeEventListener('resize', updateWidth);
+          };
+        }
+      }, 100);
+    }
+  }, [step, selectedQB, grades]);
 
   const loadExamTemplates = async () => {
     if (!user) return;
@@ -247,6 +287,9 @@ export default function KoreksiPage() {
       querySnapshot.forEach((doc) => {
         studentsData.push({ id: doc.id, ...doc.data() } as Student);
       });
+      
+      // Sort students by name alphabetically
+      studentsData.sort((a, b) => a.name.localeCompare(b.name, 'id'));
       
       setStudents(studentsData);
       
@@ -852,10 +895,11 @@ export default function KoreksiPage() {
                 </div>
               </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="relative">
+                <div id="table-container" className="overflow-x-auto border rounded-lg" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                  <Table>
+                    <TableHeader className="sticky top-0 z-30">
+                      <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
                       <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold">No</TableHead>
                       <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[200px]">Nama Siswa</TableHead>
                       {selectedQB.questions.multipleChoice?.map((q: any, idx: number) => (
@@ -960,8 +1004,88 @@ export default function KoreksiPage() {
                   </TableBody>
                 </Table>
               </div>
+            </div>
+
             </CardContent>
           </Card>
+
+          {/* Sticky Horizontal Scrollbar - Always visible at bottom of viewport */}
+          {tableScrollWidth > 0 && (
+            <div 
+              id="sticky-scrollbar"
+              className="fixed bottom-0 left-0 right-0 h-5 bg-white border-t-2 border-gray-300 overflow-x-auto overflow-y-hidden z-40 shadow-lg"
+            >
+              <div 
+                style={{ 
+                  width: `${tableScrollWidth}px`,
+                  height: '1px'
+                }}
+              />
+            </div>
+          )}
+          
+          <style jsx global>{`
+            #table-container {
+              scrollbar-width: thin;
+              scrollbar-color: #3b82f6 #e5e7eb;
+            }
+            #table-container::-webkit-scrollbar {
+              height: 12px;
+            }
+            #table-container::-webkit-scrollbar-track {
+              background: #e5e7eb;
+              border-radius: 6px;
+            }
+            #table-container::-webkit-scrollbar-thumb {
+              background: #3b82f6;
+              border-radius: 6px;
+            }
+            #table-container::-webkit-scrollbar-thumb:hover {
+              background: #2563eb;
+            }
+            
+            #sticky-scrollbar::-webkit-scrollbar {
+              height: 16px;
+            }
+            #sticky-scrollbar::-webkit-scrollbar-track {
+              background: #f3f4f6;
+            }
+            #sticky-scrollbar::-webkit-scrollbar-thumb {
+              background: #3b82f6;
+              border-radius: 8px;
+            }
+            #sticky-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #2563eb;
+            }
+          `}</style>
+
+          {/* Fixed Scroll Buttons - Circular style like scroll to top */}
+          <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
+            <button
+              onClick={() => {
+                const container = document.getElementById('table-container');
+                if (container) {
+                  container.scrollBy({ left: 300, behavior: 'smooth' });
+                }
+              }}
+              className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-blue-500/50 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+              title="Scroll ke kanan"
+            >
+              <span className="text-2xl font-bold">→</span>
+            </button>
+            <button
+              onClick={() => {
+                const container = document.getElementById('table-container');
+                if (container) {
+                  container.scrollBy({ left: -300, behavior: 'smooth' });
+                }
+              }}
+              className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-blue-500/50 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+              title="Scroll ke kiri"
+            >
+              <span className="text-2xl font-bold">←</span>
+            </button>
+          </div>
         </div>
         );
       })()}

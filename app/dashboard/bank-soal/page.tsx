@@ -40,6 +40,7 @@ export default function BankSoalPage() {
   const [availableKelas, setAvailableKelas] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showTPInDownload, setShowTPInDownload] = useState(true);
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function BankSoalPage() {
             subject: selectedSoal.subject,
             examTitle: selectedSoal.examTitle,
             duration: selectedSoal.duration,
-            includeTP: selectedSoal.includeTP,
+            includeTP: showTPInDownload,
           });
 
       const blob = await Packer.toBlob(doc);
@@ -438,6 +439,24 @@ export default function BankSoalPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Export Options */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="showTP"
+                  checked={showTPInDownload}
+                  onChange={(e) => setShowTPInDownload(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="showTP" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Tampilkan Tujuan Pembelajaran (TP) dalam file download
+                </label>
+              </div>
             </CardContent>
           </Card>
 

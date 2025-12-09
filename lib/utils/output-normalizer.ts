@@ -2,18 +2,30 @@
  * Output Normalizer for TP Generation
  * Ensures consistent format and quality across all AI responses
  * Part of Critical AI Prompt Engineering Fix
+ * 
+ * @version 2.0.0 - Refactored with proper types and extracted constants
  */
 
-export interface TPOutput {
-  semester1: any[];
-  semester2: any[];
-}
+import type { 
+  TPOutput, 
+  Chapter,
+  GradeLevel, 
+  NormalizationResult, 
+  NormalizationOptions,
+  KKOValidationResult,
+  ABCDCheckResult 
+} from './tp-types';
 
-export interface NormalizationResult {
-  normalized: TPOutput;
-  warnings: string[];
-  corrections: string[];
-}
+import { 
+  TP_KERANJANG,
+  TP_DEFAULTS, 
+  QUALITY_SCORE,
+  ABCD_CONDITION_KEYWORDS,
+  ABCD_DEGREE_KEYWORDS,
+  deepClone 
+} from './tp-constants';
+
+import { PHASE_KKO_RULES, DEFAULT_FASE } from '@/lib/constants/kko-rules';
 
 /**
  * Normalize and validate TP output from Gemini API
@@ -22,125 +34,38 @@ export interface NormalizationResult {
  * - Inconsistent formatting
  * - Invalid KKO for grade level
  * - Length violations
+ * 
+ * @param raw - Raw TP output from AI
+ * @param gradeLevel - Grade level phase (FASE_A, FASE_B, FASE_C)
+ * @param options - Normalization options
+ * @returns Normalized output with warnings and corrections
  */
 export function normalizeTPOutput(
-  raw: any,
-  gradeLevel: string,
-  maxLength100?: boolean
+  raw: TPOutput | Partial<TPOutput>,
+  gradeLevel: GradeLevel,
+  options: NormalizationOptions = {}
 ): NormalizationResult {
+  const { maxLength, autoFix = true } = options;
   const warnings: string[] = [];
   const corrections: string[] = [];
   
-  // Deep clone to avoid mutation
+  // Input validation
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Invalid input: raw must be an object');
+  }
+  
+  if (!['FASE_A', 'FASE_B', 'FASE_C'].includes(gradeLevel)) {
+    throw new Error(`Invalid gradeLevel: ${gradeLevel}. Must be FASE_A, FASE_B, or FASE_C`);
+  }
+  
+  // ✅ PERFORMANCE FIX: Use structuredClone instead of JSON.parse/stringify
   const normalized: TPOutput = {
-    semester1: JSON.parse(JSON.stringify(raw.semester1 || [])),
-    semester2: JSON.parse(JSON.stringify(raw.semester2 || []))
+    semester1: deepClone(raw.semester1 || []),
+    semester2: deepClone(raw.semester2 || [])
   };
 
   // Process each semester
-  [normalized.semester1, normalized.semester2].forEach((semester, semIndex) => {
-    const semNum = semIndex + 1;
-    
-    semester.forEach((chapter: any, chapterIndex: number) => {
-      const chapterName = chapter.chapter || `Bab ${chapterIndex + 1}`;
-      
-      // Normalize TP fields
-      const tpCount = chapter.tp_count || 0;
-      
-      for (let i = 1; i <= tpCount; i++) {
-        const tpKey = `tp_${i}`;
-        const keranjangKey = `keranjang_${i}`;
-        const cakupanKey = `cakupan_materi_${i}`;
-        
-        if (!chapter[tpKey]) {
-          warnings.push(`[Sem${semNum}][${chapterName}] Missing ${tpKey}`);
-          continue;
-        }
-        
-        let tp = chapter[tpKey].trim();
-        const originalTP = tp;
-        let modified = false;
-        
-        // ✅ FIX 1: Ensure starts with "Peserta didik"
-        if (!tp.toLowerCase().includes('peserta didik')) {
-          if (tp.toLowerCase().startsWith('dapat ')) {
-            tp = 'Peserta didik mampu ' + tp.substring(6);
-            modified = true;
-            corrections.push(`[Sem${semNum}][${chapterName}][${tpKey}] Added "Peserta didik mampu"`);
-          } else if (tp.toLowerCase().startsWith('mampu ')) {
-            tp = 'Peserta didik ' + tp;
-            modified = true;
-            corrections.push(`[Sem${semNum}][${chapterName}][${tpKey}] Added "Peserta didik"`);
-          } else {
-            tp = 'Peserta didik mampu ' + tp;
-            modified = true;
-            corrections.push(`[Sem${semNum}][${chapterName}][${tpKey}] Prepended ABCD Audience`);
-          }
-        }
-        
-        // ✅ FIX 2: Capitalize first letter properly
-        if (tp.charAt(0) !== tp.charAt(0).toUpperCase()) {
-          tp = tp.charAt(0).toUpperCase() + tp.slice(1);
-          modified = true;
-        }
-        
-        // ✅ FIX 3: Remove trailing period if present
-        if (tp.endsWith('.')) {
-          tp = tp.slice(0, -1);
-          modified = true;
-        }
-        
-        // ✅ FIX 4: Check length constraint
-        if (maxLength100 && tp.length > 100) {
-          warnings.push(
-            `[Sem${semNum}][${chapterName}][${tpKey}] Exceeds 100 chars (${tp.length}): "${tp.substring(0, 100)}..."`
-          );
-          // Note: We don't auto-trim as it might lose meaning
-          // Let retry logic handle this
-        }
-        
-        // ✅ FIX 5: Validate KKO for grade level
-        const kkoValidation = validateKKOForGrade(tp, gradeLevel);
-        if (!kkoValidation.valid) {
-          warnings.push(
-            `[Sem${semNum}][${chapterName}][${tpKey}] KKO issue: ${kkoValidation.message}`
-          );
-        }
-        
-        // ✅ FIX 6: Check ABCD completeness
-        const abcdCheck = checkABCDCompleteness(tp);
-        if (!abcdCheck.complete) {
-          warnings.push(
-            `[Sem${semNum}][${chapterName}][${tpKey}] Missing ABCD: ${abcdCheck.missing.join(', ')}`
-          );
-        }
-        
-        // Apply modifications
-        if (modified) {
-          chapter[tpKey] = tp;
-        }
-        
-        // ✅ FIX 7: Validate keranjang value
-        if (chapter[keranjangKey]) {
-          const keranjang = chapter[keranjangKey].toUpperCase();
-          if (!['A', 'B', 'C'].includes(keranjang)) {
-            chapter[keranjangKey] = 'A'; // Default to A
-            corrections.push(
-              `[Sem${semNum}][${chapterName}][${keranjangKey}] Invalid value, defaulted to 'A'`
-            );
-          }
-        }
-        
-        // ✅ FIX 8: Ensure cakupan_materi exists
-        if (!chapter[cakupanKey] || chapter[cakupanKey].trim() === '') {
-          chapter[cakupanKey] = 'Topik pembelajaran';
-          corrections.push(
-            `[Sem${semNum}][${chapterName}][${cakupanKey}] Missing, added default`
-          );
-        }
-      }
-    });
-  });
+  processSemesters(normalized, gradeLevel, maxLength, autoFix, warnings, corrections);
   
   return {
     normalized,
@@ -150,27 +75,178 @@ export function normalizeTPOutput(
 }
 
 /**
+ * Process both semesters
+ */
+function processSemesters(
+  normalized: TPOutput,
+  gradeLevel: GradeLevel,
+  maxLength: number | undefined,
+  autoFix: boolean,
+  warnings: string[],
+  corrections: string[]
+): void {
+  [normalized.semester1, normalized.semester2].forEach((semester, semIndex) => {
+    const semNum = semIndex + 1;
+    
+    semester.forEach((chapter: Chapter, chapterIndex: number) => {
+      processChapter(chapter, semNum, chapterIndex, gradeLevel, maxLength, autoFix, warnings, corrections);
+    });
+  });
+}
+
+/**
+ * Process single chapter
+ */
+function processChapter(
+  chapter: Chapter,
+  semNum: number,
+  chapterIndex: number,
+  gradeLevel: GradeLevel,
+  maxLength: number | undefined,
+  autoFix: boolean,
+  warnings: string[],
+  corrections: string[]
+): void {
+  const chapterName = chapter.chapter || `Bab ${chapterIndex + 1}`;
+  const tpCount = chapter.tp_count || 0;
+  
+  for (let i = 1; i <= tpCount; i++) {
+    processTP(chapter, i, semNum, chapterName, gradeLevel, maxLength, autoFix, warnings, corrections);
+  }
+}
+
+/**
+ * Process single TP
+ */
+function processTP(
+  chapter: Chapter,
+  tpNumber: number,
+  semNum: number,
+  chapterName: string,
+  gradeLevel: GradeLevel,
+  maxLength: number | undefined,
+  autoFix: boolean,
+  warnings: string[],
+  corrections: string[]
+): void {
+  const tpKey = `tp_${tpNumber}` as const;
+  const keranjangKey = `keranjang_${tpNumber}` as const;
+  const cakupanKey = `cakupan_materi_${tpNumber}` as const;
+  
+  // Check if TP exists
+  if (!chapter[tpKey]) {
+    warnings.push(`[Sem${semNum}][${chapterName}] Missing ${tpKey}`);
+    return;
+  }
+  
+  let tp = chapter[tpKey].trim();
+  let modified = false;
+  
+  // ✅ FIX 1: Ensure starts with "Peserta didik"
+  if (autoFix && !tp.toLowerCase().includes('peserta didik')) {
+    const result = fixAudiencePrefix(tp);
+    tp = result.fixed;
+    modified = result.modified;
+    if (modified) {
+      corrections.push(`[Sem${semNum}][${chapterName}][${tpKey}] ${result.message}`);
+    }
+  }
+  
+  // ✅ FIX 2: Capitalize first letter properly
+  if (autoFix && tp.charAt(0) !== tp.charAt(0).toUpperCase()) {
+    tp = tp.charAt(0).toUpperCase() + tp.slice(1);
+    modified = true;
+  }
+  
+  // ✅ FIX 3: Remove trailing period if present
+  if (autoFix && tp.endsWith('.')) {
+    tp = tp.slice(0, -1);
+    modified = true;
+  }
+  
+  // ✅ FIX 4: Check length constraint
+  if (maxLength && tp.length > maxLength) {
+    warnings.push(
+      `[Sem${semNum}][${chapterName}][${tpKey}] Exceeds ${maxLength} chars (${tp.length}): "${tp.substring(0, maxLength)}..."`
+    );
+  }
+  
+  // ✅ FIX 5: Validate KKO for grade level
+  const kkoValidation = validateKKOForGrade(tp, gradeLevel);
+  if (!kkoValidation.valid) {
+    warnings.push(
+      `[Sem${semNum}][${chapterName}][${tpKey}] KKO issue: ${kkoValidation.message}`
+    );
+  }
+  
+  // ✅ FIX 6: Check ABCD completeness
+  const abcdCheck = checkABCDCompleteness(tp);
+  if (!abcdCheck.complete) {
+    warnings.push(
+      `[Sem${semNum}][${chapterName}][${tpKey}] Missing ABCD: ${abcdCheck.missing.join(', ')}`
+    );
+  }
+  
+  // Apply modifications
+  if (modified) {
+    chapter[tpKey] = tp;
+  }
+  
+  // ✅ FIX 7: Validate keranjang value
+  if (chapter[keranjangKey]) {
+    const keranjang = chapter[keranjangKey].toUpperCase() as any;
+    if (!TP_KERANJANG.includes(keranjang)) {
+      chapter[keranjangKey] = TP_DEFAULTS.KERANJANG;
+      corrections.push(
+        `[Sem${semNum}][${chapterName}][${keranjangKey}] Invalid value, defaulted to '${TP_DEFAULTS.KERANJANG}'`
+      );
+    }
+  }
+  
+  // ✅ FIX 8: Ensure cakupan_materi exists
+  if (!chapter[cakupanKey] || chapter[cakupanKey].trim() === '') {
+    chapter[cakupanKey] = TP_DEFAULTS.CAKUPAN_MATERI;
+    corrections.push(
+      `[Sem${semNum}][${chapterName}][${cakupanKey}] Missing, added default`
+    );
+  }
+}
+
+/**
+ * Fix audience prefix
+ */
+function fixAudiencePrefix(tp: string): { fixed: string; modified: boolean; message: string } {
+  const lower = tp.toLowerCase();
+  
+  if (lower.startsWith('dapat ')) {
+    return {
+      fixed: TP_DEFAULTS.AUDIENCE_PREFIX + tp.substring(6),
+      modified: true,
+      message: 'Added "Peserta didik mampu"'
+    };
+  }
+  
+  if (lower.startsWith('mampu ')) {
+    return {
+      fixed: TP_DEFAULTS.AUDIENCE_PREFIX_SHORT + tp,
+      modified: true,
+      message: 'Added "Peserta didik"'
+    };
+  }
+  
+  return {
+    fixed: TP_DEFAULTS.AUDIENCE_PREFIX + tp,
+    modified: true,
+    message: 'Prepended ABCD Audience'
+  };
+}
+
+/**
  * Validate KKO (Kata Kerja Operasional) for specific grade level
  */
-function validateKKOForGrade(tp: string, gradeLevel: string): { valid: boolean; message: string } {
+function validateKKOForGrade(tp: string, gradeLevel: GradeLevel): KKOValidationResult {
   const tpLower = tp.toLowerCase();
-  
-  const phaseKKO: Record<string, { appropriate: string[]; inappropriate: string[] }> = {
-    'FASE_A': {
-      appropriate: ['menyebutkan', 'menunjukkan', 'menghitung', 'menceritakan', 'meniru', 'mengelompokkan', 'membandingkan'],
-      inappropriate: ['menganalisis', 'mengevaluasi', 'mensintesis', 'merancang sistem', 'mengkritisi']
-    },
-    'FASE_B': {
-      appropriate: ['menjelaskan', 'menghitung', 'membandingkan', 'mengelompokkan', 'menerapkan', 'mempraktikkan', 'mengidentifikasi'],
-      inappropriate: ['mengevaluasi teori', 'mensintesis', 'mengkritisi', 'merancang sistem kompleks']
-    },
-    'FASE_C': {
-      appropriate: ['menganalisis', 'membandingkan', 'mengkategorikan', 'menyimpulkan', 'memecahkan', 'mengidentifikasi', 'menghubungkan'],
-      inappropriate: ['mensintesis teori', 'merancang sistem kompleks', 'mengkritisi teori']
-    }
-  };
-  
-  const rules = phaseKKO[gradeLevel] || phaseKKO['FASE_B'];
+  const rules = PHASE_KKO_RULES[gradeLevel] || PHASE_KKO_RULES[DEFAULT_FASE];
   
   // Check for inappropriate KKO
   for (const badKKO of rules.inappropriate) {
@@ -198,7 +274,7 @@ function validateKKOForGrade(tp: string, gradeLevel: string): { valid: boolean; 
 /**
  * Check ABCD (Audience, Behavior, Condition, Degree) completeness
  */
-function checkABCDCompleteness(tp: string): { complete: boolean; missing: string[] } {
+function checkABCDCompleteness(tp: string): ABCDCheckResult {
   const missing: string[] = [];
   const tpLower = tp.toLowerCase();
   
@@ -214,21 +290,13 @@ function checkABCDCompleteness(tp: string): { complete: boolean; missing: string
   }
   
   // C - Condition - Look for common condition patterns
-  const conditionKeywords = [
-    'melalui', 'dengan menggunakan', 'berdasarkan', 'setelah', 
-    'menggunakan', 'dari', 'pada', 'dalam konteks'
-  ];
-  const hasCondition = conditionKeywords.some(keyword => tpLower.includes(keyword));
+  const hasCondition = ABCD_CONDITION_KEYWORDS.some(keyword => tpLower.includes(keyword));
   if (!hasCondition) {
     missing.push('C (Condition)');
   }
   
   // D - Degree - Look for quality/quantity indicators
-  const degreeKeywords = [
-    'dengan benar', 'dengan tepat', 'dengan akurat', 'secara sistematis',
-    'minimal', 'maksimal', 'tanpa bantuan', 'sesuai', 'runtut'
-  ];
-  const hasDegree = degreeKeywords.some(keyword => tpLower.includes(keyword));
+  const hasDegree = ABCD_DEGREE_KEYWORDS.some(keyword => tpLower.includes(keyword));
   if (!hasDegree) {
     missing.push('D (Degree)');
   }
@@ -243,16 +311,16 @@ function checkABCDCompleteness(tp: string): { complete: boolean; missing: string
  * Calculate quality score for TP output (0-100)
  */
 export function calculateQualityScore(result: NormalizationResult): number {
-  let score = 100;
+  let score = QUALITY_SCORE.BASE;
   
   // Deduct points for warnings
-  score -= result.warnings.length * 5;
+  score -= result.warnings.length * QUALITY_SCORE.WARNING_PENALTY;
   
   // Deduct points for corrections needed
-  score -= result.corrections.length * 3;
+  score -= result.corrections.length * QUALITY_SCORE.CORRECTION_PENALTY;
   
-  // Ensure score doesn't go below 0
-  return Math.max(0, score);
+  // Ensure score doesn't go below minimum
+  return Math.max(QUALITY_SCORE.MIN_SCORE, score);
 }
 
 /**
@@ -261,10 +329,10 @@ export function calculateQualityScore(result: NormalizationResult): number {
 export function getImprovementSuggestions(result: NormalizationResult): string[] {
   const suggestions: string[] = [];
   
-  const lengthWarnings = result.warnings.filter(w => w.includes('Exceeds 100 chars'));
+  const lengthWarnings = result.warnings.filter(w => w.includes('Exceeds'));
   if (lengthWarnings.length > 0) {
     suggestions.push(
-      `${lengthWarnings.length} TP melebihi 100 karakter. Pertimbangkan retry dengan emphasis pada brevity.`
+      `${lengthWarnings.length} TP melebihi batas karakter. Pertimbangkan retry dengan emphasis pada brevity.`
     );
   }
   
@@ -282,9 +350,20 @@ export function getImprovementSuggestions(result: NormalizationResult): string[]
     );
   }
   
-  if (result.warnings.length === 0 && result.corrections.length <= 2) {
+  if (result.warnings.length === 0 && result.corrections.length <= QUALITY_SCORE.HIGH_QUALITY_THRESHOLD) {
     suggestions.push('✅ Output berkualitas tinggi. Tidak perlu retry.');
   }
   
   return suggestions;
 }
+
+// Re-export types for convenience
+export type {
+  TPOutput,
+  Chapter,
+  GradeLevel,
+  NormalizationResult,
+  NormalizationOptions,
+  KKOValidationResult,
+  ABCDCheckResult
+} from './tp-types';
