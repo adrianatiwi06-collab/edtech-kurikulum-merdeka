@@ -467,12 +467,12 @@ export default function AnalisisTPPage() {
           tpData.questions.forEach((q: any) => {
             if (q.type === 'PG') {
               const answerIndex = q.number - 1;
-              if (studentData.answers && studentData.answers[answerIndex] === grade.answer_key[answerIndex]) {
+              if (studentData.mcAnswers && studentData.mcAnswers[answerIndex] === grade.answer_key[answerIndex]) {
                 totalScore += 1;
               }
               maxScore += 1;
             } else {
-              const essayScore = studentData.essay_scores?.find((es: any) => es.questionNumber === q.number);
+              const essayScore = studentData.essayScores?.find((es: any) => es.questionNumber === q.number);
               if (essayScore) {
                 totalScore += essayScore.score;
                 maxScore += essayScore.maxScore;
