@@ -100,14 +100,18 @@ export default function KoreksiPage() {
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {
-        const tableContainer = document.getElementById('table-container');
-        if (tableContainer) {
-          setTableScrollWidth(tableContainer.scrollWidth);
+        const tableWrapper = document.getElementById('table-wrapper');
+        if (tableWrapper) {
+          const actualWidth = tableWrapper.scrollWidth;
+          console.log('Table scroll width:', actualWidth);
+          setTableScrollWidth(actualWidth);
         }
       };
       
-      // Initial calculation with delay to ensure render
+      // Initial calculation with multiple delays to ensure render
       setTimeout(updateWidth, 100);
+      setTimeout(updateWidth, 500);
+      setTimeout(updateWidth, 1000);
       
       window.addEventListener('resize', updateWidth);
       return () => window.removeEventListener('resize', updateWidth);
@@ -1024,19 +1028,22 @@ export default function KoreksiPage() {
       })()}
 
       {/* Horizontal Scrollbar - Fixed at bottom like image 2 */}
-      {step === 3 && tableScrollWidth > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2">
+      {step === 3 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-1">
           <div 
             id="custom-scrollbar"
-            className="overflow-x-auto overflow-y-hidden px-4"
+            className="overflow-x-auto overflow-y-hidden px-2"
           >
             <div 
               style={{ 
-                width: `${tableScrollWidth}px`,
-                height: '2px',
-                background: 'transparent'
+                width: `${tableScrollWidth || 2000}px`,
+                height: '1px'
               }}
             />
+          </div>
+          {/* Debug info */}
+          <div className="text-xs text-center text-gray-500 py-1">
+            Width: {tableScrollWidth}px
           </div>
         </div>
       )}
