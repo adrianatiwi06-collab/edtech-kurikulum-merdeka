@@ -96,28 +96,28 @@ export default function KoreksiPage() {
     }
   }, [user, showSavedGrades]);
 
-  // Sync sticky scrollbar with table scroll
+  // Sync custom scrollbar with table scroll
   useEffect(() => {
     if (step === 3) {
       // Wait for DOM to be ready
       setTimeout(() => {
         const tableContainer = document.getElementById('table-container');
-        const stickyScrollbar = document.getElementById('sticky-scrollbar');
+        const customScrollbar = document.getElementById('custom-scrollbar');
         
-        if (tableContainer && stickyScrollbar) {
+        if (tableContainer && customScrollbar) {
           // Update scrollbar width
           setTableScrollWidth(tableContainer.scrollWidth);
           
           const syncScroll = () => {
-            stickyScrollbar.scrollLeft = tableContainer.scrollLeft;
+            customScrollbar.scrollLeft = tableContainer.scrollLeft;
           };
           
           const syncScrollReverse = () => {
-            tableContainer.scrollLeft = stickyScrollbar.scrollLeft;
+            tableContainer.scrollLeft = customScrollbar.scrollLeft;
           };
           
           tableContainer.addEventListener('scroll', syncScroll);
-          stickyScrollbar.addEventListener('scroll', syncScrollReverse);
+          customScrollbar.addEventListener('scroll', syncScrollReverse);
           
           // Update width on resize
           const updateWidth = () => {
@@ -127,7 +127,7 @@ export default function KoreksiPage() {
           
           return () => {
             tableContainer.removeEventListener('scroll', syncScroll);
-            stickyScrollbar.removeEventListener('scroll', syncScrollReverse);
+            customScrollbar.removeEventListener('scroll', syncScrollReverse);
             window.removeEventListener('resize', updateWidth);
           };
         }
@@ -1009,83 +1009,58 @@ export default function KoreksiPage() {
             </CardContent>
           </Card>
 
-          {/* Sticky Horizontal Scrollbar - Always visible at bottom of viewport */}
+          {/* Custom Horizontal Scrollbar - Positioned below table */}
           {tableScrollWidth > 0 && (
-            <div 
-              id="sticky-scrollbar"
-              className="fixed bottom-0 left-0 right-0 h-5 bg-white border-t-2 border-gray-300 overflow-x-auto overflow-y-hidden z-40 shadow-lg"
-            >
+            <div className="sticky bottom-0 left-0 right-0 bg-white border-t-2 border-gray-300 z-40 shadow-lg mt-4">
               <div 
-                style={{ 
-                  width: `${tableScrollWidth}px`,
-                  height: '1px'
-                }}
-              />
+                id="custom-scrollbar"
+                className="overflow-x-auto overflow-y-hidden"
+                style={{ height: '24px' }}
+              >
+                <div 
+                  style={{ 
+                    width: `${tableScrollWidth}px`,
+                    height: '1px'
+                  }}
+                />
+              </div>
             </div>
           )}
           
           <style jsx global>{`
+            /* Hide default scrollbar in table */
             #table-container {
-              scrollbar-width: thin;
-              scrollbar-color: #3b82f6 #e5e7eb;
+              scrollbar-width: none;
             }
             #table-container::-webkit-scrollbar {
-              height: 12px;
-            }
-            #table-container::-webkit-scrollbar-track {
-              background: #e5e7eb;
-              border-radius: 6px;
-            }
-            #table-container::-webkit-scrollbar-thumb {
-              background: #3b82f6;
-              border-radius: 6px;
-            }
-            #table-container::-webkit-scrollbar-thumb:hover {
-              background: #2563eb;
+              display: none;
             }
             
-            #sticky-scrollbar::-webkit-scrollbar {
-              height: 16px;
+            /* Custom scrollbar styling - More prominent */
+            #custom-scrollbar {
+              scrollbar-width: thin;
+              scrollbar-color: #3b82f6 #f3f4f6;
             }
-            #sticky-scrollbar::-webkit-scrollbar-track {
-              background: #f3f4f6;
+            #custom-scrollbar::-webkit-scrollbar {
+              height: 20px;
             }
-            #sticky-scrollbar::-webkit-scrollbar-thumb {
-              background: #3b82f6;
-              border-radius: 8px;
+            #custom-scrollbar::-webkit-scrollbar-track {
+              background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+              border-radius: 10px;
+              margin: 0 8px;
             }
-            #sticky-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #2563eb;
+            #custom-scrollbar::-webkit-scrollbar-thumb {
+              background: linear-gradient(to bottom, #3b82f6 0%, #2563eb 100%);
+              border-radius: 10px;
+              border: 2px solid #f3f4f6;
+            }
+            #custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(to bottom, #2563eb 0%, #1d4ed8 100%);
+            }
+            #custom-scrollbar::-webkit-scrollbar-thumb:active {
+              background: #1e40af;
             }
           `}</style>
-
-          {/* Fixed Scroll Buttons - Circular style like scroll to top */}
-          <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3">
-            <button
-              onClick={() => {
-                const container = document.getElementById('table-container');
-                if (container) {
-                  container.scrollBy({ left: 300, behavior: 'smooth' });
-                }
-              }}
-              className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-blue-500/50 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-              title="Scroll ke kanan"
-            >
-              <span className="text-2xl font-bold">→</span>
-            </button>
-            <button
-              onClick={() => {
-                const container = document.getElementById('table-container');
-                if (container) {
-                  container.scrollBy({ left: -300, behavior: 'smooth' });
-                }
-              }}
-              className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl hover:shadow-blue-500/50 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-              title="Scroll ke kiri"
-            >
-              <span className="text-2xl font-bold">←</span>
-            </button>
-          </div>
         </div>
         );
       })()}

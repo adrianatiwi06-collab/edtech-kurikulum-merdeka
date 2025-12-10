@@ -4,7 +4,7 @@ import { useEffect, ReactNode, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { BookOpen, FileText, ClipboardCheck, BarChart3, Users, LogOut, Loader2, Database, ChevronDown, ChevronRight, Home, FileCheck, Brain } from 'lucide-react';
+import { BookOpen, FileText, ClipboardCheck, BarChart3, Users, LogOut, Loader2, Database, ChevronDown, ChevronRight, Home, FileCheck, Brain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [masterDataOpen, setMasterDataOpen] = useState(true);
   const [assessmentOpen, setAssessmentOpen] = useState(true);
   const [analysisOpen, setAnalysisOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,7 +62,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-indigo-50">
-      <aside className="w-64 bg-gradient-to-b from-violet-600 via-blue-600 to-indigo-700 shadow-2xl flex flex-col relative overflow-hidden">
+      <aside className={`bg-gradient-to-b from-violet-600 via-blue-600 to-indigo-700 shadow-2xl flex flex-col relative overflow-hidden transition-all duration-300 ${
+        sidebarCollapsed ? 'w-20' : 'w-64'
+      }`}>
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse"></div>
@@ -69,14 +72,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
         
         <div className="relative p-6 border-b border-white/20 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
-              <span className="text-2xl">📚</span>
+          <div className="flex items-center justify-between">
+            <div className={`flex items-center gap-3 transition-all duration-300 ${
+              sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+            }`}>
+              <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
+                <span className="text-2xl">📚</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white drop-shadow-lg">EdTech</h1>
+                <p className="text-xs text-white/80 font-medium">Kurikulum Merdeka</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white drop-shadow-lg">EdTech</h1>
-              <p className="text-xs text-white/80 font-medium">Kurikulum Merdeka</p>
-            </div>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 hover:bg-white/20 rounded-lg transition-all duration-300 text-white hover:scale-110"
+              title={sidebarCollapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+            >
+              {sidebarCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
+            </button>
           </div>
         </div>
         
@@ -85,10 +99,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             onClick={() => handleNavigation('/dashboard')}
             className={`relative w-full flex items-center gap-3 px-6 py-3.5 text-white/90 hover:text-white transition-all duration-300 group ${
               pathname === '/dashboard' ? 'bg-white/20 backdrop-blur-sm shadow-lg border-l-4 border-white' : 'hover:bg-white/10'
-            }`}
+            } ${sidebarCollapsed ? 'justify-center' : ''}`}
+            title={sidebarCollapsed ? 'Dashboard' : ''}
           >
             <Home className="w-5 h-5 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
-            <span className="font-semibold">Dashboard</span>
+            <span className={`font-semibold transition-all duration-300 ${
+              sidebarCollapsed ? 'hidden' : 'block'
+            }`}>Dashboard</span>
             {pathname === '/dashboard' && (
               <div className="absolute right-4 w-2 h-2 bg-white rounded-full animate-pulse"></div>
             )}
@@ -97,15 +114,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="mt-2">
             <button
               onClick={() => setMasterDataOpen(!masterDataOpen)}
-              className="w-full flex items-center justify-between px-6 py-3.5 text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group"
+              className={`w-full flex items-center justify-between px-6 py-3.5 text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group ${
+                sidebarCollapsed ? 'justify-center' : ''
+              }`}
+              title={sidebarCollapsed ? 'Master Data' : ''}
             >
               <div className="flex items-center gap-3">
                 <Database className="w-5 h-5 transition-transform duration-300 group-hover:scale-125" />
-                <span className="font-semibold">Master Data</span>
+                <span className={`font-semibold transition-all duration-300 ${
+                  sidebarCollapsed ? 'hidden' : 'block'
+                }`}>Master Data</span>
               </div>
-              {masterDataOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />}
+              {!sidebarCollapsed && (masterDataOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
             </button>
-            {masterDataOpen && (
+            {masterDataOpen && !sidebarCollapsed && (
               <div className="bg-white/5 border-l-2 border-white/30 ml-6">
                 <button
                   onClick={() => handleNavigation('/dashboard/master-data')}
@@ -159,15 +181,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="mt-2">
             <button
               onClick={() => setAssessmentOpen(!assessmentOpen)}
-              className="w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1"
+              className={`w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1 ${
+                sidebarCollapsed ? 'justify-center' : ''
+              }`}
+              title={sidebarCollapsed ? 'Assessment' : ''}
             >
               <div className="flex items-center gap-3">
                 <ClipboardCheck className="w-5 h-5 transition-transform duration-300" />
-                <span className="font-medium">Assessment</span>
+                <span className={`font-medium transition-all duration-300 ${
+                  sidebarCollapsed ? 'hidden' : 'block'
+                }`}>Assessment</span>
               </div>
-              {assessmentOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />}
+              {!sidebarCollapsed && (assessmentOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
             </button>
-            {assessmentOpen && (
+            {assessmentOpen && !sidebarCollapsed && (
               <div className="bg-slate-900/30 border-l-2 border-slate-700 ml-6">
                 <button
                   onClick={() => handleNavigation('/dashboard/generate-soal')}
@@ -203,15 +230,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="mt-2">
             <button
               onClick={() => setAnalysisOpen(!analysisOpen)}
-              className="w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1"
+              className={`w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1 ${
+                sidebarCollapsed ? 'justify-center' : ''
+              }`}
+              title={sidebarCollapsed ? 'Analysis' : ''}
             >
               <div className="flex items-center gap-3">
                 <BarChart3 className="w-5 h-5 transition-transform duration-300" />
-                <span className="font-medium">Analysis</span>
+                <span className={`font-medium transition-all duration-300 ${
+                  sidebarCollapsed ? 'hidden' : 'block'
+                }`}>Analysis</span>
               </div>
-              {analysisOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />}
+              {!sidebarCollapsed && (analysisOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
             </button>
-            {analysisOpen && (
+            {analysisOpen && !sidebarCollapsed && (
               <div className="bg-slate-900/30 border-l-2 border-slate-700 ml-6">
                 <button
                   onClick={() => handleNavigation('/dashboard/analisis-tp')}
