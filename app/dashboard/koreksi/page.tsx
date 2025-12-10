@@ -1012,13 +1012,13 @@ export default function KoreksiPage() {
         );
       })()}
 
-      {/* Custom Horizontal Scrollbar - Fixed at bottom, outside table */}
+      {/* Horizontal Scrollbar - Fixed at bottom like in image 2 */}
       {step === 3 && tableScrollWidth > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-300 z-50 shadow-2xl">
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-300 z-50">
           <div 
             id="custom-scrollbar"
-            className="overflow-x-auto overflow-y-hidden px-4"
-            style={{ height: '32px' }}
+            className="overflow-x-auto overflow-y-hidden"
+            style={{ height: '20px' }}
           >
             <div 
               style={{ 
@@ -1031,41 +1031,41 @@ export default function KoreksiPage() {
       )}
       
       <style jsx global>{`
-        /* Hide default scrollbar in table */
+        /* Hide default scrollbar in table container */
         #table-container {
           scrollbar-width: none;
+          -ms-overflow-style: none;
         }
         #table-container::-webkit-scrollbar {
           display: none;
         }
         
-        /* Custom scrollbar styling - More prominent and separated */
+        /* Native scrollbar styling for custom-scrollbar - Simple and clear like image 2 */
         #custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #3b82f6 #f3f4f6;
+          scrollbar-width: auto;
+          scrollbar-color: #3b82f6 #e5e7eb;
         }
+        
+        /* WebKit scrollbar styling */
         #custom-scrollbar::-webkit-scrollbar {
-          height: 24px;
+          height: 18px;
         }
+        
         #custom-scrollbar::-webkit-scrollbar-track {
-          background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
-          border-radius: 12px;
-          margin: 0 12px;
-          border: 1px solid #e5e7eb;
+          background: #e5e7eb;
         }
+        
         #custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to right, #3b82f6 0%, #2563eb 50%, #3b82f6 100%);
-          border-radius: 12px;
-          border: 3px solid #f3f4f6;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+          background: #3b82f6;
+          border: 2px solid #e5e7eb;
         }
+        
         #custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to right, #2563eb 0%, #1d4ed8 50%, #2563eb 100%);
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+          background: #2563eb;
         }
+        
         #custom-scrollbar::-webkit-scrollbar-thumb:active {
-          background: #1e40af;
-          box-shadow: 0 2px 6px rgba(30, 64, 175, 0.5);
+          background: #1d4ed8;
         }
       `}</style>
     </div>
