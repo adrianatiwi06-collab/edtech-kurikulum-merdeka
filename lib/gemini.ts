@@ -3997,13 +3997,23 @@ ATURAN PEMBUATAN SOAL:
 
 6. Opsi jawaban harus homogen, proporsional panjangnya, dan tidak ada yang terlalu jelas salah
 
-7. KUNCI JAWABAN harus ACAK - hindari pola berurutan (A-A-A atau A-B-C-D)
+7. [!][!][!][!][!] DISTRIBUSI KUNCI JAWABAN WAJIB SEIMBANG:
+   - Untuk ${questionConfig.multipleChoice.count} soal PG dengan ${optionsCount} opsi (${options.join(', ')}):
+   - Setiap opsi (${options.join(', ')}) harus muncul sebagai kunci jawaban dengan frekuensi yang MERATA
+   - Contoh untuk 15 soal: A=3-4x, B=3-4x, C=3-4x, D=3-4x (jika 4 opsi)
+   - [!][!][!] DILARANG KERAS: A muncul >40% atau dominan, hindari pola seperti A=11x, B=2x, C=2x
+   - Pastikan TIDAK ada satu opsi yang mendominasi (>40% dari total soal)
 
-8. Hindari kata "kecuali", "tidak", "bukan" dalam stem soal (kecuali sangat diperlukan)
+8. [!][!][!] URUTAN OPSI JAWABAN WAJIB BERURUTAN:
+   - Opsi HARUS selalu dalam urutan: ${options.join(', ')}
+   - DILARANG urutan acak seperti B, C, A atau C, A, D
+   - Jawaban benar bisa di posisi manapun, tapi label opsi tetap berurutan
 
-9. [!][!][!][!][!][!] VALIDASI WAJIB SETIAP SOAL: Maksimal ${guide.maxWords} kata, kosakata sesuai tingkat ${gradeLevel}
+9. Hindari kata "kecuali", "tidak", "bukan" dalam stem soal (kecuali sangat diperlukan)
 
-10. Distribusi tingkat kognitif (Taksonomi Bloom):
+10. [!][!][!][!][!][!] VALIDASI WAJIB SETIAP SOAL: Maksimal ${guide.maxWords} kata, kosakata sesuai tingkat ${gradeLevel}
+
+11. Distribusi tingkat kognitif (Taksonomi Bloom):
 
    - 30% soal C1-C2 (Pengetahuan/Pemahaman): mengingat fakta, definisi, konsep dasar
 
@@ -4011,7 +4021,7 @@ ATURAN PEMBUATAN SOAL:
 
    - 20% soal C5-C6 (Evaluasi/Kreasi): mengevaluasi, memecahkan masalah kompleks
 
-${includeImage ? '11. Tambahkan field "imageDescription" berisi deskripsi gambar/diagram yang sesuai untuk soal' : ''}
+${includeImage ? '12. Tambahkan field "imageDescription" berisi deskripsi gambar/diagram yang sesuai untuk soal' : ''}
 
 
 OUTPUT FORMAT (JSON):
