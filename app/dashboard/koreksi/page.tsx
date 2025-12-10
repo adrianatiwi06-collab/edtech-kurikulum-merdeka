@@ -1021,17 +1021,18 @@ export default function KoreksiPage() {
         );
       })()}
 
-      {/* Horizontal Scrollbar - Sticky at bottom */}
+      {/* Horizontal Scrollbar - Fixed at bottom like image 2 */}
       {step === 3 && tableScrollWidth > 0 && (
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] mt-4 rounded-t-lg">
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2">
           <div 
             id="custom-scrollbar"
-            className="overflow-x-auto overflow-y-hidden py-3"
+            className="overflow-x-auto overflow-y-hidden px-4"
           >
             <div 
               style={{ 
                 width: `${tableScrollWidth}px`,
-                height: '1px'
+                height: '2px',
+                background: 'transparent'
               }}
             />
           </div>
@@ -1054,18 +1055,20 @@ export default function KoreksiPage() {
           scrollbar-color: #3b82f6 #e5e7eb;
         }
         
-        /* WebKit scrollbar styling */
+        /* WebKit scrollbar styling - Make it prominent like in image 2 */
         #custom-scrollbar::-webkit-scrollbar {
-          height: 18px;
+          height: 16px;
         }
         
         #custom-scrollbar::-webkit-scrollbar-track {
-          background: #e5e7eb;
+          background: #d1d5db;
+          border-radius: 0;
         }
         
         #custom-scrollbar::-webkit-scrollbar-thumb {
           background: #3b82f6;
-          border: 2px solid #e5e7eb;
+          border-radius: 0;
+          border: 1px solid #9ca3af;
         }
         
         #custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -1074,6 +1077,12 @@ export default function KoreksiPage() {
         
         #custom-scrollbar::-webkit-scrollbar-thumb:active {
           background: #1d4ed8;
+        }
+        
+        /* Firefox scrollbar */
+        #custom-scrollbar {
+          scrollbar-width: auto !important;
+          scrollbar-color: #3b82f6 #d1d5db !important;
         }
       `}</style>
     </div>
