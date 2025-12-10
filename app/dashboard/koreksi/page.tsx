@@ -117,27 +117,27 @@ export default function KoreksiPage() {
   // Sync custom scrollbar with table scroll
   useEffect(() => {
     if (step === 3 && tableScrollWidth > 0) {
-      const tableContainer = document.getElementById('table-container');
+      const tableWrapper = document.getElementById('table-wrapper');
       const customScrollbar = document.getElementById('custom-scrollbar');
       
-      if (tableContainer && customScrollbar) {
+      if (tableWrapper && customScrollbar) {
         const syncScroll = () => {
-          if (customScrollbar.scrollLeft !== tableContainer.scrollLeft) {
-             customScrollbar.scrollLeft = tableContainer.scrollLeft;
+          if (customScrollbar.scrollLeft !== tableWrapper.scrollLeft) {
+             customScrollbar.scrollLeft = tableWrapper.scrollLeft;
           }
         };
         
         const syncScrollReverse = () => {
-          if (tableContainer.scrollLeft !== customScrollbar.scrollLeft) {
-            tableContainer.scrollLeft = customScrollbar.scrollLeft;
+          if (tableWrapper.scrollLeft !== customScrollbar.scrollLeft) {
+            tableWrapper.scrollLeft = customScrollbar.scrollLeft;
           }
         };
         
-        tableContainer.addEventListener('scroll', syncScroll);
+        tableWrapper.addEventListener('scroll', syncScroll);
         customScrollbar.addEventListener('scroll', syncScrollReverse);
         
         return () => {
-          tableContainer.removeEventListener('scroll', syncScroll);
+          tableWrapper.removeEventListener('scroll', syncScroll);
           customScrollbar.removeEventListener('scroll', syncScrollReverse);
         };
       }
@@ -904,9 +904,10 @@ export default function KoreksiPage() {
                 </div>
               </CardHeader>
             <CardContent>
-              <div className="relative">
-                <div id="table-container" className="overflow-x-auto border rounded-lg" style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                  <Table>
+              <div className="relative overflow-hidden">
+                <div id="table-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <div id="table-container" className="border rounded-lg">
+                    <Table>
                     <TableHeader className="sticky top-0 z-30">
                       <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
                       <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold">No</TableHead>
@@ -1012,8 +1013,9 @@ export default function KoreksiPage() {
                     ))}
                   </TableBody>
                 </Table>
+                  </div>
+                </div>
               </div>
-            </div>
 
             </CardContent>
           </Card>
@@ -1040,12 +1042,12 @@ export default function KoreksiPage() {
       )}
       
       <style jsx global>{`
-        /* Hide default scrollbar in table container */
-        #table-container {
+        /* Hide default scrollbar in table wrapper */
+        #table-wrapper {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-        #table-container::-webkit-scrollbar {
+        #table-wrapper::-webkit-scrollbar {
           display: none;
         }
         
