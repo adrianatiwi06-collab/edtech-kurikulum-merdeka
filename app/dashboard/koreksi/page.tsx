@@ -96,14 +96,14 @@ export default function KoreksiPage() {
     }
   }, [user, showSavedGrades]);
 
-  // Calculate table width
+  // Calculate content width
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {
-        const tableWrapper = document.getElementById('table-wrapper');
-        if (tableWrapper) {
-          const actualWidth = tableWrapper.scrollWidth;
-          console.log('Table scroll width:', actualWidth);
+        const contentWrapper = document.getElementById('content-wrapper');
+        if (contentWrapper) {
+          const actualWidth = contentWrapper.scrollWidth;
+          console.log('Content scroll width:', actualWidth);
           setTableScrollWidth(actualWidth);
         }
       };
@@ -118,30 +118,30 @@ export default function KoreksiPage() {
     }
   }, [step, selectedQB, grades.length]);
 
-  // Sync custom scrollbar with table scroll
+  // Sync custom scrollbar with content scroll
   useEffect(() => {
     if (step === 3 && tableScrollWidth > 0) {
-      const tableWrapper = document.getElementById('table-wrapper');
+      const contentWrapper = document.getElementById('content-wrapper');
       const customScrollbar = document.getElementById('custom-scrollbar');
       
-      if (tableWrapper && customScrollbar) {
+      if (contentWrapper && customScrollbar) {
         const syncScroll = () => {
-          if (customScrollbar.scrollLeft !== tableWrapper.scrollLeft) {
-             customScrollbar.scrollLeft = tableWrapper.scrollLeft;
+          if (customScrollbar.scrollLeft !== contentWrapper.scrollLeft) {
+             customScrollbar.scrollLeft = contentWrapper.scrollLeft;
           }
         };
         
         const syncScrollReverse = () => {
-          if (tableWrapper.scrollLeft !== customScrollbar.scrollLeft) {
-            tableWrapper.scrollLeft = customScrollbar.scrollLeft;
+          if (contentWrapper.scrollLeft !== customScrollbar.scrollLeft) {
+            contentWrapper.scrollLeft = customScrollbar.scrollLeft;
           }
         };
         
-        tableWrapper.addEventListener('scroll', syncScroll);
+        contentWrapper.addEventListener('scroll', syncScroll);
         customScrollbar.addEventListener('scroll', syncScrollReverse);
         
         return () => {
-          tableWrapper.removeEventListener('scroll', syncScroll);
+          contentWrapper.removeEventListener('scroll', syncScroll);
           customScrollbar.removeEventListener('scroll', syncScrollReverse);
         };
       }
@@ -871,8 +871,9 @@ export default function KoreksiPage() {
         const maxScore = (mcCount * mcWeight) + totalEssayWeight;
         
         return (
-          <div className="space-y-6">
-            <Card>
+          <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="space-y-6" style={{ minWidth: 'max-content' }}>
+              <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -908,10 +909,9 @@ export default function KoreksiPage() {
                 </div>
               </CardHeader>
             <CardContent>
-              <div className="relative overflow-hidden">
-                <div id="table-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  <div id="table-container" className="border rounded-lg">
-                    <Table>
+              <div className="relative">
+                <div className="border rounded-lg">
+                  <Table>
                     <TableHeader className="sticky top-0 z-30">
                       <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
                       <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold">No</TableHead>
@@ -1017,13 +1017,13 @@ export default function KoreksiPage() {
                     ))}
                   </TableBody>
                 </Table>
-                  </div>
                 </div>
               </div>
 
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </div>
         );
       })()}
 
@@ -1049,12 +1049,12 @@ export default function KoreksiPage() {
       )}
       
       <style jsx global>{`
-        /* Hide default scrollbar in table wrapper */
-        #table-wrapper {
+        /* Hide default scrollbar in content wrapper */
+        #content-wrapper {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-        #table-wrapper::-webkit-scrollbar {
+        #content-wrapper::-webkit-scrollbar {
           display: none;
         }
         
