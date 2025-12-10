@@ -96,44 +96,53 @@ export default function KoreksiPage() {
     }
   }, [user, showSavedGrades]);
 
-  // Sync custom scrollbar with table scroll
+  // Calculate table width
   useEffect(() => {
     if (step === 3) {
-      // Wait for DOM to be ready
-      setTimeout(() => {
+      const updateWidth = () => {
         const tableContainer = document.getElementById('table-container');
-        const customScrollbar = document.getElementById('custom-scrollbar');
-        
-        if (tableContainer && customScrollbar) {
-          // Update scrollbar width
+        if (tableContainer) {
           setTableScrollWidth(tableContainer.scrollWidth);
-          
-          const syncScroll = () => {
-            customScrollbar.scrollLeft = tableContainer.scrollLeft;
-          };
-          
-          const syncScrollReverse = () => {
-            tableContainer.scrollLeft = customScrollbar.scrollLeft;
-          };
-          
-          tableContainer.addEventListener('scroll', syncScroll);
-          customScrollbar.addEventListener('scroll', syncScrollReverse);
-          
-          // Update width on resize
-          const updateWidth = () => {
-            setTableScrollWidth(tableContainer.scrollWidth);
-          };
-          window.addEventListener('resize', updateWidth);
-          
-          return () => {
-            tableContainer.removeEventListener('scroll', syncScroll);
-            customScrollbar.removeEventListener('scroll', syncScrollReverse);
-            window.removeEventListener('resize', updateWidth);
-          };
         }
-      }, 100);
+      };
+      
+      // Initial calculation with delay to ensure render
+      setTimeout(updateWidth, 100);
+      
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
     }
-  }, [step, selectedQB, grades]);
+  }, [step, selectedQB, grades.length]);
+
+  // Sync custom scrollbar with table scroll
+  useEffect(() => {
+    if (step === 3 && tableScrollWidth > 0) {
+      const tableContainer = document.getElementById('table-container');
+      const customScrollbar = document.getElementById('custom-scrollbar');
+      
+      if (tableContainer && customScrollbar) {
+        const syncScroll = () => {
+          if (customScrollbar.scrollLeft !== tableContainer.scrollLeft) {
+             customScrollbar.scrollLeft = tableContainer.scrollLeft;
+          }
+        };
+        
+        const syncScrollReverse = () => {
+          if (tableContainer.scrollLeft !== customScrollbar.scrollLeft) {
+            tableContainer.scrollLeft = customScrollbar.scrollLeft;
+          }
+        };
+        
+        tableContainer.addEventListener('scroll', syncScroll);
+        customScrollbar.addEventListener('scroll', syncScrollReverse);
+        
+        return () => {
+          tableContainer.removeEventListener('scroll', syncScroll);
+          customScrollbar.removeEventListener('scroll', syncScrollReverse);
+        };
+      }
+    }
+  }, [step, tableScrollWidth]);
 
   const loadExamTemplates = async () => {
     if (!user) return;
@@ -1012,13 +1021,12 @@ export default function KoreksiPage() {
         );
       })()}
 
-      {/* Horizontal Scrollbar - Fixed at bottom like in image 2 */}
+      {/* Horizontal Scrollbar - Sticky at bottom */}
       {step === 3 && tableScrollWidth > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-300 z-50">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] mt-4 rounded-t-lg">
           <div 
             id="custom-scrollbar"
-            className="overflow-x-auto overflow-y-hidden"
-            style={{ height: '20px' }}
+            className="overflow-x-auto overflow-y-hidden py-3"
           >
             <div 
               style={{ 
