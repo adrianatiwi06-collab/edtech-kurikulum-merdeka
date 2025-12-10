@@ -1008,62 +1008,66 @@ export default function KoreksiPage() {
 
             </CardContent>
           </Card>
-
-          {/* Custom Horizontal Scrollbar - Positioned below table */}
-          {tableScrollWidth > 0 && (
-            <div className="sticky bottom-0 left-0 right-0 bg-white border-t-2 border-gray-300 z-40 shadow-lg mt-4">
-              <div 
-                id="custom-scrollbar"
-                className="overflow-x-auto overflow-y-hidden"
-                style={{ height: '24px' }}
-              >
-                <div 
-                  style={{ 
-                    width: `${tableScrollWidth}px`,
-                    height: '1px'
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          
-          <style jsx global>{`
-            /* Hide default scrollbar in table */
-            #table-container {
-              scrollbar-width: none;
-            }
-            #table-container::-webkit-scrollbar {
-              display: none;
-            }
-            
-            /* Custom scrollbar styling - More prominent */
-            #custom-scrollbar {
-              scrollbar-width: thin;
-              scrollbar-color: #3b82f6 #f3f4f6;
-            }
-            #custom-scrollbar::-webkit-scrollbar {
-              height: 20px;
-            }
-            #custom-scrollbar::-webkit-scrollbar-track {
-              background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
-              border-radius: 10px;
-              margin: 0 8px;
-            }
-            #custom-scrollbar::-webkit-scrollbar-thumb {
-              background: linear-gradient(to bottom, #3b82f6 0%, #2563eb 100%);
-              border-radius: 10px;
-              border: 2px solid #f3f4f6;
-            }
-            #custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: linear-gradient(to bottom, #2563eb 0%, #1d4ed8 100%);
-            }
-            #custom-scrollbar::-webkit-scrollbar-thumb:active {
-              background: #1e40af;
-            }
-          `}</style>
         </div>
         );
       })()}
+
+      {/* Custom Horizontal Scrollbar - Fixed at bottom, outside table */}
+      {step === 3 && tableScrollWidth > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-300 z-50 shadow-2xl">
+          <div 
+            id="custom-scrollbar"
+            className="overflow-x-auto overflow-y-hidden px-4"
+            style={{ height: '32px' }}
+          >
+            <div 
+              style={{ 
+                width: `${tableScrollWidth}px`,
+                height: '1px'
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
+      <style jsx global>{`
+        /* Hide default scrollbar in table */
+        #table-container {
+          scrollbar-width: none;
+        }
+        #table-container::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Custom scrollbar styling - More prominent and separated */
+        #custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #3b82f6 #f3f4f6;
+        }
+        #custom-scrollbar::-webkit-scrollbar {
+          height: 24px;
+        }
+        #custom-scrollbar::-webkit-scrollbar-track {
+          background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+          border-radius: 12px;
+          margin: 0 12px;
+          border: 1px solid #e5e7eb;
+        }
+        #custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to right, #3b82f6 0%, #2563eb 50%, #3b82f6 100%);
+          border-radius: 12px;
+          border: 3px solid #f3f4f6;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        #custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to right, #2563eb 0%, #1d4ed8 50%, #2563eb 100%);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        #custom-scrollbar::-webkit-scrollbar-thumb:active {
+          background: #1e40af;
+          box-shadow: 0 2px 6px rgba(30, 64, 175, 0.5);
+        }
+      `}</style>
     </div>
   );
 }
