@@ -8,7 +8,7 @@ import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, orderBy }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Trash2, Edit2, Check, X, Filter, Search, ArrowRightLeft, Download, FileSpreadsheet, Zap, Split, BookOpen } from 'lucide-react';
+import { Loader2, Trash2, Edit2, Check, X, Filter, Search, ArrowRightLeft, Download, FileSpreadsheet, Zap, Split, BookOpen, Settings } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { compressTP, type CompressionResult, formatCompressionResult } from '@/lib/tp-compressor';
 
@@ -46,6 +46,37 @@ export default function MyTPPage() {
   // Edit mode
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  
+  // Edit metadata mode
+  const [editMetadataOpen, setEditMetadataOpen] = useState(false);
+  const [selectedTPForMetadata, setSelectedTPForMetadata] = useState<SavedTP | null>(null);
+  const [metadataGrade, setMetadataGrade] = useState('');
+  const [metadataSubject, setMetadataSubject] = useState('');
+  const [metadataSemester, setMetadataSemester] = useState('');
+  const [metadataChapter, setMetadataChapter] = useState('');
+  const [metadataLoading, setMetadataLoading] = useState(false);
+
+  // Daftar mata pelajaran SD
+  const sdSubjects = [
+    'Pendidikan Agama Islam',
+    'Pendidikan Agama Kristen',
+    'Pendidikan Agama Katolik',
+    'Pendidikan Agama Hindu',
+    'Pendidikan Agama Buddha',
+    'Pendidikan Agama Khonghucu',
+    'Pendidikan Pancasila',
+    'Bahasa Indonesia',
+    'Matematika',
+    'IPAS (Ilmu Pengetahuan Alam dan Sosial)',
+    'Pendidikan Jasmani Olahraga dan Kesehatan (PJOK)',
+    'Seni dan Budaya',
+    'Bahasa Inggris',
+    'Bahasa Daerah',
+    'Seni Rupa',
+    'Seni Musik',
+    'Seni Tari',
+    'Seni Teater',
+  ];
   
   // Compress mode
   const [compressModalOpen, setCompressModalOpen] = useState(false);
@@ -211,6 +242,54 @@ export default function MyTPPage() {
       setEditText('');
     } catch (err: any) {
       alert('Gagal menyimpan perubahan: ' + err.message);
+    }
+  };
+
+  const openEditMetadata = (tp: SavedTP) => {
+    setSelectedTPForMetadata(tp);
+    setMetadataGrade(tp.grade);
+    setMetadataSubject(tp.subject || '');
+    setMetadataSemester(tp.semester.toString());
+    setMetadataChapter(tp.chapter);
+    setEditMetadataOpen(true);
+  };
+
+  const saveMetadataEdit = async () => {
+    if (!selectedTPForMetadata) return;
+
+    if (!metadataGrade || !metadataSemester) {
+      alert('Kelas dan semester harus diisi');
+      return;
+    }
+
+    setMetadataLoading(true);
+    try {
+      await updateDoc(doc(db, 'learning_goals', selectedTPForMetadata.id), {
+        grade: metadataGrade,
+        subject: metadataSubject,
+        semester: parseInt(metadataSemester),
+        chapter: metadataChapter,
+      });
+
+      setSavedTPs(savedTPs.map(tp => 
+        tp.id === selectedTPForMetadata.id 
+          ? { 
+              ...tp, 
+              grade: metadataGrade,
+              subject: metadataSubject,
+              semester: parseInt(metadataSemester),
+              chapter: metadataChapter
+            } 
+          : tp
+      ));
+
+      alert('✅ Metadata berhasil diupdate!');
+      setEditMetadataOpen(false);
+      setSelectedTPForMetadata(null);
+    } catch (err: any) {
+      alert('Gagal menyimpan metadata: ' + err.message);
+    } finally {
+      setMetadataLoading(false);
     }
   };
 
@@ -873,18 +952,29 @@ export default function MyTPPage() {
                                   })}
                                 </p>
                               </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)}
-                                  title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`}
-                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                >
-                                  <ArrowRightLeft className="w-4 h-4" />
-                                  <span className="ml-1 text-xs">S{tp.semester === 1 ? 2 : 1}</span>
-                                </Button>
-                                {tp.isRaporFormat && (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openEditMetadata(tp)}
+                                    title="Edit kelas, mapel, semester, bab"
+                                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                                  >
+                                    <Settings className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)}
+                                    title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`}
+                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                    <span className="ml-1 text-xs">S{tp.semester === 1 ? 2 : 1}</span>
+                                  </Button>
+                                </div>
+                                <div className="flex gap-1">{tp.isRaporFormat && (
                                   tp.tpOriginal ? (
                                     <Button
                                       size="sm"
@@ -930,7 +1020,7 @@ export default function MyTPPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => startEdit(tp)}
-                                  title="Edit TP"
+                                  title="Edit teks TP"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
@@ -943,6 +1033,7 @@ export default function MyTPPage() {
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
+                              </div>
                               </div>
                             </>
                           )}
@@ -1408,6 +1499,128 @@ export default function MyTPPage() {
             >
               <X className="w-6 h-6" />
             </button>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal Edit Metadata */}
+      {editMetadataOpen && selectedTPForMetadata && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl bg-white">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-indigo-600" />
+                Edit Metadata TP
+              </CardTitle>
+              <CardDescription>
+                Ubah informasi kelas, mata pelajaran, semester, dan bab
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4 p-6">
+              {/* TP Preview */}
+              <div className="bg-gray-50 border rounded p-3">
+                <p className="text-xs font-semibold text-gray-600 mb-1">Teks TP:</p>
+                <p className="text-sm text-gray-700">{selectedTPForMetadata.tp}</p>
+              </div>
+
+              {/* Form */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Kelas *</label>
+                  <select
+                    value={metadataGrade}
+                    onChange={(e) => setMetadataGrade(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Pilih Kelas</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Semester *</label>
+                  <select
+                    value={metadataSemester}
+                    onChange={(e) => setMetadataSemester(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Pilih Semester</option>
+                    <option value="1">Semester 1 (Ganjil)</option>
+                    <option value="2">Semester 2 (Genap)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Mata Pelajaran</label>
+                <select
+                  value={metadataSubject}
+                  onChange={(e) => setMetadataSubject(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="">Pilih Mata Pelajaran</option>
+                  {sdSubjects.map(subject => (
+                    <option key={subject} value={subject}>{subject}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Atau ketik manual jika mapel tidak ada di daftar
+                </p>
+                <Input
+                  type="text"
+                  placeholder="Atau ketik nama mapel..."
+                  value={metadataSubject}
+                  onChange={(e) => setMetadataSubject(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Bab/Elemen</label>
+                <Input
+                  type="text"
+                  placeholder="Contoh: Bab 1 - Bilangan"
+                  value={metadataChapter}
+                  onChange={(e) => setMetadataChapter(e.target.value)}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  onClick={saveMetadataEdit}
+                  disabled={metadataLoading}
+                  className="flex-1"
+                >
+                  {metadataLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Simpan Perubahan
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditMetadataOpen(false);
+                    setSelectedTPForMetadata(null);
+                  }}
+                  disabled={metadataLoading}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Batal
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </div>
       )}
