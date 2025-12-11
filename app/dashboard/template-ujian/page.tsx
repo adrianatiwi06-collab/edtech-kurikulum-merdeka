@@ -509,42 +509,52 @@ export default function TemplateUjianPage() {
               <div>
                 <h3 className="font-semibold mb-3">Kunci Jawaban & Pemetaan TP - Pilihan Ganda</h3>
                 <div className="grid grid-cols-5 gap-3 max-h-96 overflow-y-auto">
-                  {Array.from({ length: pgCount }, (_, i) => i + 1).map((num) => (
-                    <div key={num} className="space-y-2 p-3 border rounded">
-                      <p className="text-sm font-medium">No. {num}</p>
-                      <select
-                        className="w-full p-1 text-sm border rounded"
-                        value={pgAnswerKeys[num - 1] || ''}
-                        onChange={(e) => {
-                          const newKeys = [...pgAnswerKeys];
-                          newKeys[num - 1] = e.target.value;
-                          setPgAnswerKeys(newKeys);
-                        }}
-                      >
-                        <option value="">Pilih</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                        <option value="E">E</option>
-                      </select>
-                      <select
-                        className="w-full p-1 text-sm border rounded"
-                        value={pgTPMapping[num] || ''}
-                        onChange={(e) => setPgTPMapping({ ...pgTPMapping, [num]: e.target.value })}
-                      >
-                        <option value="">TP...</option>
-                        {Array.from(selectedTPs).map((tpId) => {
-                          const tp = availableTPs.find(t => t.id === tpId);
-                          return (
-                            <option key={tpId} value={tpId}>
-                              {tp?.chapter.substring(0, 20)}...
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  ))}
+                  {Array.from({ length: pgCount }, (_, i) => i + 1).map((num) => {
+                    const selectedTP = availableTPs.find(t => t.id === pgTPMapping[num]);
+                    return (
+                      <div key={num} className="space-y-2 p-3 border rounded">
+                        <p className="text-sm font-medium">No. {num}</p>
+                        <select
+                          className="w-full p-1 text-sm border rounded"
+                          value={pgAnswerKeys[num - 1] || ''}
+                          onChange={(e) => {
+                            const newKeys = [...pgAnswerKeys];
+                            newKeys[num - 1] = e.target.value;
+                            setPgAnswerKeys(newKeys);
+                          }}
+                        >
+                          <option value="">Pilih</option>
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                          <option value="D">D</option>
+                          <option value="E">E</option>
+                        </select>
+                        <select
+                          className="w-full p-1 text-sm border rounded h-auto"
+                          size={5}
+                          value={pgTPMapping[num] || ''}
+                          onChange={(e) => setPgTPMapping({ ...pgTPMapping, [num]: e.target.value })}
+                        >
+                          <option value="">TP...</option>
+                          {Array.from(selectedTPs).map((tpId) => {
+                            const tp = availableTPs.find(t => t.id === tpId);
+                            return (
+                              <option key={tpId} value={tpId} className="whitespace-normal py-1">
+                                {tp?.chapter}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {selectedTP && (
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                            <p className="font-medium text-blue-900">TP Dipilih:</p>
+                            <p className="text-blue-800 mt-1">{selectedTP.chapter}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -554,26 +564,36 @@ export default function TemplateUjianPage() {
               <div>
                 <h3 className="font-semibold mb-3">Pemetaan TP - Soal Isian</h3>
                 <div className="grid grid-cols-5 gap-3">
-                  {Array.from({ length: essayCount }, (_, i) => i + 1).map((num) => (
-                    <div key={num} className="space-y-2 p-3 border rounded">
-                      <p className="text-sm font-medium">No. {num}</p>
-                      <select
-                        className="w-full p-1 text-sm border rounded"
-                        value={essayTPMapping[num] || ''}
-                        onChange={(e) => setEssayTPMapping({ ...essayTPMapping, [num]: e.target.value })}
-                      >
-                        <option value="">TP...</option>
-                        {Array.from(selectedTPs).map((tpId) => {
-                          const tp = availableTPs.find(t => t.id === tpId);
-                          return (
-                            <option key={tpId} value={tpId}>
-                              {tp?.chapter.substring(0, 20)}...
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  ))}
+                  {Array.from({ length: essayCount }, (_, i) => i + 1).map((num) => {
+                    const selectedTP = availableTPs.find(t => t.id === essayTPMapping[num]);
+                    return (
+                      <div key={num} className="space-y-2 p-3 border rounded">
+                        <p className="text-sm font-medium">No. {num}</p>
+                        <select
+                          className="w-full p-1 text-sm border rounded h-auto"
+                          size={5}
+                          value={essayTPMapping[num] || ''}
+                          onChange={(e) => setEssayTPMapping({ ...essayTPMapping, [num]: e.target.value })}
+                        >
+                          <option value="">TP...</option>
+                          {Array.from(selectedTPs).map((tpId) => {
+                            const tp = availableTPs.find(t => t.id === tpId);
+                            return (
+                              <option key={tpId} value={tpId} className="whitespace-normal py-1">
+                                {tp?.chapter}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {selectedTP && (
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                            <p className="font-medium text-blue-900">TP Dipilih:</p>
+                            <p className="text-blue-800 mt-1">{selectedTP.chapter}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
