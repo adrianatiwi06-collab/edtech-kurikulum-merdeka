@@ -896,7 +896,7 @@ export default function KoreksiPage() {
         
         return (
           <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="space-y-6" style={{ minWidth: 'max-content' }}>
+            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '100px' }}>
               <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -916,19 +916,6 @@ export default function KoreksiPage() {
                         Total Skor Maksimum: {maxScore} poin
                       </span>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={calculateAllScores} disabled={loading} variant="default">
-                      Hitung Nilai
-                    </Button>
-                    <Button onClick={handleSaveGrades} disabled={loading} variant="outline">
-                      {loading ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-2" />
-                      )}
-                      Simpan
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -967,8 +954,8 @@ export default function KoreksiPage() {
                   <Table>
                     <TableHeader className="sticky top-0 z-30">
                       <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                      <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold">No</TableHead>
-                      <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[200px]">Nama Siswa</TableHead>
+                      <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold w-12">No</TableHead>
+                      <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[160px]">Nama Siswa</TableHead>
                       {Array.from({ length: mcCount }, (_, idx) => {
                         const weight = useTemplate && selectedTemplate 
                           ? selectedTemplate.multiple_choice.weight 
@@ -991,8 +978,8 @@ export default function KoreksiPage() {
                           </TableHead>
                         );
                       })}
-                      <TableHead className="text-center font-bold bg-blue-100 border-l-2 border-blue-300">Total Skor</TableHead>
-                      <TableHead className="text-center font-bold bg-indigo-100 border-x-2 border-indigo-300">Nilai</TableHead>
+                      <TableHead className="text-center font-bold bg-blue-100 border-l-2 border-blue-300 w-24">Total Skor</TableHead>
+                      <TableHead className="text-center font-bold bg-indigo-100 border-x-2 border-indigo-300 w-20">Nilai</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1011,11 +998,11 @@ export default function KoreksiPage() {
                           const isCorrect = answer && answer === correctAnswer;
                           const isWrong = answer && answer !== correctAnswer;
                           return (
-                            <TableCell key={`mc-${studentIdx}-${qIdx}`} className="border-x">
+                            <TableCell key={`mc-${studentIdx}-${qIdx}`} className="border-x p-1">
                               <Input
                                 data-student={studentIdx}
                                 data-question={qIdx}
-                                className={`w-16 text-center font-semibold uppercase transition-colors ${
+                                className={`w-12 text-center font-semibold uppercase transition-colors ${
                                   isCorrect ? 'bg-green-100 border-green-400 text-green-800' : 
                                   isWrong ? 'bg-red-100 border-red-400 text-red-800' : 
                                   'border-gray-300'
@@ -1051,9 +1038,9 @@ export default function KoreksiPage() {
                             ? selectedTemplate.essay.weight
                             : selectedQB?.questions.essay[qIdx]?.weight || 0;
                           return (
-                            <TableCell key={`essay-${studentIdx}-${qIdx}`} className="border-x">
+                            <TableCell key={`essay-${studentIdx}-${qIdx}`} className="border-x p-1">
                               <Input
-                                className="w-20 text-center font-medium border-gray-300"
+                                className="w-16 text-center font-medium border-gray-300"
                                 type="number"
                                 value={score || ''}
                                 onChange={(e) => updateEssayScore(studentIdx, qIdx, e.target.value)}
