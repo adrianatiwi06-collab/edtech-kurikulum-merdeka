@@ -925,7 +925,6 @@ export default function KoreksiPage() {
                 <Button onClick={() => setStep(2)} variant="outline" size="lg">
                   ← Kembali
                 </Button>
-                <div className="flex-1"></div>
                 <Button 
                   onClick={calculateAllScores} 
                   disabled={loading} 
