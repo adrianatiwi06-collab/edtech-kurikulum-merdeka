@@ -933,6 +933,35 @@ export default function KoreksiPage() {
                 </div>
               </CardHeader>
             <CardContent>
+              {/* Action Buttons - Prominent position above table */}
+              <div className="flex gap-3 mb-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                <Button onClick={() => setStep(2)} variant="outline" size="lg">
+                  ← Kembali
+                </Button>
+                <div className="flex-1"></div>
+                <Button 
+                  onClick={calculateAllScores} 
+                  disabled={loading} 
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+                >
+                  🧮 Hitung Nilai
+                </Button>
+                <Button 
+                  onClick={handleSaveGrades} 
+                  disabled={loading}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  💾 Simpan
+                </Button>
+              </div>
+              
               <div className="relative">
                 <div className="border rounded-lg">
                   <Table>
