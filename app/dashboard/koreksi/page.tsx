@@ -400,8 +400,10 @@ export default function KoreksiPage() {
     const numScore = score === '' ? 0 : Number(score);
     if (isNaN(numScore) || numScore < 0) return;
     
-    // Validate max score
-    const maxScore = selectedQB?.questions.essay[questionIdx]?.weight || 0;
+    // Validate max score - support both template and QB
+    const maxScore = useTemplate && selectedTemplate
+      ? selectedTemplate.essay.weight
+      : selectedQB?.questions.essay[questionIdx]?.weight || 0;
     if (numScore > maxScore) return;
     
     const updated = [...grades];
@@ -863,12 +865,34 @@ export default function KoreksiPage() {
       )}
 
       {/* Step 3: Grading Table */}
-      {step === 3 && selectedQB && (() => {
-        const mcCount = selectedQB.questions.multipleChoice?.length || 0;
-        const mcWeight = selectedQB.questions.multipleChoice[0]?.weight || 1;
-        const essayWeights = selectedQB.questions.essay?.map((q: any) => q.weight) || [];
+      {step === 3 && (selectedQB || selectedTemplate) && (() => {
+        // Get counts and weights from either QB or Template
+        const mcCount = useTemplate && selectedTemplate 
+          ? selectedTemplate.multiple_choice.count
+          : selectedQB?.questions.multipleChoice?.length || 0;
+        
+        const mcWeight = useTemplate && selectedTemplate
+          ? selectedTemplate.multiple_choice.weight
+          : selectedQB?.questions.multipleChoice[0]?.weight || 1;
+        
+        const essayCount = useTemplate && selectedTemplate
+          ? selectedTemplate.essay.count
+          : selectedQB?.questions.essay?.length || 0;
+        
+        const essayWeight = useTemplate && selectedTemplate
+          ? selectedTemplate.essay.weight
+          : 0;
+        
+        const essayWeights = useTemplate && selectedTemplate
+          ? new Array(essayCount).fill(essayWeight)
+          : selectedQB?.questions.essay?.map((q: any) => q.weight) || [];
+        
         const totalEssayWeight = essayWeights.reduce((sum: number, w: number) => sum + w, 0);
         const maxScore = (mcCount * mcWeight) + totalEssayWeight;
+        
+        const examTitle = useTemplate && selectedTemplate
+          ? selectedTemplate.exam_name
+          : selectedQB?.examTitle || '';
         
         return (
           <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -879,7 +903,7 @@ export default function KoreksiPage() {
                   <div>
                     <CardTitle>{examName}</CardTitle>
                     <CardDescription>
-                      {selectedClass?.name} - {selectedQB.examTitle}
+                      {selectedClass?.name} - {examTitle}
                     </CardDescription>
                     <div className="mt-2 flex gap-4 text-sm">
                       <span className="text-green-700 font-medium">
@@ -916,18 +940,28 @@ export default function KoreksiPage() {
                       <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
                       <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold">No</TableHead>
                       <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[200px]">Nama Siswa</TableHead>
-                      {selectedQB.questions.multipleChoice?.map((q: any, idx: number) => (
-                        <TableHead key={`mc-${idx}`} className="text-center bg-green-50 font-semibold border-x">
-                          PG {idx + 1}<br />
-                          <span className="text-xs font-normal text-gray-500">({q.weight})</span>
-                        </TableHead>
-                      ))}
-                      {selectedQB.questions.essay?.map((q: any, idx: number) => (
-                        <TableHead key={`essay-${idx}`} className="text-center bg-purple-50 font-semibold border-x">
-                          Essay {idx + 1}<br />
-                          <span className="text-xs font-normal text-gray-500">(max {q.weight})</span>
-                        </TableHead>
-                      ))}
+                      {Array.from({ length: mcCount }, (_, idx) => {
+                        const weight = useTemplate && selectedTemplate 
+                          ? selectedTemplate.multiple_choice.weight 
+                          : selectedQB?.questions.multipleChoice[idx]?.weight || 1;
+                        return (
+                          <TableHead key={`mc-${idx}`} className="text-center bg-green-50 font-semibold border-x">
+                            PG {idx + 1}<br />
+                            <span className="text-xs font-normal text-gray-500">({weight})</span>
+                          </TableHead>
+                        );
+                      })}
+                      {Array.from({ length: essayCount }, (_, idx) => {
+                        const weight = useTemplate && selectedTemplate
+                          ? selectedTemplate.essay.weight
+                          : selectedQB?.questions.essay[idx]?.weight || 0;
+                        return (
+                          <TableHead key={`essay-${idx}`} className="text-center bg-purple-50 font-semibold border-x">
+                            Essay {idx + 1}<br />
+                            <span className="text-xs font-normal text-gray-500">(max {weight})</span>
+                          </TableHead>
+                        );
+                      })}
                       <TableHead className="text-center font-bold bg-blue-100 border-l-2 border-blue-300">Total Skor</TableHead>
                       <TableHead className="text-center font-bold bg-indigo-100 border-x-2 border-indigo-300">Nilai</TableHead>
                     </TableRow>
@@ -942,7 +976,9 @@ export default function KoreksiPage() {
                         
                         {/* Multiple Choice Answers */}
                         {grade.mcAnswers.map((answer, qIdx) => {
-                          const correctAnswer = selectedQB.questions.multipleChoice[qIdx]?.correctAnswer;
+                          const correctAnswer = useTemplate && selectedTemplate
+                            ? selectedTemplate.multiple_choice.answer_keys[qIdx]
+                            : selectedQB?.questions.multipleChoice[qIdx]?.correctAnswer;
                           const isCorrect = answer && answer === correctAnswer;
                           const isWrong = answer && answer !== correctAnswer;
                           return (
@@ -982,7 +1018,9 @@ export default function KoreksiPage() {
                         
                         {/* Essay Scores */}
                         {grade.essayScores.map((score, qIdx) => {
-                          const maxScore = selectedQB.questions.essay[qIdx]?.weight || 0;
+                          const maxScore = useTemplate && selectedTemplate
+                            ? selectedTemplate.essay.weight
+                            : selectedQB?.questions.essay[qIdx]?.weight || 0;
                           return (
                             <TableCell key={`essay-${studentIdx}-${qIdx}`} className="border-x">
                               <Input
