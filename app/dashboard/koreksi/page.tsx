@@ -896,7 +896,7 @@ export default function KoreksiPage() {
         
         return (
           <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '200px' }}>
+            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
               <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1082,7 +1082,7 @@ export default function KoreksiPage() {
 
       {/* Horizontal Scrollbar - Fixed at bottom like image 2 */}
       {step === 3 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2">
+        <div className="sticky bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2 mt-4">
           <div 
             id="custom-scrollbar"
             className="overflow-x-auto overflow-y-hidden px-2"
