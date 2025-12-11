@@ -896,7 +896,7 @@ export default function KoreksiPage() {
         
         return (
           <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '100px' }}>
+            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '200px' }}>
               <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
