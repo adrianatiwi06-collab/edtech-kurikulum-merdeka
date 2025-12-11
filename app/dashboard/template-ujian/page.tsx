@@ -505,8 +505,8 @@ export default function TemplateUjianPage() {
                     const tp = availableTPs.find(t => t.id === tpId);
                     return (
                       <div key={tpId} className="bg-white p-3 rounded border border-blue-200">
-                        <p className="text-sm font-medium text-blue-900">TP {index + 1}:</p>
-                        <p className="text-sm text-gray-700 mt-1">{tp?.chapter}</p>
+                        <p className="text-sm font-medium text-blue-900">{tp?.chapter}</p>
+                        <p className="text-sm text-gray-700 mt-1">{tp?.tp}</p>
                       </div>
                     );
                   })}
