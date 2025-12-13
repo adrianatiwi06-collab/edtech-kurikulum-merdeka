@@ -430,29 +430,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* All Features */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4">All Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <Link key={feature.title} href={feature.href}>
-                <Card className="card-elegant hover:shadow-2xl hover:scale-105 smooth-transition cursor-pointer h-full border-0">
-                  <CardHeader>
-                    <div className={`w-14 h-14 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 shadow-md hover:shadow-lg smooth-transition`}>
-                      <Icon className={`w-7 h-7 ${feature.color}`} />
-                    </div>
-                    <CardTitle className="text-xl">{feature.title}</CardTitle>
-                    <CardDescription className="text-gray-600">{feature.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

@@ -61,32 +61,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-violet-50 via-sky-50 to-indigo-50">
-      <aside className={`bg-gradient-to-b from-violet-600 via-blue-600 to-indigo-700 shadow-2xl flex flex-col relative overflow-hidden transition-all duration-300 ${
+    <div className="flex h-screen bg-slate-50">
+      <aside className={`bg-white border-r border-slate-200 shadow-sm flex flex-col relative overflow-hidden transition-all duration-300 ${
         sidebarCollapsed ? 'w-20' : 'w-64'
       }`}>
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full blur-3xl animate-pulse delay-1000"></div>
-        </div>
         
-        <div className="relative p-6 border-b border-white/20 backdrop-blur-sm">
+        <div className="relative p-6 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <div className={`flex items-center gap-3 transition-all duration-300 ${
               sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
             }`}>
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110 hover:rotate-6 glow">
-                <span className="text-2xl">📚</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md transition-all duration-300 hover:scale-105">
+                <span className="text-xl text-white">📚</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white drop-shadow-lg">EdTech</h1>
-                <p className="text-xs text-white/80 font-medium">Kurikulum Merdeka</p>
+                <h1 className="text-lg font-bold text-slate-800">EdTech</h1>
+                <p className="text-xs text-slate-500 font-medium">Kurikulum Merdeka</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 hover:bg-white/20 rounded-lg transition-all duration-300 text-white hover:scale-110"
+              className="p-2 hover:bg-slate-100 rounded-lg transition-all duration-300 text-slate-500 hover:text-slate-800"
               title={sidebarCollapsed ? 'Buka sidebar' : 'Tutup sidebar'}
             >
               {sidebarCollapsed ? <Menu className="w-5 h-5" /> : <X className="w-5 h-5" />}
@@ -94,173 +89,192 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         
-        <nav className="relative flex-1 py-4 overflow-y-auto overflow-x-hidden">
+        <nav className="relative flex-1 py-4 overflow-y-auto overflow-x-hidden px-3 space-y-1">
           <button
             onClick={() => handleNavigation('/dashboard')}
-            className={`relative w-full flex items-center gap-3 px-6 py-3.5 text-white/90 hover:text-white transition-all duration-300 group ${
-              pathname === '/dashboard' ? 'bg-white/20 backdrop-blur-sm shadow-lg border-l-4 border-white' : 'hover:bg-white/10'
+            className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
+              pathname === '/dashboard' 
+                ? 'bg-violet-50 text-violet-700 font-semibold shadow-sm' 
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             } ${sidebarCollapsed ? 'justify-center' : ''}`}
             title={sidebarCollapsed ? 'Dashboard' : ''}
           >
-            <Home className="w-5 h-5 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12" />
-            <span className={`font-semibold transition-all duration-300 ${
+            <Home className={`w-5 h-5 transition-transform duration-300 ${pathname === '/dashboard' ? 'text-violet-600' : 'text-slate-500 group-hover:text-slate-700'}`} />
+            <span className={`transition-all duration-300 ${
               sidebarCollapsed ? 'hidden' : 'block'
             }`}>Dashboard</span>
-            {pathname === '/dashboard' && (
-              <div className="absolute right-4 w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
           </button>
 
-          <div className="mt-2">
+          <div className="pt-2">
             <button
               onClick={() => setMasterDataOpen(!masterDataOpen)}
-              className={`w-full flex items-center justify-between px-6 py-3.5 text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group ${
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all duration-300 group ${
                 sidebarCollapsed ? 'justify-center' : ''
               }`}
               title={sidebarCollapsed ? 'Master Data' : ''}
             >
               <div className="flex items-center gap-3">
-                <Database className="w-5 h-5 transition-transform duration-300 group-hover:scale-125" />
-                <span className={`font-semibold transition-all duration-300 ${
+                <Database className="w-5 h-5 text-slate-500 group-hover:text-slate-700 transition-transform duration-300" />
+                <span className={`font-medium transition-all duration-300 ${
                   sidebarCollapsed ? 'hidden' : 'block'
                 }`}>Master Data</span>
               </div>
-              {!sidebarCollapsed && (masterDataOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
+              {!sidebarCollapsed && (masterDataOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />)}
             </button>
             {masterDataOpen && !sidebarCollapsed && (
-              <div className="bg-white/5 border-l-2 border-white/30 ml-6">
+              <div className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-3">
                 <button
                   onClick={() => handleNavigation('/dashboard/master-data')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/master-data' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/master-data' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Users className="w-4 h-4 transition-transform duration-300" />
+                  <Users className="w-4 h-4" />
                   Kelas & Siswa
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/generate-tp')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/generate-tp' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/generate-tp' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Brain className="w-4 h-4 transition-transform duration-300" />
+                  <Brain className="w-4 h-4" />
                   Generate TP
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/my-tp')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/my-tp' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/my-tp' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <BookOpen className="w-4 h-4 transition-transform duration-300" />
+                  <BookOpen className="w-4 h-4" />
                   TP Tersimpan
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/bank-soal')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/bank-soal' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/bank-soal' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <FileText className="w-4 h-4 transition-transform duration-300" />
+                  <FileText className="w-4 h-4" />
                   Bank Soal
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/template-ujian')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/template-ujian' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/template-ujian' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <FileCheck className="w-4 h-4 transition-transform duration-300" />
+                  <FileCheck className="w-4 h-4" />
                   Template Ujian
                 </button>
               </div>
             )}
           </div>
 
-          <div className="mt-2">
+          <div className="pt-2">
             <button
               onClick={() => setAssessmentOpen(!assessmentOpen)}
-              className={`w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1 ${
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all duration-300 group ${
                 sidebarCollapsed ? 'justify-center' : ''
               }`}
               title={sidebarCollapsed ? 'Assessment' : ''}
             >
               <div className="flex items-center gap-3">
-                <ClipboardCheck className="w-5 h-5 transition-transform duration-300" />
+                <ClipboardCheck className="w-5 h-5 text-slate-500 group-hover:text-slate-700 transition-transform duration-300" />
                 <span className={`font-medium transition-all duration-300 ${
                   sidebarCollapsed ? 'hidden' : 'block'
                 }`}>Assessment</span>
               </div>
-              {!sidebarCollapsed && (assessmentOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
+              {!sidebarCollapsed && (assessmentOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />)}
             </button>
             {assessmentOpen && !sidebarCollapsed && (
-              <div className="bg-slate-900/30 border-l-2 border-slate-700 ml-6">
+              <div className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-3">
                 <button
                   onClick={() => handleNavigation('/dashboard/generate-soal')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/generate-soal' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/generate-soal' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Brain className="w-4 h-4 transition-transform duration-300" />
+                  <Brain className="w-4 h-4" />
                   Generate Soal
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/koreksi')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/koreksi' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/koreksi' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <ClipboardCheck className="w-4 h-4 transition-transform duration-300" />
+                  <ClipboardCheck className="w-4 h-4" />
                   Koreksi Digital
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/rekap-nilai')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/rekap-nilai' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/rekap-nilai' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <BarChart3 className="w-4 h-4 transition-transform duration-300" />
+                  <BarChart3 className="w-4 h-4" />
                   Rekap Nilai
                 </button>
               </div>
             )}
           </div>
 
-          <div className="mt-2">
+          <div className="pt-2">
             <button
               onClick={() => setAnalysisOpen(!analysisOpen)}
-              className={`w-full flex items-center justify-between px-6 py-3 text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all duration-300 hover:translate-x-1 ${
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all duration-300 group ${
                 sidebarCollapsed ? 'justify-center' : ''
               }`}
               title={sidebarCollapsed ? 'Analysis' : ''}
             >
               <div className="flex items-center gap-3">
-                <BarChart3 className="w-5 h-5 transition-transform duration-300" />
+                <BarChart3 className="w-5 h-5 text-slate-500 group-hover:text-slate-700 transition-transform duration-300" />
                 <span className={`font-medium transition-all duration-300 ${
                   sidebarCollapsed ? 'hidden' : 'block'
                 }`}>Analysis</span>
               </div>
-              {!sidebarCollapsed && (analysisOpen ? <ChevronDown className="w-4 h-4 transition-transform duration-300" /> : <ChevronRight className="w-4 h-4 transition-transform duration-300" />)}
+              {!sidebarCollapsed && (analysisOpen ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />)}
             </button>
             {analysisOpen && !sidebarCollapsed && (
-              <div className="bg-slate-900/30 border-l-2 border-slate-700 ml-6">
+              <div className="ml-4 mt-1 space-y-1 border-l border-slate-200 pl-3">
                 <button
                   onClick={() => handleNavigation('/dashboard/analisis-tp')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/analisis-tp' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/analisis-tp' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <BarChart3 className="w-4 h-4 transition-transform duration-300" />
+                  <BarChart3 className="w-4 h-4" />
                   Analisis TP
                 </button>
                 <button
                   onClick={() => handleNavigation('/dashboard/analisis-nilai')}
-                  className={`w-full flex items-center gap-2 pl-8 pr-6 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800/30 transition-all duration-300 hover:translate-x-1 ${
-                    pathname === '/dashboard/analisis-nilai' ? 'text-white bg-slate-800/50 font-medium' : ''
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 ${
+                    pathname === '/dashboard/analisis-nilai' 
+                      ? 'text-violet-700 bg-violet-50 font-medium' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  <Users className="w-4 h-4 transition-transform duration-300" />
+                  <Users className="w-4 h-4" />
                   Analisis Nilai Siswa
                 </button>
               </div>
@@ -268,36 +282,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </nav>
 
-        <div className="flex-shrink-0 p-4 border-t border-slate-700/50">
-          <div className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 rounded-xl p-4 mb-3 border border-blue-500/20 transition-all duration-300 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10">
+        <div className="flex-shrink-0 p-4 border-t border-slate-200">
+          <div className="bg-slate-50 rounded-xl p-3 mb-3 border border-slate-200">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-semibold shadow-lg transition-transform duration-300 hover:scale-110">
+              <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-semibold shadow-sm">
                 {user.email?.[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-400 mb-0.5">Logged in as</p>
-                <p className="text-sm font-semibold text-white truncate">{user.email}</p>
+                <p className="text-xs text-slate-500 mb-0.5">Logged in as</p>
+                <p className="text-sm font-semibold text-slate-800 truncate">{user.email}</p>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="w-full bg-slate-800/50 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border-slate-700 hover:border-red-500/50 transition-all duration-300 hover:scale-105"
+              className="w-full bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border-slate-200 hover:border-red-200 transition-all duration-300"
               onClick={handleSignOut}
             >
-              <LogOut className="w-4 h-4 mr-2 transition-transform duration-300" />
+              <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-slate-50/50">
         {navigating && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="flex items-center gap-2 bg-white px-6 py-4 rounded-xl shadow-2xl border border-blue-200">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">Loading...</span>
+            <div className="flex items-center gap-2 bg-white px-6 py-4 rounded-xl shadow-2xl border border-slate-100">
+              <Loader2 className="w-5 h-5 animate-spin text-violet-600" />
+              <span className="text-sm font-medium text-slate-700">Loading...</span>
             </div>
           </div>
         )}

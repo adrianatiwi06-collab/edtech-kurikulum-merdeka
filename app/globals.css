@@ -79,45 +79,43 @@
 }
 
 @layer components {
-  /* Card styles */
+  /* Card styles - Lebih bersih dan modern */
   .card-elegant {
-    @apply bg-white/90 backdrop-blur-lg shadow-xl hover:shadow-2xl transition-all duration-500 border border-white/60 rounded-2xl;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+    @apply bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 rounded-2xl;
   }
   
   /* Button hover effects */
   .btn-elegant {
-    @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:-translate-y-1;
+    @apply transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-sm hover:shadow;
   }
   
   /* Input focus styles */
   .input-elegant {
-    @apply focus:ring-4 focus:ring-violet-500/30 focus:border-violet-500 transition-all duration-300 rounded-xl;
+    @apply focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all duration-300 rounded-xl border-slate-200;
   }
   
   /* Table styles */
   .table-elegant {
-    @apply bg-white/95 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-white/60;
+    @apply bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100;
   }
   
-  /* Gradient text */
+  /* Gradient text - Lebih halus */
   .text-gradient {
-    @apply bg-gradient-to-r from-violet-600 via-blue-500 to-cyan-500 bg-clip-text text-transparent font-bold;
+    @apply bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent font-bold;
   }
   
   .text-gradient-blue {
-    @apply bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 bg-clip-text text-transparent font-bold;
+    @apply bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent font-bold;
   }
   
-  /* Glass morphism effect */
+  /* Glass morphism effect - Lebih subtle */
   .glass {
-    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl;
-    box-shadow: 0 8px 32px 0 rgba(147, 51, 234, 0.15);
+    @apply bg-white/80 backdrop-blur-md border border-white/60 shadow-lg rounded-2xl;
   }
   
   /* Smooth transitions */
   .smooth-transition {
-    @apply transition-all duration-500 ease-out;
+    @apply transition-all duration-300 ease-out;
   }
   
   /* Animated gradient background */
@@ -145,14 +143,12 @@
   
   /* Glow effect */
   .glow {
-    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3),
-                0 0 40px rgba(59, 130, 246, 0.2),
-                0 0 60px rgba(34, 211, 238, 0.15);
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.1),
+                0 0 40px rgba(59, 130, 246, 0.1);
   }
   
   .glow-hover:hover {
-    box-shadow: 0 0 30px rgba(147, 51, 234, 0.5),
-                0 0 60px rgba(59, 130, 246, 0.3),
-                0 0 90px rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.2),
+                0 0 60px rgba(59, 130, 246, 0.15);
   }
 }
