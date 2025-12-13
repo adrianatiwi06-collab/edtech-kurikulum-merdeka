@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { ExamTemplate, LearningGoal } from '@/types';
@@ -9,11 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 
-type Step = 1 | 2 | 3;
+type Step = 0 | 1 | 2 | 3; // 0 for saved templates view
 
 export default function TemplateUjianPage() {
   const { user } = useAuth();
-  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [currentStep, setCurrentStep] = useState<Step>(0);
+  
+  // Saved templates
+  const [savedTemplates, setSavedTemplates] = useState<ExamTemplate[]>([]);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [showSavedTemplates, setShowSavedTemplates] = useState(true);
   
   // Step 1: Exam Info
   const [examName, setExamName] = useState('');
@@ -52,12 +57,111 @@ export default function TemplateUjianPage() {
 
   const grades = ['1', '2', '3', '4', '5', '6'];
 
+  // Load saved templates on mount
+  useEffect(() => {
+    if (user && showSavedTemplates) {
+      loadSavedTemplates();
+    }
+  }, [user, showSavedTemplates]);
+
   // Load TPs when filters change
   useEffect(() => {
     if (currentStep === 2 && user && selectedGrade && selectedSubject && selectedSemester) {
       loadTPs();
     }
   }, [currentStep, user, selectedGrade, selectedSubject, selectedSemester]);
+
+  const loadSavedTemplates = async () => {
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, 'exam_templates'),
+        where('user_id', '==', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      const templates: ExamTemplate[] = [];
+      snapshot.forEach((doc) => {
+        templates.push({ id: doc.id, ...doc.data() } as ExamTemplate);
+      });
+      // Sort by created_at descending
+      templates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setSavedTemplates(templates);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  };
+
+  const handleEditTemplate = (template: ExamTemplate) => {
+    // Load template data into state
+    setEditingTemplateId(template.id);
+    setExamName(template.exam_name);
+    setExamType(template.exam_type);
+    setSelectedGrade(template.grade);
+    setSelectedSubject(template.subject);
+    setSelectedSemester(template.semester);
+    
+    // Set TP selection
+    const tpIds = new Set(template.tp_ids);
+    setSelectedTPs(tpIds);
+    
+    // Set question config
+    setPgCount(template.multiple_choice.count);
+    setPgWeight(template.multiple_choice.weight);
+    setPgAnswerKeys(template.multiple_choice.answer_keys);
+    
+    // Rebuild PG mapping
+    const pgMapping: { [key: number]: string } = {};
+    template.multiple_choice.tp_mapping.forEach((tpId, index) => {
+      pgMapping[index + 1] = tpId;
+    });
+    setPgTPMapping(pgMapping);
+    
+    setEssayCount(template.essay.count);
+    setEssayWeight(template.essay.weight);
+    
+    // Rebuild Essay mapping
+    const essayMapping: { [key: number]: string } = {};
+    template.essay.tp_mapping.forEach((tpId, index) => {
+      essayMapping[index + 1] = tpId;
+    });
+    setEssayTPMapping(essayMapping);
+    
+    setShowSavedTemplates(false);
+    setCurrentStep(1);
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Yakin ingin menghapus template ini?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'exam_templates', templateId));
+      alert('Template berhasil dihapus');
+      loadSavedTemplates();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      alert('Gagal menghapus template');
+    }
+  };
+
+  const handleStartNewTemplate = () => {
+    // Reset all states
+    setEditingTemplateId(null);
+    setExamName('');
+    setExamType('PAS');
+    setSelectedGrade('1');
+    setSelectedSubject('');
+    setSelectedSemester(1);
+    setSelectedTPs(new Set());
+    setPgCount(20);
+    setPgWeight(1);
+    setPgAnswerKeys(Array(20).fill(''));
+    setPgTPMapping({});
+    setEssayCount(5);
+    setEssayWeight(4);
+    setEssayTPMapping({});
+    setShowSavedTemplates(false);
+    setCurrentStep(1);
+  };
 
   const loadTPs = async () => {
     if (!user) return;
@@ -247,17 +351,29 @@ export default function TemplateUjianPage() {
         updated_at: new Date().toISOString()
       };
       
-      await addDoc(collection(db, 'exam_templates'), template);
+      if (editingTemplateId) {
+        // Update existing template
+        await updateDoc(doc(db, 'exam_templates', editingTemplateId), {
+          ...template,
+          created_at: undefined, // Don't update created_at
+        } as any);
+        alert('Template ujian berhasil diperbarui!');
+      } else {
+        // Create new template
+        await addDoc(collection(db, 'exam_templates'), template);
+        alert('Template ujian berhasil disimpan!');
+      }
       
-      alert('Template ujian berhasil disimpan!');
-      
-      // Reset form
-      setCurrentStep(1);
+      // Reset form and go back to saved templates
+      setEditingTemplateId(null);
+      setCurrentStep(0);
+      setShowSavedTemplates(true);
       setExamName('');
       setSelectedTPs(new Set());
       setPgAnswerKeys(Array(20).fill(''));
       setPgTPMapping({});
       setEssayTPMapping({});
+      loadSavedTemplates();
       
     } catch (error) {
       console.error('Error saving template:', error);
@@ -276,9 +392,90 @@ export default function TemplateUjianPage() {
         </p>
       </div>
 
+      {/* Saved Templates View - Step 0 */}
+      {showSavedTemplates && currentStep === 0 && (
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Template Tersimpan</h2>
+            <Button onClick={handleStartNewTemplate} size="lg">
+              ➕ Buat Template Baru
+            </Button>
+          </div>
+          
+          {savedTemplates.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg mb-4">Belum ada template tersimpan</p>
+              <Button onClick={handleStartNewTemplate} variant="outline">
+                Buat Template Pertama
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {savedTemplates.map((template) => (
+                <Card key={template.id} className="p-4 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-primary">{template.exam_name}</h3>
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Jenis:</span>
+                          <span className="ml-2 font-medium">{template.exam_type}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Kelas:</span>
+                          <span className="ml-2 font-medium">{template.grade}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Mapel:</span>
+                          <span className="ml-2 font-medium">{template.subject}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Semester:</span>
+                          <span className="ml-2 font-medium">{template.semester}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex gap-4 text-sm">
+                        <span className="text-green-700">
+                          PG: {template.multiple_choice.count} soal × {template.multiple_choice.weight} = {template.multiple_choice.count * template.multiple_choice.weight} poin
+                        </span>
+                        <span className="text-purple-700">
+                          Essay: {template.essay.count} soal × {template.essay.weight} = {template.essay.count * template.essay.weight} poin
+                        </span>
+                        <span className="text-blue-700 font-semibold">
+                          Total: {template.max_score} poin
+                        </span>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        TP: {template.tp_ids.length} tujuan pembelajaran
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button 
+                        onClick={() => handleEditTemplate(template)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        ✏️ Edit
+                      </Button>
+                      <Button 
+                        onClick={() => handleDeleteTemplate(template.id)}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        🗑️ Hapus
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Step Indicator */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
+      {!showSavedTemplates && currentStep > 0 && (
+      <div className="flex items-center gap-4 mb-8">\n        <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             1
           </div>
@@ -299,6 +496,7 @@ export default function TemplateUjianPage() {
           <span className="font-medium">Konfigurasi Soal</span>
         </div>
       </div>
+      )}
 
       {/* Step 1: Exam Info */}
       {currentStep === 1 && (
@@ -372,9 +570,18 @@ export default function TemplateUjianPage() {
             </div>
           </div>
           
-          <div className="flex justify-end gap-2 mt-6">
+          <div className="flex justify-between gap-2 mt-6">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setCurrentStep(0);
+                setShowSavedTemplates(true);
+              }}
+            >
+              ← Kembali ke Daftar Template
+            </Button>
             <Button onClick={handleStep1Next}>
-              Lanjut ke Pemilihan TP
+              Lanjut ke Pemilihan TP →
             </Button>
           </div>
         </Card>
@@ -621,10 +828,10 @@ export default function TemplateUjianPage() {
           
           <div className="flex justify-between gap-2 mt-6">
             <Button variant="outline" onClick={() => setCurrentStep(2)}>
-              Kembali
+              ← Kembali
             </Button>
             <Button onClick={handleSaveTemplate} disabled={saving}>
-              {saving ? 'Menyimpan...' : 'Simpan Template'}
+              {saving ? 'Menyimpan...' : editingTemplateId ? '💾 Update Template' : '💾 Simpan Template'}
             </Button>
           </div>
         </Card>
