@@ -235,52 +235,107 @@ export default function KoreksiPage() {
   const handleLoadSavedGrade = async (savedGrade: SavedGrade) => {
     setLoading(true);
     try {
-      // Load question bank
-      const qbQuery = query(
-        collection(db, 'question_banks'),
-        where('user_id', '==', user?.uid)
-      );
-      const qbSnapshot = await getDocs(qbQuery);
-      let foundQB: QuestionBank | null = null;
-      
-      qbSnapshot.forEach((doc) => {
-        if (doc.id === savedGrade.question_bank_id) {
-          foundQB = { id: doc.id, ...doc.data() } as QuestionBank;
+      // Check if this grade is from template or question bank
+      if (savedGrade.exam_template_id) {
+        // Load from template
+        const templateQuery = query(
+          collection(db, 'exam_templates'),
+          where('user_id', '==', user?.uid)
+        );
+        const templateSnapshot = await getDocs(templateQuery);
+        let foundTemplate: ExamTemplate | null = null;
+        
+        templateSnapshot.forEach((doc) => {
+          if (doc.id === savedGrade.exam_template_id) {
+            foundTemplate = { id: doc.id, ...doc.data() } as ExamTemplate;
+          }
+        });
+        
+        if (!foundTemplate) {
+          alert('Template ujian tidak ditemukan');
+          return;
         }
-      });
-      
-      if (!foundQB) {
-        alert('Soal tidak ditemukan');
-        return;
-      }
-      
-      // Load class
-      const classQuery = query(
-        collection(db, 'classes'),
-        where('user_id', '==', user?.uid)
-      );
-      const classSnapshot = await getDocs(classQuery);
-      let foundClass: Class | null = null;
-      
-      classSnapshot.forEach((doc) => {
-        if (doc.id === savedGrade.class_id) {
-          foundClass = { id: doc.id, name: doc.data().name } as Class;
+        
+        // Load class
+        const classQuery = query(
+          collection(db, 'classes'),
+          where('user_id', '==', user?.uid)
+        );
+        const classSnapshot = await getDocs(classQuery);
+        let foundClass: Class | null = null;
+        
+        classSnapshot.forEach((doc) => {
+          if (doc.id === savedGrade.class_id) {
+            foundClass = { id: doc.id, name: doc.data().name } as Class;
+          }
+        });
+        
+        if (!foundClass) {
+          alert('Kelas tidak ditemukan');
+          return;
         }
-      });
-      
-      if (!foundClass) {
-        alert('Kelas tidak ditemukan');
-        return;
+        
+        // Set states for template mode
+        setUseTemplate(true);
+        setSelectedTemplate(foundTemplate);
+        setSelectedQB(null);
+        setSelectedClass(foundClass);
+        setExamName(savedGrade.exam_name);
+        setGrades(savedGrade.grades);
+        setSavedGradeId(savedGrade.id);
+        setStep(3);
+        setShowSavedGrades(false);
+        
+      } else {
+        // Load from question bank (existing logic)
+        const qbQuery = query(
+          collection(db, 'question_banks'),
+          where('user_id', '==', user?.uid)
+        );
+        const qbSnapshot = await getDocs(qbQuery);
+        let foundQB: QuestionBank | null = null;
+        
+        qbSnapshot.forEach((doc) => {
+          if (doc.id === savedGrade.question_bank_id) {
+            foundQB = { id: doc.id, ...doc.data() } as QuestionBank;
+          }
+        });
+        
+        if (!foundQB) {
+          alert('Soal tidak ditemukan');
+          return;
+        }
+        
+        // Load class
+        const classQuery = query(
+          collection(db, 'classes'),
+          where('user_id', '==', user?.uid)
+        );
+        const classSnapshot = await getDocs(classQuery);
+        let foundClass: Class | null = null;
+        
+        classSnapshot.forEach((doc) => {
+          if (doc.id === savedGrade.class_id) {
+            foundClass = { id: doc.id, name: doc.data().name } as Class;
+          }
+        });
+        
+        if (!foundClass) {
+          alert('Kelas tidak ditemukan');
+          return;
+        }
+        
+        // Set states for question bank mode
+        setUseTemplate(false);
+        setSelectedQB(foundQB);
+        setSelectedTemplate(null);
+        setSelectedClass(foundClass);
+        setExamName(savedGrade.exam_name);
+        setGrades(savedGrade.grades);
+        setSavedGradeId(savedGrade.id);
+        setStep(3);
+        setShowSavedGrades(false);
       }
-      
-      // Set all states
-      setSelectedQB(foundQB);
-      setSelectedClass(foundClass);
-      setExamName(savedGrade.exam_name);
-      setGrades(savedGrade.grades);
-      setSavedGradeId(savedGrade.id);
-      setStep(3);
-      setShowSavedGrades(false);
     } catch (error) {
       console.error('Error loading saved grade:', error);
       alert('Gagal memuat data koreksi');
