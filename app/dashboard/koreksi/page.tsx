@@ -611,9 +611,9 @@ export default function KoreksiPage() {
 
       {/* Step 0: Choose Mode */}
       {step === 0 && !showSavedGrades && (
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
           <CardHeader>
-            <CardTitle>Pilih Mode Koreksi</CardTitle>
+            <CardTitle className="text-purple-900">Pilih Mode Koreksi</CardTitle>
             <CardDescription>
               Gunakan Template Ujian untuk ujian kertas (PAS/PTS) dengan pemetaan TP, 
               atau Bank Soal untuk ujian digital dengan soal lengkap
@@ -622,7 +622,7 @@ export default function KoreksiPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Card
-                className="cursor-pointer hover:border-primary transition-all"
+                className="cursor-pointer hover:border-purple-500 hover:shadow-lg transition-all bg-gradient-to-br from-fuchsia-50 to-purple-100 border-purple-300"
                 onClick={() => {
                   setUseTemplate(true);
                   setStep(1);
@@ -630,7 +630,7 @@ export default function KoreksiPage() {
               >
                 <CardContent className="p-6 text-center">
                   <div className="text-4xl mb-3">📝</div>
-                  <h3 className="font-semibold mb-2">Template Ujian</h3>
+                  <h3 className="font-semibold mb-2 text-purple-900">Template Ujian</h3>
                   <p className="text-sm text-muted-foreground">
                     Ujian berbasis kertas (PAS/PTS) dengan kunci jawaban & pemetaan TP
                   </p>
@@ -643,7 +643,7 @@ export default function KoreksiPage() {
               </Card>
 
               <Card
-                className="cursor-pointer hover:border-primary transition-all"
+                className="cursor-pointer hover:border-teal-500 hover:shadow-lg transition-all bg-gradient-to-br from-teal-50 to-cyan-100 border-teal-300"
                 onClick={() => {
                   setUseTemplate(false);
                   setStep(1);
@@ -651,7 +651,7 @@ export default function KoreksiPage() {
               >
                 <CardContent className="p-6 text-center">
                   <div className="text-4xl mb-3">📚</div>
-                  <h3 className="font-semibold mb-2">Bank Soal</h3>
+                  <h3 className="font-semibold mb-2 text-teal-900">Bank Soal</h3>
                   <p className="text-sm text-muted-foreground">
                     Soal digital lengkap dari Bank Soal yang sudah dibuat
                   </p>
@@ -726,17 +726,17 @@ export default function KoreksiPage() {
       )}
 
       {step === 1 && !showSavedGrades && !useTemplate && (
-        <Card>
+        <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Pilih Sumber Soal</CardTitle>
+                <CardTitle className="text-teal-900">Pilih Sumber Soal</CardTitle>
                 <CardDescription>Pilih mata pelajaran dan bank soal, atau lanjutkan koreksi tersimpan</CardDescription>
               </div>
               <Button 
                 variant="outline" 
                 onClick={() => setShowSavedGrades(true)}
-                className="gap-2"
+                className="gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 border-blue-300 hover:from-blue-200 hover:to-indigo-200"
               >
                 📂 Muat Koreksi Tersimpan
               </Button>
@@ -820,30 +820,30 @@ export default function KoreksiPage() {
                   const progress = totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0;
                   
                   return (
-                    <Card key={savedGrade.id} className="border-2 hover:border-blue-400 transition-colors">
+                    <Card key={savedGrade.id} className="border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all bg-gradient-to-br from-purple-50 to-pink-50">
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg mb-2">{savedGrade.exam_name}</h3>
-                            <div className="space-y-1 text-sm text-gray-600">
-                              <p><span className="font-medium">Mata Pelajaran:</span> {savedGrade.subject}</p>
-                              <p><span className="font-medium">Kelas:</span> {savedGrade.class_name}</p>
-                              <p><span className="font-medium">Bank Soal:</span> {savedGrade.exam_title}</p>
-                              <p><span className="font-medium">Terakhir diubah:</span> {new Date(savedGrade.updated_at).toLocaleString('id-ID')}</p>
+                            <h3 className="font-semibold text-lg mb-2 text-purple-900">{savedGrade.exam_name}</h3>
+                            <div className="space-y-1 text-sm text-gray-700">
+                              <p><span className="font-medium text-purple-800">Mata Pelajaran:</span> {savedGrade.subject}</p>
+                              <p><span className="font-medium text-purple-800">Kelas:</span> {savedGrade.class_name}</p>
+                              <p><span className="font-medium text-purple-800">Bank Soal:</span> {savedGrade.exam_title}</p>
+                              <p><span className="font-medium text-purple-800">Terakhir diubah:</span> {new Date(savedGrade.updated_at).toLocaleString('id-ID')}</p>
                             </div>
                             <div className="mt-3">
                               <div className="flex items-center gap-3">
-                                <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+                                <div className="flex-1 bg-purple-200 rounded-full h-2.5">
                                   <div 
-                                    className="bg-blue-600 h-2.5 rounded-full transition-all" 
+                                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-2.5 rounded-full transition-all" 
                                     style={{ width: `${progress}%` }}
                                   ></div>
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium text-purple-900">
                                   {completedStudents}/{totalStudents} siswa
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-purple-700 mt-1">
                                 Progress: {progress}%
                               </p>
                             </div>
