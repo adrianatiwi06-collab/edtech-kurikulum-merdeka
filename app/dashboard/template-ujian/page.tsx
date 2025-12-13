@@ -109,22 +109,14 @@ export default function TemplateUjianPage() {
     setPgWeight(template.multiple_choice.weight);
     setPgAnswerKeys(template.multiple_choice.answer_keys);
     
-    // Rebuild PG mapping
-    const pgMapping: { [key: number]: string } = {};
-    template.multiple_choice.tp_mapping.forEach((tpId, index) => {
-      pgMapping[index + 1] = tpId;
-    });
-    setPgTPMapping(pgMapping);
+    // tp_mapping is already an object { [questionNumber]: tpId }, just use it directly
+    setPgTPMapping(template.multiple_choice.tp_mapping);
     
     setEssayCount(template.essay.count);
     setEssayWeight(template.essay.weight);
     
-    // Rebuild Essay mapping
-    const essayMapping: { [key: number]: string } = {};
-    template.essay.tp_mapping.forEach((tpId, index) => {
-      essayMapping[index + 1] = tpId;
-    });
-    setEssayTPMapping(essayMapping);
+    // Essay mapping is also an object
+    setEssayTPMapping(template.essay.tp_mapping);
     
     setShowSavedTemplates(false);
     setCurrentStep(1);
