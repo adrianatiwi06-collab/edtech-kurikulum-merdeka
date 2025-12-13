@@ -344,11 +344,9 @@ export default function TemplateUjianPage() {
       };
       
       if (editingTemplateId) {
-        // Update existing template
-        await updateDoc(doc(db, 'exam_templates', editingTemplateId), {
-          ...template,
-          created_at: undefined, // Don't update created_at
-        } as any);
+        // Update existing template - don't include created_at
+        const { created_at, ...updateData } = template;
+        await updateDoc(doc(db, 'exam_templates', editingTemplateId), updateData);
         alert('Template ujian berhasil diperbarui!');
       } else {
         // Create new template
