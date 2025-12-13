@@ -161,36 +161,36 @@ export default function DashboardPage() {
       title: 'Total TP',
       value: stats.totalTP,
       icon: BookOpen,
-      gradient: 'from-violet-500 to-purple-600',
-      iconColor: 'text-violet-600',
-      bgGradient: 'from-violet-50 to-purple-50',
+      gradient: 'from-purple-500 to-pink-600',
+      iconColor: 'text-purple-600',
+      bgGradient: 'from-purple-50 to-pink-50',
       description: 'Tujuan Pembelajaran'
     },
     {
       title: 'Bank Soal',
       value: stats.bankSoal,
       icon: FileText,
-      gradient: 'from-emerald-500 to-teal-600',
-      iconColor: 'text-emerald-600',
-      bgGradient: 'from-emerald-50 to-teal-50',
+      gradient: 'from-teal-500 to-cyan-600',
+      iconColor: 'text-teal-600',
+      bgGradient: 'from-teal-50 to-cyan-50',
       description: 'Total Soal'
     },
     {
       title: 'Template Ujian',
       value: stats.templates,
       icon: FileCheck,
-      gradient: 'from-indigo-500 to-blue-600',
-      iconColor: 'text-indigo-600',
-      bgGradient: 'from-indigo-50 to-blue-50',
+      gradient: 'from-blue-500 to-indigo-600',
+      iconColor: 'text-blue-600',
+      bgGradient: 'from-blue-50 to-indigo-50',
       description: 'Template Tersedia'
     },
     {
       title: 'Nilai Tersimpan',
       value: stats.grades,
       icon: BarChart3,
-      gradient: 'from-amber-500 to-orange-600',
-      iconColor: 'text-amber-600',
-      bgGradient: 'from-amber-50 to-orange-50',
+      gradient: 'from-orange-500 to-red-600',
+      iconColor: 'text-orange-600',
+      bgGradient: 'from-orange-50 to-red-50',
       description: 'Total Penilaian'
     }
   ];
@@ -201,24 +201,24 @@ export default function DashboardPage() {
       description: 'Buat Tujuan Pembelajaran dengan AI',
       icon: Brain,
       href: '/dashboard/generate-tp',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      color: 'text-fuchsia-600',
+      bgColor: 'bg-fuchsia-50'
     },
     {
       title: 'Generate Soal AI',
       description: 'Generate soal dari Tujuan Pembelajaran',
       icon: Brain,
       href: '/dashboard/generate-soal',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50'
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50'
     },
     {
       title: 'Template Ujian',
       description: 'Buat Template Ujian Cepat',
       icon: FileCheck,
       href: '/dashboard/template-ujian',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      color: 'text-rose-600',
+      bgColor: 'bg-rose-50'
     }
   ];
 
@@ -228,24 +228,24 @@ export default function DashboardPage() {
       description: 'Kelola data kelas dan siswa',
       icon: Users,
       href: '/dashboard/master-data',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: 'text-sky-600',
+      bgColor: 'bg-sky-50',
     },
     {
       title: 'Bank Soal',
       description: 'Kelola dan lihat bank soal',
       icon: FileText,
       href: '/dashboard/bank-soal',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
     },
     {
       title: 'Koreksi Digital',
       description: 'Koreksi jawaban siswa secara digital',
       icon: ClipboardCheck,
       href: '/dashboard/koreksi',
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
     },
     {
       title: 'Rekap Nilai',
