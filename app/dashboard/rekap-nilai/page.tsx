@@ -243,8 +243,13 @@ export default function RekapNilaiPage() {
 
         const score = studentGrade.finalGrade !== undefined ? studentGrade.finalGrade : studentGrade.totalScore;
 
+        // Fallback: jika examType 'uh' tapi ada field pas pada studentGrade, masukkan ke PAS
         if (examType === 'uh') {
-          student.uh.push(score);
+          if (typeof studentGrade.pas === 'number' && studentGrade.pas > 0) {
+            student.pas = studentGrade.pas;
+          } else {
+            student.uh.push(score);
+          }
         } else if (examType === 'pts') {
           student.pts = score;
         } else if (examType === 'pas') {
