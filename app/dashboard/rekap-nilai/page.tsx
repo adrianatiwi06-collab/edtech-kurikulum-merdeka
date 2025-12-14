@@ -721,6 +721,11 @@ export default function RekapNilaiPage() {
                 setManualLoading(true);
                 try {
                   // Simpan ke Firestore: update/replace dokumen grades (per subject, class, exam_name: "Manual Input")
+                  if (!user) {
+                    setManualError('User tidak ditemukan. Silakan login ulang.');
+                    setManualLoading(false);
+                    return;
+                  }
                   const q = query(collection(db, 'grades'), where('user_id', '==', user.uid), where('subject', '==', selectedSubject), where('class_name', '==', selectedClass), where('exam_name', '==', 'Manual Input'));
                   const snap = await getDocs(q);
                   let docId = '';
