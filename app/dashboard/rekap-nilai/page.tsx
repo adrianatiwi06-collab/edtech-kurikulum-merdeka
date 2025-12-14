@@ -1,14 +1,7 @@
 
 "use client";
 
-// State untuk input manual nilai
-const [manualModalOpen, setManualModalOpen] = useState(false);
-const [manualStudent, setManualStudent] = useState('');
-const [manualUH, setManualUH] = useState<string[]>(['']);
-const [manualPTS, setManualPTS] = useState('');
-const [manualPAS, setManualPAS] = useState('');
-const [manualLoading, setManualLoading] = useState(false);
-const [manualError, setManualError] = useState('');
+
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +44,14 @@ interface ConsolidatedStudentGrade {
 const ITEMS_PER_PAGE = 10;
 
 export default function RekapNilaiPage() {
+    // State untuk input manual nilai
+    const [manualModalOpen, setManualModalOpen] = useState(false);
+    const [manualStudent, setManualStudent] = useState('');
+    const [manualUH, setManualUH] = useState<string[]>(['']);
+    const [manualPTS, setManualPTS] = useState('');
+    const [manualPAS, setManualPAS] = useState('');
+    const [manualLoading, setManualLoading] = useState(false);
+    const [manualError, setManualError] = useState('');
   const { user } = useAuth();
   const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(false);
