@@ -1,12 +1,14 @@
-  // State untuk input manual nilai
-  const [manualModalOpen, setManualModalOpen] = useState(false);
-  const [manualStudent, setManualStudent] = useState('');
-  const [manualUH, setManualUH] = useState<string[]>(['']);
-  const [manualPTS, setManualPTS] = useState('');
-  const [manualPAS, setManualPAS] = useState('');
-  const [manualLoading, setManualLoading] = useState(false);
-  const [manualError, setManualError] = useState('');
+
 "use client";
+
+// State untuk input manual nilai
+const [manualModalOpen, setManualModalOpen] = useState(false);
+const [manualStudent, setManualStudent] = useState('');
+const [manualUH, setManualUH] = useState<string[]>(['']);
+const [manualPTS, setManualPTS] = useState('');
+const [manualPAS, setManualPAS] = useState('');
+const [manualLoading, setManualLoading] = useState(false);
+const [manualError, setManualError] = useState('');
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
