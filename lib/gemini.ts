@@ -1486,7 +1486,7 @@ Berikan response HANYA dalam format JSON yang valid. Maksimal 5 TP per bab (jika
 
       "chapter": "Nama Bab/Elemen",
 
-      "tp_count": 2 / 3 / 4 / 5,
+      "tp_count": "jumlah TP untuk bab ini (2-4)",
 
       "tp_1": "Peserta didik mampu [GENERAL & IMPORTANT]",
 
@@ -1523,7 +1523,9 @@ Berikan response HANYA dalam format JSON yang valid. Maksimal 5 TP per bab (jika
 
 [!][!][!][!][!][!] WAJIB PATUHI:
 
-- Maksimal 4 TP per bab (jangan lebih)
+- TARGET: Total 12 TP untuk seluruh semester (distribusi merata di semua bab)
+
+- Minimal 2 TP per bab, maksimal 4 TP per bab
 
 - Setiap TP mewakili 1 keranjang (A/B/C)
 
@@ -1616,7 +1618,7 @@ ATURAN PENTING:
 
 OUTPUT FORMAT (JSON):
 
-Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP):
+Berikan response HANYA dalam format JSON yang valid. TARGET 12 TP total untuk seluruh semester:
 
 {
 
@@ -1628,7 +1630,7 @@ Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP):
 
       "chapter": "Nama Bab/Elemen",
 
-      "tp_count": 2 / 3 / 4,
+      "tp_count": "jumlah TP untuk bab ini (2-4)",
 
       "tp_1": "Peserta didik mampu [GENERAL & IMPORTANT]",
 
@@ -1663,7 +1665,9 @@ Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP):
 
 [!][!][!][!][!][!] WAJIB PATUHI:
 
-- Maksimal 4 TP per bab (jangan lebih)
+- TARGET: Total 12 TP untuk seluruh semester (distribusi merata di semua bab)
+
+- Minimal 2 TP per bab, maksimal 4 TP per bab
 
 - Setiap TP mewakili 1 keranjang (A/B/C)
 
@@ -1739,7 +1743,7 @@ ATURAN PENTING:
 
 OUTPUT FORMAT (JSON):
 
-Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP per bab per semester):
+Berikan response HANYA dalam format JSON yang valid. TARGET 12 TP total per semester (distribusi merata):
 
 {
 
@@ -1749,7 +1753,7 @@ Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP pe
 
       "chapter": "Nama Bab/Elemen",
 
-      "tp_count": 2 / 3 / 4,
+      "tp_count": "jumlah TP untuk bab ini (2-4)",
 
       "tp_1": "Peserta didik mampu [GENERAL & IMPORTANT]",
 
@@ -1785,7 +1789,7 @@ Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP pe
 
       "chapter": "Nama Bab/Elemen",
 
-      "tp_count": 2 / 3 / 4,
+      "tp_count": "jumlah TP untuk bab ini (2-4)",
 
       "tp_1": "Peserta didik mampu [GENERAL & IMPORTANT]",
 
@@ -1820,13 +1824,15 @@ Berikan response HANYA dalam format JSON yang valid. Structure (MAKSIMAL 4 TP pe
 
 [!][!][!][!][!][!] WAJIB PATUHI:
 
-- Maksimal 4 TP per bab per semester (jangan lebih)
+- TARGET: Total 12 TP per semester (24 TP untuk 2 semester)
+
+- Minimal 2 TP per bab, maksimal 4 TP per bab
 
 - Setiap TP mewakili 1 keranjang (A/B/C)
 
 - Hindari TP redundan atau detail micro
 
-- Balance 50:50 antara semester 1 dan 2 jika memungkinkan`;
+- Balance 50:50 antara semester 1 dan 2 (masing-masing 12 TP)`;
 
   }
 
