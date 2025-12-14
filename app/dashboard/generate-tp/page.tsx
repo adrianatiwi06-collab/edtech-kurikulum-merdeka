@@ -53,6 +53,10 @@ export default function GenerateTPPage() {
     'Seni dan Budaya',
     'Bahasa Inggris',
     'Bahasa Daerah',
+    'Seni Rupa',
+    'Seni Musik',
+    'Seni Tari',
+    'Seni Teater',
   ];
 
   // Check if grade is SD (1-6)
