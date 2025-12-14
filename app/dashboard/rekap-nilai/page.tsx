@@ -182,6 +182,7 @@ export default function RekapNilaiPage() {
   const consolidateGradesByStudent = () => {
     if (!selectedSubject || !selectedClass) return;
 
+
     // Group grades by student
     const studentMap = new Map<string, {
       uh: number[];
@@ -190,10 +191,37 @@ export default function RekapNilaiPage() {
     }>();
 
     grades.forEach(grade => {
-      const examNameLower = grade.exam_name.toLowerCase();
-      const examType = examNameLower.includes('pts') ? 'pts' :
-                       examNameLower.includes('pas') || examNameLower.includes('uas') ? 'pas' :
-                       'uh';
+      // Gabungkan exam_name dan exam_title untuk deteksi jenis ulangan
+      const examNameLower = (grade.exam_name || '').toLowerCase();
+      const examTitleLower = (grade.exam_title || '').toLowerCase();
+      // Cek kata kunci umum
+      let examType = 'uh';
+      if (examNameLower.includes('pts') || examTitleLower.includes('pts') || examNameLower.includes('uts') || examTitleLower.includes('uts')) {
+        examType = 'pts';
+      } else if (
+        examNameLower.includes('pas') || examTitleLower.includes('pas') ||
+        examNameLower.includes('uas') || examTitleLower.includes('uas') ||
+        examNameLower.includes('pat') || examTitleLower.includes('pat')
+      ) {
+        examType = 'pas';
+      } else if (
+        examNameLower.includes('uh') || examTitleLower.includes('uh') ||
+        examNameLower.includes('ulangan harian') || examTitleLower.includes('ulangan harian') ||
+        examNameLower.includes('formatif') || examTitleLower.includes('formatif')
+      ) {
+        examType = 'uh';
+      } else if (
+        examNameLower.includes('sumatif') || examTitleLower.includes('sumatif')
+      ) {
+        // Sumatif: jika ada PAS/PTS di title, tetap prioritas PAS/PTS
+        if (examNameLower.includes('akhir') || examTitleLower.includes('akhir')) {
+          examType = 'pas';
+        } else if (examNameLower.includes('tengah') || examTitleLower.includes('tengah')) {
+          examType = 'pts';
+        } else {
+          examType = 'uh';
+        }
+      }
 
       grade.grades.forEach(studentGrade => {
         const student = studentMap.get(studentGrade.studentName) || {
