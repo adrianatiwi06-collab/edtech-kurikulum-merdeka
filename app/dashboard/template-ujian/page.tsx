@@ -45,14 +45,24 @@ export default function TemplateUjianPage() {
   const [saving, setSaving] = useState(false);
 
   const subjects = [
+    'Pendidikan Agama Islam',
+    'Pendidikan Agama Kristen',
+    'Pendidikan Agama Katolik',
+    'Pendidikan Agama Hindu',
+    'Pendidikan Agama Buddha',
+    'Pendidikan Agama Khonghucu',
+    'Pendidikan Pancasila',
     'Bahasa Indonesia',
     'Matematika',
-    'Pendidikan Agama Islam',
-    'Pendidikan Pancasila',
-    'IPAS',
+    'IPAS (Ilmu Pengetahuan Alam dan Sosial)',
+    'Pendidikan Jasmani Olahraga dan Kesehatan (PJOK)',
+    'Seni dan Budaya',
     'Bahasa Inggris',
-    'Seni',
-    'PJOK'
+    'Bahasa Daerah',
+    'Seni Rupa',
+    'Seni Musik',
+    'Seni Tari',
+    'Seni Teater',
   ];
 
   const grades = ['1', '2', '3', '4', '5', '6'];
