@@ -1,3 +1,11 @@
+  // State untuk input manual nilai
+  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [manualStudent, setManualStudent] = useState('');
+  const [manualUH, setManualUH] = useState<string[]>(['']);
+  const [manualPTS, setManualPTS] = useState('');
+  const [manualPAS, setManualPAS] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
+  const [manualError, setManualError] = useState('');
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -443,10 +451,15 @@ export default function RekapNilaiPage() {
                   {selectedSubject} - Kelas {selectedClass}
                 </CardDescription>
               </div>
-              <Button onClick={exportConsolidatedToExcel} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export Excel (CSV)
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setManualModalOpen(true)} variant="default" size="sm" className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold">
+                  + Input Manual Nilai
+                </Button>
+                <Button onClick={exportConsolidatedToExcel} variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Excel (CSV)
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -640,6 +653,141 @@ export default function RekapNilaiPage() {
           )}
         </div>
       )}
-    </div>
+    {/* Modal Input Manual Nilai */}
+    {manualModalOpen && (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 relative">
+          <h2 className="text-xl font-bold mb-4 text-green-700">Input Manual Nilai Siswa</h2>
+          <button className="absolute top-3 right-3 text-gray-400 hover:text-red-500" onClick={() => setManualModalOpen(false)}>
+            ×
+          </button>
+          {manualError && <div className="mb-2 text-red-600 text-sm">{manualError}</div>}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Nama Siswa</label>
+            <input
+              className="w-full border rounded px-3 py-2"
+              value={manualStudent}
+              onChange={e => setManualStudent(e.target.value)}
+              placeholder="Masukkan nama siswa"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Nilai UH (bisa lebih dari 1, pisahkan dengan koma)</label>
+            <input
+              className="w-full border rounded px-3 py-2"
+              value={manualUH.join(',')}
+              onChange={e => setManualUH(e.target.value.split(',').map(v => v.trim()))}
+              placeholder="Contoh: 80,85,90"
+            />
+          </div>
+          <div className="mb-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">PTS</label>
+              <input
+                className="w-full border rounded px-3 py-2"
+                type="number"
+                value={manualPTS}
+                onChange={e => setManualPTS(e.target.value)}
+                placeholder="Contoh: 85"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">PAS</label>
+              <input
+                className="w-full border rounded px-3 py-2"
+                type="number"
+                value={manualPAS}
+                onChange={e => setManualPAS(e.target.value)}
+                placeholder="Contoh: 90"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button
+              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 disabled:opacity-60"
+              disabled={manualLoading}
+              onClick={async () => {
+                setManualError('');
+                if (!manualStudent.trim()) {
+                  setManualError('Nama siswa wajib diisi');
+                  return;
+                }
+                if (!manualUH.some(u => u && !isNaN(Number(u)))) {
+                  setManualError('Minimal 1 nilai UH harus diisi');
+                  return;
+                }
+                setManualLoading(true);
+                try {
+                  // Simpan ke Firestore: update/replace dokumen grades (per subject, class, exam_name: "Manual Input")
+                  const q = query(collection(db, 'grades'), where('user_id', '==', user.uid), where('subject', '==', selectedSubject), where('class_name', '==', selectedClass), where('exam_name', '==', 'Manual Input'));
+                  const snap = await getDocs(q);
+                  let docId = '';
+                  let gradesArr = [];
+                  if (!snap.empty) {
+                    docId = snap.docs[0].id;
+                    gradesArr = snap.docs[0].data().grades || [];
+                  }
+                  // Cek jika siswa sudah ada, replace
+                  const idx = gradesArr.findIndex((g: any) => g.studentName === manualStudent.trim());
+                  const newGrade = {
+                    studentName: manualStudent.trim(),
+                    totalScore: 0,
+                    finalGrade: 0,
+                    manualInput: true,
+                    uh: manualUH.filter(u => u && !isNaN(Number(u))).map(u => Number(u)),
+                    pts: manualPTS ? Number(manualPTS) : 0,
+                    pas: manualPAS ? Number(manualPAS) : 0
+                  };
+                  // Hitung nilai rapor (mengikuti rumus di consolidateGradesByStudent)
+                  const rataUH = newGrade.uh.length > 0 ? newGrade.uh.reduce((a, b) => a + b, 0) / newGrade.uh.length : 0;
+                  newGrade.finalGrade = Math.round(((rataUH + newGrade.pts + (newGrade.pas / 2)) / 2.5) * 100) / 100;
+                  newGrade.totalScore = newGrade.finalGrade;
+                  if (idx >= 0) {
+                    gradesArr[idx] = newGrade;
+                  } else {
+                    gradesArr.push(newGrade);
+                  }
+                  if (docId) {
+                    await import('firebase/firestore').then(({ doc, updateDoc }) => updateDoc(doc(db, 'grades', docId), { grades: gradesArr }));
+                  } else {
+                    await import('firebase/firestore').then(({ addDoc, Timestamp }) => addDoc(collection(db, 'grades'), {
+                      user_id: user.uid,
+                      subject: selectedSubject,
+                      class_name: selectedClass,
+                      class_id: '',
+                      exam_name: 'Manual Input',
+                      exam_title: 'Manual Input',
+                      grades: gradesArr,
+                      created_at: new Date().toISOString(),
+                      is_finalized: false
+                    }));
+                  }
+                  setManualModalOpen(false);
+                  setManualStudent('');
+                  setManualUH(['']);
+                  setManualPTS('');
+                  setManualPAS('');
+                  setTimeout(() => loadGrades(), 500);
+                } catch (err: any) {
+                  setManualError('Gagal menyimpan nilai: ' + (err.message || err));
+                } finally {
+                  setManualLoading(false);
+                }
+              }}
+            >
+              Simpan Nilai
+            </button>
+            <button
+              className="flex-1 border border-gray-300 py-2 rounded-lg"
+              onClick={() => setManualModalOpen(false)}
+              disabled={manualLoading}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
   );
 }
