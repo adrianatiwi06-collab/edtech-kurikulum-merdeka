@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authenticatedFetch } from '@/lib/auth-fetch';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc, orderBy, addDoc, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Trash2, Edit2, Check, X, Filter, Search, ArrowRightLeft, Download, FileSpreadsheet, Zap, Split, BookOpen, Settings } from 'lucide-react';
+import { Loader2, Trash2, Edit2, Check, X, Filter, Search, ArrowRightLeft, Download, FileSpreadsheet, Zap, Split, BookOpen, Settings, Upload, Plus, FileUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { compressTP, type CompressionResult, formatCompressionResult } from '@/lib/tp-compressor';
 
@@ -98,6 +98,22 @@ export default function MyTPPage() {
   const [selectedTPForRestore, setSelectedTPForRestore] = useState<SavedTP | null>(null);
   const [restoreOriginalText, setRestoreOriginalText] = useState('');
   const [restoreLoading, setRestoreLoading] = useState(false);
+
+  // Import XLSX
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Manual Input
+  const [manualInputOpen, setManualInputOpen] = useState(false);
+  const [manualTPText, setManualTPText] = useState('');
+  const [manualChapter, setManualChapter] = useState('');
+  const [manualGrade, setManualGrade] = useState('');
+  const [manualSubject, setManualSubject] = useState('');
+  const [manualSemester, setManualSemester] = useState('');
+  const [manualCPReference, setManualCPReference] = useState('');
+  const [manualSaving, setManualSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -638,6 +654,147 @@ export default function MyTPPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Import XLSX
+  const handleImportXLSX = async () => {
+    if (!importFile || !user) {
+      alert('Pilih file terlebih dahulu');
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const data = await importFile.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+      if (jsonData.length === 0) {
+        alert('File Excel kosong');
+        setImportLoading(false);
+        return;
+      }
+
+      // Validasi kolom yang diperlukan
+      const requiredColumns = ['Bab/Elemen', 'Tujuan Pembelajaran', 'Semester', 'Kelas', 'Mata Pelajaran'];
+      const firstRow = jsonData[0];
+      const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+      
+      if (missingColumns.length > 0) {
+        alert(`Kolom yang diperlukan tidak ditemukan: ${missingColumns.join(', ')}\n\nPastikan file Excel memiliki kolom: ${requiredColumns.join(', ')}`);
+        setImportLoading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of jsonData) {
+        try {
+          const tpData = {
+            chapter: String(row['Bab/Elemen'] || '').trim(),
+            tp: String(row['Tujuan Pembelajaran'] || '').trim(),
+            semester: parseInt(String(row['Semester'])) || 1,
+            grade: String(row['Kelas'] || '').trim(),
+            subject: String(row['Mata Pelajaran'] || '').trim(),
+            cpReference: String(row['Referensi CP'] || row['CP Reference'] || 'Import Manual').trim(),
+            user_id: user.uid,
+            created_at: Timestamp.now().toDate().toISOString(),
+            isRaporFormat: false
+          };
+
+          // Validasi data tidak kosong
+          if (!tpData.chapter || !tpData.tp || !tpData.grade || !tpData.subject) {
+            errorCount++;
+            continue;
+          }
+
+          await addDoc(collection(db, 'learning_goals'), tpData);
+          successCount++;
+        } catch (err) {
+          console.error('Error importing row:', err);
+          errorCount++;
+        }
+      }
+
+      alert(`Import selesai!\n✅ Berhasil: ${successCount}\n❌ Gagal: ${errorCount}`);
+      
+      // Reload data
+      await loadSavedTPs();
+      
+      // Reset state
+      setImportModalOpen(false);
+      setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err: any) {
+      alert('Gagal import file: ' + err.message);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // Manual Input
+  const handleManualInput = async () => {
+    if (!user) return;
+
+    // Validasi
+    if (!manualTPText.trim()) {
+      alert('Tujuan Pembelajaran harus diisi');
+      return;
+    }
+    if (!manualChapter.trim()) {
+      alert('Bab/Elemen harus diisi');
+      return;
+    }
+    if (!manualGrade) {
+      alert('Kelas harus dipilih');
+      return;
+    }
+    if (!manualSubject) {
+      alert('Mata Pelajaran harus dipilih');
+      return;
+    }
+    if (!manualSemester) {
+      alert('Semester harus dipilih');
+      return;
+    }
+
+    setManualSaving(true);
+    try {
+      const tpData = {
+        chapter: manualChapter.trim(),
+        tp: manualTPText.trim(),
+        semester: parseInt(manualSemester),
+        grade: manualGrade,
+        subject: manualSubject,
+        cpReference: manualCPReference.trim() || 'Input Manual',
+        user_id: user.uid,
+        created_at: Timestamp.now().toDate().toISOString(),
+        isRaporFormat: false
+      };
+
+      await addDoc(collection(db, 'learning_goals'), tpData);
+      
+      alert('✅ TP berhasil ditambahkan!');
+      
+      // Reload data
+      await loadSavedTPs();
+      
+      // Reset form
+      setManualTPText('');
+      setManualChapter('');
+      setManualGrade('');
+      setManualSubject('');
+      setManualSemester('');
+      setManualCPReference('');
+      setManualInputOpen(false);
+    } catch (err: any) {
+      alert('Gagal menyimpan TP: ' + err.message);
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
   const uniqueGrades = Array.from(new Set(savedTPs.map(tp => tp.grade))).sort((a, b) => parseInt(a) - parseInt(b));
   const uniqueSubjects = Array.from(new Set(savedTPs.map(tp => tp.subject).filter(s => s)));
 
@@ -749,6 +906,26 @@ export default function MyTPPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setManualInputOpen(true)}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                title="Tambah TP secara manual"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Input Manual
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setImportModalOpen(true)}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                title="Import TP dari file Excel"
+              >
+                <FileUp className="w-4 h-4 mr-2" />
+                Import XLSX
+              </Button>
               {filteredTPs.length > 0 && (
                 <>
                   <Button
@@ -1614,6 +1791,248 @@ export default function MyTPPage() {
                     setSelectedTPForMetadata(null);
                   }}
                   disabled={metadataLoading}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Batal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Import XLSX Modal */}
+      {importModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <FileUp className="w-5 h-5" />
+                Import TP dari Excel
+              </CardTitle>
+              <CardDescription className="text-blue-100">
+                Upload file Excel (.xlsx) dengan format yang sesuai
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">📋 Format File Excel:</h4>
+                <p className="text-sm text-blue-800 mb-3">File Excel harus memiliki kolom-kolom berikut:</p>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li><strong>Bab/Elemen</strong> - Nama bab atau elemen (wajib)</li>
+                  <li><strong>Tujuan Pembelajaran</strong> - Teks TP lengkap (wajib)</li>
+                  <li><strong>Semester</strong> - Angka 1 atau 2 (wajib)</li>
+                  <li><strong>Kelas</strong> - Tingkat kelas 1-12 (wajib)</li>
+                  <li><strong>Mata Pelajaran</strong> - Nama mata pelajaran (wajib)</li>
+                  <li><strong>Referensi CP</strong> - Referensi capaian pembelajaran (opsional)</li>
+                </ul>
+              </div>
+
+              {/* Download Template */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-900 mb-2">💡 Tips:</h4>
+                <p className="text-sm text-green-800 mb-2">
+                  Anda dapat menggunakan file export sebagai template atau membuat file baru dengan kolom-kolom di atas.
+                </p>
+                <p className="text-sm text-green-800">
+                  Pastikan tidak ada baris kosong di tengah-tengah data.
+                </p>
+              </div>
+
+              {/* File Input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Pilih File Excel</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {importFile && (
+                  <p className="text-sm text-green-600 mt-2">
+                    ✓ File terpilih: {importFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  onClick={handleImportXLSX}
+                  disabled={!importFile || importLoading}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600"
+                >
+                  {importLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Mengimport...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import Sekarang
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setImportModalOpen(false);
+                    setImportFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  disabled={importLoading}
+                  className="flex-1"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Batal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Manual Input Modal */}
+      {manualInputOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Tambah TP Manual
+              </CardTitle>
+              <CardDescription className="text-green-100">
+                Input tujuan pembelajaran secara manual
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              {/* Tujuan Pembelajaran */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Tujuan Pembelajaran *</label>
+                <textarea
+                  value={manualTPText}
+                  onChange={(e) => setManualTPText(e.target.value)}
+                  placeholder="Contoh: Peserta didik mampu mengidentifikasi bilangan bulat dan operasinya dalam kehidupan sehari-hari"
+                  className="w-full px-3 py-2 border rounded-md min-h-[100px]"
+                  rows={4}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {manualTPText.length} karakter
+                </p>
+              </div>
+
+              {/* Bab/Elemen */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Bab/Elemen *</label>
+                <Input
+                  type="text"
+                  value={manualChapter}
+                  onChange={(e) => setManualChapter(e.target.value)}
+                  placeholder="Contoh: Bab 1 - Bilangan Bulat"
+                />
+              </div>
+
+              {/* Grid untuk Kelas, Semester */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Kelas *</label>
+                  <select
+                    value={manualGrade}
+                    onChange={(e) => setManualGrade(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Pilih Kelas</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                      <option key={g} value={g}>Kelas {g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Semester *</label>
+                  <select
+                    value={manualSemester}
+                    onChange={(e) => setManualSemester(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="">Pilih Semester</option>
+                    <option value="1">Semester 1 (Ganjil)</option>
+                    <option value="2">Semester 2 (Genap)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Mata Pelajaran */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Mata Pelajaran *</label>
+                <select
+                  value={manualSubject}
+                  onChange={(e) => setManualSubject(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="">Pilih Mata Pelajaran</option>
+                  {sdSubjects.map(subject => (
+                    <option key={subject} value={subject}>{subject}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Atau ketik manual jika mapel tidak ada di daftar
+                </p>
+                <Input
+                  type="text"
+                  placeholder="Atau ketik nama mapel..."
+                  value={manualSubject}
+                  onChange={(e) => setManualSubject(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+
+              {/* Referensi CP (Optional) */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Referensi CP (Opsional)</label>
+                <Input
+                  type="text"
+                  value={manualCPReference}
+                  onChange={(e) => setManualCPReference(e.target.value)}
+                  placeholder="Contoh: CP Fase A - Bilangan"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  onClick={handleManualInput}
+                  disabled={manualSaving}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600"
+                >
+                  {manualSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Simpan TP
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setManualInputOpen(false);
+                    setManualTPText('');
+                    setManualChapter('');
+                    setManualGrade('');
+                    setManualSubject('');
+                    setManualSemester('');
+                    setManualCPReference('');
+                  }}
+                  disabled={manualSaving}
                   className="flex-1"
                 >
                   <X className="w-4 h-4 mr-2" />
