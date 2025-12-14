@@ -654,6 +654,82 @@ export default function MyTPPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Download Template XLSX
+  const downloadTemplateXLSX = () => {
+    // Data contoh untuk template
+    const templateData = [
+      {
+        'Bab/Elemen': 'Bab 1 - Bilangan Bulat',
+        'Tujuan Pembelajaran': 'Peserta didik mampu mengidentifikasi bilangan bulat dan operasinya dalam kehidupan sehari-hari',
+        'Semester': 1,
+        'Kelas': '4',
+        'Mata Pelajaran': 'Matematika',
+        'Referensi CP': 'CP Fase B - Bilangan'
+      },
+      {
+        'Bab/Elemen': 'Bab 2 - Pecahan',
+        'Tujuan Pembelajaran': 'Peserta didik mampu membandingkan dan mengurutkan pecahan serta menggunakan pecahan dalam kehidupan sehari-hari',
+        'Semester': 1,
+        'Kelas': '4',
+        'Mata Pelajaran': 'Matematika',
+        'Referensi CP': 'CP Fase B - Bilangan'
+      },
+      {
+        'Bab/Elemen': 'Bab 1 - Cerita Rakyat',
+        'Tujuan Pembelajaran': 'Peserta didik mampu mengidentifikasi unsur intrinsik dalam cerita rakyat dan menceritakan kembali dengan bahasa sendiri',
+        'Semester': 1,
+        'Kelas': '4',
+        'Mata Pelajaran': 'Bahasa Indonesia',
+        'Referensi CP': 'CP Fase B - Membaca dan Memirsa'
+      }
+    ];
+
+    // Buat worksheet
+    const ws = XLSX.utils.json_to_sheet(templateData);
+
+    // Set column widths
+    const colWidths = [
+      { wch: 25 }, // Bab/Elemen
+      { wch: 80 }, // Tujuan Pembelajaran
+      { wch: 10 }, // Semester
+      { wch: 8 },  // Kelas
+      { wch: 30 }, // Mata Pelajaran
+      { wch: 30 }  // Referensi CP
+    ];
+    ws['!cols'] = colWidths;
+
+    // Style header row
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (ws[cellRef]) {
+        if (!ws[cellRef].s) ws[cellRef].s = {};
+        ws[cellRef].s = {
+          fill: { fgColor: { rgb: "4472C4" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        };
+      }
+    }
+
+    // Wrap text untuk semua cell
+    for (let row = range.s.r; row <= range.e.r; row++) {
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+        if (ws[cellRef]) {
+          if (!ws[cellRef].s) ws[cellRef].s = {};
+          ws[cellRef].s.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        }
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template TP');
+    
+    const filename = 'Template_Import_TP.xlsx';
+    XLSX.writeFile(wb, filename);
+  };
+
   // Import XLSX
   const handleImportXLSX = async () => {
     if (!importFile || !user) {
@@ -1831,14 +1907,38 @@ export default function MyTPPage() {
               </div>
 
               {/* Download Template */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-semibold text-green-900 mb-2">💡 Tips:</h4>
-                <p className="text-sm text-green-800 mb-2">
-                  Anda dapat menggunakan file export sebagai template atau membuat file baru dengan kolom-kolom di atas.
-                </p>
-                <p className="text-sm text-green-800">
-                  Pastikan tidak ada baris kosong di tengah-tengah data.
-                </p>
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                      📥 Download Template Excel
+                    </h4>
+                    <p className="text-sm text-green-800 mb-3">
+                      Download file template Excel dengan format yang sudah sesuai dan berisi 3 contoh data TP sebagai panduan.
+                    </p>
+                    <Button
+                      onClick={downloadTemplateXLSX}
+                      variant="outline"
+                      size="sm"
+                      className="bg-white hover:bg-green-50 border-green-300 text-green-700 hover:text-green-800 font-semibold"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Template
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tips */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h4 className="font-semibold text-amber-900 mb-2">💡 Tips Penting:</h4>
+                <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
+                  <li>Gunakan template yang sudah disediakan untuk menghindari kesalahan format</li>
+                  <li>Pastikan tidak ada baris kosong di tengah-tengah data</li>
+                  <li>Kolom <strong>Referensi CP</strong> boleh dikosongkan (opsional)</li>
+                  <li>Nilai <strong>Semester</strong> harus angka 1 atau 2</li>
+                  <li>Nilai <strong>Kelas</strong> harus angka 1-12</li>
+                </ul>
               </div>
 
               {/* File Input */}
