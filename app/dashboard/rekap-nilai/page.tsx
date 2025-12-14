@@ -6,7 +6,7 @@
   const [manualPAS, setManualPAS] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
   const [manualError, setManualError] = useState('');
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
