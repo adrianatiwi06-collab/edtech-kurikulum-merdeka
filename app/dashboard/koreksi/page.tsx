@@ -4,7 +4,21 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+  // Hapus hasil koreksi tersimpan
+  const handleDeleteSavedGrade = async (gradeId: string) => {
+    if (!window.confirm('Yakin ingin menghapus hasil koreksi ini? Data tidak bisa dikembalikan.')) return;
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, 'grades', gradeId));
+      setSavedGrades((prev) => prev.filter((g) => g.id !== gradeId));
+      alert('Hasil koreksi berhasil dihapus.');
+    } catch (error) {
+      alert('Gagal menghapus hasil koreksi.');
+    } finally {
+      setLoading(false);
+    }
+  };
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -818,7 +832,6 @@ export default function KoreksiPage() {
                     g => g.mcAnswers.some(a => a !== '') || g.essayScores.some(s => s > 0)
                   ).length;
                   const progress = totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0;
-                  
                   return (
                     <Card key={savedGrade.id} className="border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all bg-gradient-to-br from-purple-50 to-pink-50">
                       <CardContent className="pt-6">
@@ -848,12 +861,21 @@ export default function KoreksiPage() {
                               </p>
                             </div>
                           </div>
-                          <Button 
-                            onClick={() => handleLoadSavedGrade(savedGrade)}
-                            disabled={loading}
-                          >
-                            Lanjutkan Koreksi
-                          </Button>
+                          <div className="flex flex-col gap-2 items-end">
+                            <Button 
+                              onClick={() => handleLoadSavedGrade(savedGrade)}
+                              disabled={loading}
+                            >
+                              Lanjutkan Koreksi
+                            </Button>
+                            <Button 
+                              onClick={() => handleDeleteSavedGrade(savedGrade.id)}
+                              disabled={loading}
+                              variant="destructive"
+                            >
+                              Hapus
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
