@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-  // Hapus hasil koreksi tersimpan
+// Hapus hasil koreksi tersimpan
+export default function KoreksiPage() {
   const handleDeleteSavedGrade = async (gradeId: string) => {
     if (!window.confirm('Yakin ingin menghapus hasil koreksi ini? Data tidak bisa dikembalikan.')) return;
     setLoading(true);
