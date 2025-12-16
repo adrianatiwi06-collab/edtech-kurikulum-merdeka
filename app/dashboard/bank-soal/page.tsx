@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore'; // Tambahkan updateDoc disini
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Download, FileText, Trash2, Eye, Pencil } from 'lucide-react';
@@ -29,10 +29,11 @@ interface BankSoalItem {
 }
 
 export default function BankSoalPage() {
-    // State untuk edit soal
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editSoal, setEditSoal] = useState<BankSoalItem | null>(null);
-    const [editQuestions, setEditQuestions] = useState<any[]>([]);
+  // State untuk edit soal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editSoal, setEditSoal] = useState<BankSoalItem | null>(null);
+  const [editQuestions, setEditQuestions] = useState<any[]>([]);
+  
   const { user } = useAuth();
   const [bankSoal, setBankSoal] = useState<BankSoalItem[]>([]);
   const [filteredSoal, setFilteredSoal] = useState<BankSoalItem[]>([]);
@@ -73,21 +74,15 @@ export default function BankSoalPage() {
       console.log('No user found, cannot load bank soal');
       return;
     }
-    
-    setLoading(true);
-    console.log('Loading bank soal for user:', user.uid);
 
+    setLoading(true);
     try {
-      // Query from question_banks collection (the existing one)
-      // Using simple query without orderBy while index is building
       const q = query(
         collection(db, 'question_banks'),
         where('user_id', '==', user.uid)
       );
 
-      console.log('Executing query to question_banks collection...');
       const querySnapshot = await getDocs(q);
-      console.log('Query snapshot size:', querySnapshot.size);
       
       const soal: BankSoalItem[] = [];
       const kelasSet = new Set<string>();
@@ -95,7 +90,6 @@ export default function BankSoalPage() {
 
       querySnapshot.forEach((docSnap) => {
         const data = { id: docSnap.id, ...docSnap.data() } as BankSoalItem;
-        console.log('Found document:', docSnap.id, 'Subject:', data.subject, 'Kelas:', data.kelas);
         soal.push(data);
         if (data.kelas) kelasSet.add(data.kelas);
         if (data.subject) subjectSet.add(data.subject);
@@ -104,29 +98,19 @@ export default function BankSoalPage() {
       // Sort by created_at manually (newest first)
       soal.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      console.log('Total soal loaded:', soal.length);
-      console.log('Available kelas:', Array.from(kelasSet));
-      console.log('Available subjects:', Array.from(subjectSet));
-
       setBankSoal(soal);
       setFilteredSoal(soal);
       setAvailableKelas(Array.from(kelasSet).sort());
       setAvailableSubjects(Array.from(subjectSet).sort());
-      
+
       if (soal.length > 0) {
         toast.success(`Berhasil memuat ${soal.length} soal`);
       } else {
-        toast.info('Belum ada soal tersimpan', {
-          description: 'Generate soal terlebih dahulu di menu Generate Soal'
-        });
+        toast.info('Belum ada soal tersimpan');
       }
     } catch (error: any) {
       console.error('Error loading bank soal:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      toast.error('Gagal memuat Bank Soal', {
-        description: error.message || 'Silakan refresh halaman untuk mencoba lagi'
-      });
+      toast.error('Gagal memuat Bank Soal');
     } finally {
       setLoading(false);
     }
@@ -147,12 +131,38 @@ export default function BankSoalPage() {
         setSelectedSoal(null);
         setViewMode(false);
       }
-      alert('Soal berhasil dihapus');
+      toast.success('Soal berhasil dihapus');
     } catch (error) {
       console.error('Error deleting soal:', error);
-      alert('Gagal menghapus soal');
+      toast.error('Gagal menghapus soal');
     }
   };
+
+  // --- PERBAIKAN: Fungsi ini dipindahkan ke sini (sebelum return) ---
+  const handleSaveEditSoal = async () => {
+    if (!editSoal) return;
+    try {
+      setLoading(true);
+      // Update hanya bagian multipleChoice
+      await updateDoc(doc(db, 'question_banks', editSoal.id), {
+          'questions.multipleChoice': editQuestions
+      });
+
+      // Update state lokal
+      setBankSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+      setFilteredSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+      setEditModalOpen(false);
+      setEditSoal(null);
+      setEditQuestions([]);
+      toast.success('Soal berhasil diperbarui');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal menyimpan perubahan soal');
+    } finally {
+      setLoading(false);
+    }
+  };
+  // ------------------------------------------------------------------
 
   const handleExportWord = async (includeAnswerKey: boolean = false) => {
     if (!selectedSoal) return;
@@ -178,7 +188,7 @@ export default function BankSoalPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting to Word:', error);
-      alert('Gagal export ke Word');
+      toast.error('Gagal export ke Word');
     }
   };
 
@@ -315,116 +325,37 @@ export default function BankSoalPage() {
                                 </p>
                               </div>
                             </div>
-                        <div className="flex gap-2 ml-4">
-                          <Button
-                            onClick={() => handleMuatSoal(soal)}
-                            size="sm"
-                            variant="default"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Muat
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setEditSoal(soal);
-                              setEditQuestions(soal.questions.multipleChoice ? JSON.parse(JSON.stringify(soal.questions.multipleChoice)) : []);
-                              setEditModalOpen(true);
-                            }}
-                            size="sm"
-                            variant="secondary"
-                          >
-                            <Pencil className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            onClick={() => handleDeleteSoal(soal.id)}
-                            size="sm"
-                            variant="destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        // Fungsi simpan edit soal (hanya multiple choice)
-                        const handleSaveEditSoal = async () => {
-                          if (!editSoal) return;
-                          try {
-                            setLoading(true);
-                            // Update hanya bagian multipleChoice
-                            await import('firebase/firestore').then(({ doc, updateDoc }) =>
-                              updateDoc(doc(db, 'question_banks', editSoal.id), {
-                                'questions.multipleChoice': editQuestions
-                              })
-                            );
-                            // Update state lokal
-                            setBankSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
-                            setFilteredSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
-                            setEditModalOpen(false);
-                            setEditSoal(null);
-                            setEditQuestions([]);
-                            toast.success('Soal berhasil diperbarui');
-                          } catch (err) {
-                            toast.error('Gagal menyimpan perubahan soal');
-                          } finally {
-                            setLoading(false);
-                          }
-                        };
-                        {/* Modal Edit Soal (Multiple Choice) */}
-                        {editModalOpen && (
-                          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
-                              <h2 className="text-xl font-bold mb-4">Edit Soal Pilihan Ganda</h2>
-                              <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-                                {editQuestions.map((q, idx) => (
-                                  <div key={idx} className="border-b pb-4 mb-4">
-                                    <label className="block text-sm font-medium mb-1">Pertanyaan #{q.questionNumber}</label>
-                                    <textarea
-                                      className="w-full border rounded px-3 py-2 mb-2"
-                                      value={q.question}
-                                      onChange={e => {
-                                        const newQ = [...editQuestions];
-                                        newQ[idx].question = e.target.value;
-                                        setEditQuestions(newQ);
-                                      }}
-                                    />
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                      {Object.keys(q.options).map((key) => (
-                                        <div key={key} className="flex items-center gap-2">
-                                          <span className="font-bold">{key}.</span>
-                                          <input
-                                            className="flex-1 border rounded px-2 py-1"
-                                            value={q.options[key]}
-                                            onChange={e => {
-                                              const newQ = [...editQuestions];
-                                              newQ[idx].options[key] = e.target.value;
-                                              setEditQuestions(newQ);
-                                            }}
-                                          />
-                                          <input
-                                            type="radio"
-                                            name={`correct-${idx}`}
-                                            checked={q.correctAnswer === key}
-                                            onChange={() => {
-                                              const newQ = [...editQuestions];
-                                              newQ[idx].correctAnswer = key;
-                                              setEditQuestions(newQ);
-                                            }}
-                                          />
-                                          <span className="text-xs">Kunci</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="flex justify-end gap-2 mt-6">
-                                <Button onClick={() => setEditModalOpen(false)} variant="outline">Batal</Button>
-                                <Button onClick={handleSaveEditSoal} disabled={loading} variant="default">Simpan Perubahan</Button>
-                              </div>
+                            <div className="flex gap-2 ml-4">
+                              <Button
+                                onClick={() => handleMuatSoal(soal)}
+                                size="sm"
+                                variant="default"
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Muat
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setEditSoal(soal);
+                                  setEditQuestions(soal.questions.multipleChoice ? JSON.parse(JSON.stringify(soal.questions.multipleChoice)) : []);
+                                  setEditModalOpen(true);
+                                }}
+                                size="sm"
+                                variant="secondary"
+                              >
+                                <Pencil className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => handleDeleteSoal(soal.id)}
+                                size="sm"
+                                variant="destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
+                        </div>
                       ))}
                   </div>
 
@@ -575,6 +506,62 @@ export default function BankSoalPage() {
             >
               Kembali ke Daftar
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* --- PERBAIKAN: Modal dipindahkan ke luar looping --- */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+            <h2 className="text-xl font-bold mb-4">Edit Soal Pilihan Ganda</h2>
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+              {editQuestions.map((q, idx) => (
+                <div key={idx} className="border-b pb-4 mb-4">
+                  <label className="block text-sm font-medium mb-1">Pertanyaan #{q.questionNumber}</label>
+                  <textarea
+                    className="w-full border rounded px-3 py-2 mb-2"
+                    value={q.question}
+                    onChange={e => {
+                      const newQ = [...editQuestions];
+                      newQ[idx].question = e.target.value;
+                      setEditQuestions(newQ);
+                    }}
+                  />
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    {Object.keys(q.options).map((key) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="font-bold">{key}.</span>
+                        <input
+                          className="flex-1 border rounded px-2 py-1"
+                          value={q.options[key]}
+                          onChange={e => {
+                            const newQ = [...editQuestions];
+                            newQ[idx].options[key] = e.target.value;
+                            setEditQuestions(newQ);
+                          }}
+                        />
+                        <input
+                          type="radio"
+                          name={`correct-${idx}`}
+                          checked={q.correctAnswer === key}
+                          onChange={() => {
+                            const newQ = [...editQuestions];
+                            newQ[idx].correctAnswer = key;
+                            setEditQuestions(newQ);
+                          }}
+                        />
+                        <span className="text-xs">Kunci</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button onClick={() => setEditModalOpen(false)} variant="outline">Batal</Button>
+              <Button onClick={handleSaveEditSoal} disabled={loading} variant="default">Simpan Perubahan</Button>
+            </div>
           </div>
         </div>
       )}
