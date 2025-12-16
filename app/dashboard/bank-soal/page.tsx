@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, FileText, Trash2, Eye } from 'lucide-react';
+import { Loader2, Download, FileText, Trash2, Eye, Pencil } from 'lucide-react';
 import { Packer } from 'docx';
 import { generateQuestionDocument, generateAnswerKeyDocument, QuestionData } from '@/lib/docx-utils';
 import { toast } from 'sonner';
@@ -29,6 +29,10 @@ interface BankSoalItem {
 }
 
 export default function BankSoalPage() {
+    // State untuk edit soal
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editSoal, setEditSoal] = useState<BankSoalItem | null>(null);
+    const [editQuestions, setEditQuestions] = useState<any[]>([]);
   const { user } = useAuth();
   const [bankSoal, setBankSoal] = useState<BankSoalItem[]>([]);
   const [filteredSoal, setFilteredSoal] = useState<BankSoalItem[]>([]);
@@ -321,6 +325,18 @@ export default function BankSoalPage() {
                             Muat
                           </Button>
                           <Button
+                            onClick={() => {
+                              setEditSoal(soal);
+                              setEditQuestions(soal.questions.multipleChoice ? JSON.parse(JSON.stringify(soal.questions.multipleChoice)) : []);
+                              setEditModalOpen(true);
+                            }}
+                            size="sm"
+                            variant="secondary"
+                          >
+                            <Pencil className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
                             onClick={() => handleDeleteSoal(soal.id)}
                             size="sm"
                             variant="destructive"
@@ -328,6 +344,85 @@ export default function BankSoalPage() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
+                        // Fungsi simpan edit soal (hanya multiple choice)
+                        const handleSaveEditSoal = async () => {
+                          if (!editSoal) return;
+                          try {
+                            setLoading(true);
+                            // Update hanya bagian multipleChoice
+                            await import('firebase/firestore').then(({ doc, updateDoc }) =>
+                              updateDoc(doc(db, 'question_banks', editSoal.id), {
+                                'questions.multipleChoice': editQuestions
+                              })
+                            );
+                            // Update state lokal
+                            setBankSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+                            setFilteredSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+                            setEditModalOpen(false);
+                            setEditSoal(null);
+                            setEditQuestions([]);
+                            toast.success('Soal berhasil diperbarui');
+                          } catch (err) {
+                            toast.error('Gagal menyimpan perubahan soal');
+                          } finally {
+                            setLoading(false);
+                          }
+                        };
+                        {/* Modal Edit Soal (Multiple Choice) */}
+                        {editModalOpen && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+                              <h2 className="text-xl font-bold mb-4">Edit Soal Pilihan Ganda</h2>
+                              <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+                                {editQuestions.map((q, idx) => (
+                                  <div key={idx} className="border-b pb-4 mb-4">
+                                    <label className="block text-sm font-medium mb-1">Pertanyaan #{q.questionNumber}</label>
+                                    <textarea
+                                      className="w-full border rounded px-3 py-2 mb-2"
+                                      value={q.question}
+                                      onChange={e => {
+                                        const newQ = [...editQuestions];
+                                        newQ[idx].question = e.target.value;
+                                        setEditQuestions(newQ);
+                                      }}
+                                    />
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                      {Object.keys(q.options).map((key) => (
+                                        <div key={key} className="flex items-center gap-2">
+                                          <span className="font-bold">{key}.</span>
+                                          <input
+                                            className="flex-1 border rounded px-2 py-1"
+                                            value={q.options[key]}
+                                            onChange={e => {
+                                              const newQ = [...editQuestions];
+                                              newQ[idx].options[key] = e.target.value;
+                                              setEditQuestions(newQ);
+                                            }}
+                                          />
+                                          <input
+                                            type="radio"
+                                            name={`correct-${idx}`}
+                                            checked={q.correctAnswer === key}
+                                            onChange={() => {
+                                              const newQ = [...editQuestions];
+                                              newQ[idx].correctAnswer = key;
+                                              setEditQuestions(newQ);
+                                            }}
+                                          />
+                                          <span className="text-xs">Kunci</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex justify-end gap-2 mt-6">
+                                <Button onClick={() => setEditModalOpen(false)} variant="outline">Batal</Button>
+                                <Button onClick={handleSaveEditSoal} disabled={loading} variant="default">Simpan Perubahan</Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                       ))}
