@@ -1,3 +1,4 @@
+import { doc, deleteDoc } from 'firebase/firestore';
 
 "use client";
 
@@ -45,6 +46,22 @@ interface ConsolidatedStudentGrade {
 const ITEMS_PER_PAGE = 10;
 
 export default function RekapNilaiPage() {
+      // ...existing code...
+
+      // Fungsi hapus grade
+      const handleDeleteGrade = async (gradeId: string) => {
+        if (!window.confirm('Yakin ingin menghapus data nilai ini?')) return;
+        setLoading(true);
+        try {
+          await deleteDoc(doc(db, 'grades', gradeId));
+          setGrades((prev) => prev.filter((g) => g.id !== gradeId));
+        } catch (error) {
+          alert('Gagal menghapus data nilai');
+          console.error('Delete error:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
     // State untuk input manual nilai
     const [manualModalOpen, setManualModalOpen] = useState(false);
     const [manualStudent, setManualStudent] = useState('');
@@ -595,14 +612,24 @@ export default function RekapNilaiPage() {
                         Dibuat: {formatTimestamp(grade.created_at)}
                       </CardDescription>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleExportCSV(grade)}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export CSV
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleExportCSV(grade)}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export CSV
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteGrade(grade.id)}
+                        disabled={loading}
+                      >
+                        Hapus
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
