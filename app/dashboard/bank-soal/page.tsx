@@ -514,8 +514,19 @@ export default function BankSoalPage() {
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
-            <h2 className="text-xl font-bold mb-4">Edit Soal Pilihan Ganda</h2>
-            <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Soal & Nama Ujian</h2>
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-1">Nama Ujian / Tes</label>
+              <input
+                className="w-full border rounded px-3 py-2"
+                value={editSoal?.examTitle || ''}
+                onChange={e => {
+                  if (!editSoal) return;
+                  setEditSoal({ ...editSoal, examTitle: e.target.value });
+                }}
+              />
+            </div>
+            <div className="space-y-6 max-h-[50vh] overflow-y-auto">
               {editQuestions.map((q, idx) => (
                 <div key={idx} className="border-b pb-4 mb-4">
                   <label className="block text-sm font-medium mb-1">Pertanyaan #{q.questionNumber}</label>
@@ -560,7 +571,26 @@ export default function BankSoalPage() {
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <Button onClick={() => setEditModalOpen(false)} variant="outline">Batal</Button>
-              <Button onClick={handleSaveEditSoal} disabled={loading} variant="default">Simpan Perubahan</Button>
+              <Button onClick={async () => {
+                if (!editSoal) return;
+                setLoading(true);
+                try {
+                  await updateDoc(doc(db, 'question_banks', editSoal.id), {
+                    'questions.multipleChoice': editQuestions,
+                    examTitle: editSoal.examTitle
+                  });
+                  setBankSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, examTitle: editSoal.examTitle, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+                  setFilteredSoal((prev) => prev.map((item) => item.id === editSoal.id ? { ...item, examTitle: editSoal.examTitle, questions: { ...item.questions, multipleChoice: editQuestions } } : item));
+                  setEditModalOpen(false);
+                  setEditSoal(null);
+                  setEditQuestions([]);
+                  toast.success('Soal & nama ujian berhasil diperbarui');
+                } catch (err) {
+                  toast.error('Gagal menyimpan perubahan');
+                } finally {
+                  setLoading(false);
+                }
+              }} disabled={loading} variant="default">Simpan Perubahan</Button>
             </div>
           </div>
         </div>
