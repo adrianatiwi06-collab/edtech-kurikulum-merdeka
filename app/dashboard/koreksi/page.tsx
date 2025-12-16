@@ -1,3 +1,5 @@
+
+
 'use client';
 
 // Force rebuild for Vercel deployment
@@ -5,21 +7,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-// Hapus hasil koreksi tersimpan
-export default function KoreksiPage() {
-  const handleDeleteSavedGrade = async (gradeId: string) => {
-    if (!window.confirm('Yakin ingin menghapus hasil koreksi ini? Data tidak bisa dikembalikan.')) return;
-    setLoading(true);
-    try {
-      await deleteDoc(doc(db, 'grades', gradeId));
-      setSavedGrades((prev) => prev.filter((g) => g.id !== gradeId));
-      alert('Hasil koreksi berhasil dihapus.');
-    } catch (error) {
-      alert('Gagal menghapus hasil koreksi.');
-    } finally {
-      setLoading(false);
-    }
-  };
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,9 +56,9 @@ interface SavedGrade {
   grades: StudentGrade[];
   created_at: string;
   updated_at: string;
-}
+  }
 
-export default function KoreksiPage() {
+  export default function KoreksiPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(0); // Start at 0 to choose mode
   const [loading, setLoading] = useState(false);
@@ -112,6 +99,21 @@ export default function KoreksiPage() {
   }, [user, showSavedGrades]);
 
   // Calculate content width
+
+  // Delete a saved grade
+  const handleDeleteSavedGrade = async (gradeId: string) => {
+    if (!window.confirm('Yakin ingin menghapus data koreksi ini?')) return;
+    setLoading(true);
+    try {
+      await deleteDoc(doc(db, 'grades', gradeId));
+      setSavedGrades((prev) => prev.filter((g) => g.id !== gradeId));
+    } catch (error) {
+      console.error('Gagal menghapus data koreksi:', error);
+      alert('Gagal menghapus data koreksi');
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {

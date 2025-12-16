@@ -18,6 +18,7 @@ interface StudentGrade {
   studentName: string;
   totalScore: number;
   finalGrade?: number;
+  pas?: number;
 }
 
 interface Grade {
