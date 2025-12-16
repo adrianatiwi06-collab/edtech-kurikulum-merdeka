@@ -1,9 +1,5 @@
-import { doc, deleteDoc } from 'firebase/firestore';
-
 "use client";
-
-
-
+import { doc, deleteDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
