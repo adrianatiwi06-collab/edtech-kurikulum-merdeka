@@ -1,7 +1,5 @@
+ 'use client';
 import "./koreksi-scrollbar.css";
-
-
-'use client';
 
 // Force rebuild for Vercel deployment
 import { useState, useEffect } from 'react';
@@ -59,7 +57,7 @@ interface SavedGrade {
   updated_at: string;
   }
 
-  export default function KoreksiPage() {
+export default function KoreksiPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(0); // Start at 0 to choose mode
   const [loading, setLoading] = useState(false);
@@ -778,9 +776,9 @@ interface SavedGrade {
 
       {/* Step 3: Grading Table */}
       {step === 3 && (selectedQB || selectedTemplate) && (
-          <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
-              <Card>
+        <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -789,192 +787,83 @@ interface SavedGrade {
                       {selectedClass?.name} - {examTitle}
                     </CardDescription>
                     <div className="mt-2 flex gap-4 text-sm">
-                      <span className="text-green-700 font-medium">
-                        PG: {mcCount} soal × {mcWeight} = {mcCount * mcWeight} poin
-                      </span>
-                      <span className="text-purple-700 font-medium">
-                        Essay: {totalEssayWeight} poin
-                      </span>
-                      <span className="text-blue-700 font-bold">
-                        Total Skor Maksimum: {maxScore} poin
-                      </span>
+                      <span className="text-green-700 font-medium">PG: {mcCount} soal × {mcWeight} = {mcCount * mcWeight} poin</span>
+                      <span className="text-purple-700 font-medium">Essay: {totalEssayWeight} poin</span>
+                      <span className="text-blue-700 font-bold">Total Skor Maksimum: {maxScore} poin</span>
                     </div>
                   </div>
                 </div>
               </CardHeader>
-            <CardContent>
-              {/* Action Buttons - Prominent position above table */}
-              <div className="flex gap-3 mb-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
-                <Button onClick={() => setStep(2)} variant="outline" size="lg">
-                  ← Kembali
-                </Button>
-                <Button 
-                  onClick={calculateAllScores} 
-                  disabled={loading} 
-                  size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold"
-                >
-                  🧮 Hitung Nilai
-                </Button>
-                <Button 
-                  onClick={handleSaveGrades} 
-                  disabled={loading}
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  💾 Simpan
-                </Button>
-              </div>
-              
-              <div className="relative">
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader className="sticky top-0 z-30">
-                      <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                      <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold w-12">No</TableHead>
-                      <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[160px]">Nama Siswa</TableHead>
-                      {Array.from({ length: mcCount }, (_, idx) => {
-                        const weight = useTemplate && selectedTemplate 
-                          ? selectedTemplate.multiple_choice.weight 
-                          : selectedQB?.questions.multipleChoice[idx]?.weight || 1;
-                        return (
-                          <TableHead key={`mc-${idx}`} className="text-center bg-green-50 font-semibold border-x">
-                            PG {idx + 1}<br />
-                            <span className="text-xs font-normal text-gray-500">({weight})</span>
-                          </TableHead>
-                        );
-                      })}
-                      {Array.from({ length: essayCount }, (_, idx) => {
-                        const weight = useTemplate && selectedTemplate
-                          ? selectedTemplate.essay.weight
-                          : selectedQB?.questions.essay[idx]?.weight || 0;
-                        return (
-                          <TableHead key={`essay-${idx}`} className="text-center bg-purple-50 font-semibold border-x">
-                            Essay {idx + 1}<br />
-                            <span className="text-xs font-normal text-gray-500">(max {weight})</span>
-                          </TableHead>
-                        );
-                      })}
-                      <TableHead className="text-center font-bold bg-blue-100 border-l-2 border-blue-300 w-24">Total Skor</TableHead>
-                      <TableHead className="text-center font-bold bg-indigo-100 border-x-2 border-indigo-300 w-20">Nilai</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {grades.map((grade, studentIdx) => (
-                      <TableRow key={grade.studentId} className="hover:bg-gray-50 transition-colors">
-                        <TableCell className="sticky left-0 bg-white z-10 border-r-2 border-blue-200 font-medium">{studentIdx + 1}</TableCell>
-                        <TableCell className="sticky left-12 bg-white z-10 border-r-2 border-blue-200 font-medium">
-                          {grade.studentName}
-                        </TableCell>
-                        
-                        {/* Multiple Choice Answers */}
-                        {grade.mcAnswers.map((answer, qIdx) => {
-                          const correctAnswer = useTemplate && selectedTemplate
-                            ? selectedTemplate.multiple_choice.answer_keys[qIdx]
-                            : selectedQB?.questions.multipleChoice[qIdx]?.correctAnswer;
-                          const isCorrect = answer && answer === correctAnswer;
-                          const isWrong = answer && answer !== correctAnswer;
-                          return (
-                            <TableCell key={`mc-${studentIdx}-${qIdx}`} className="border-x p-1">
-                              <Input
-                                data-student={studentIdx}
-                                data-question={qIdx}
-                                className={`w-12 text-center font-semibold uppercase transition-colors ${
-                                  isCorrect ? 'bg-green-100 border-green-400 text-green-800' : 
-                                  isWrong ? 'bg-red-100 border-red-400 text-red-800' : 
-                                  'border-gray-300'
-                                }`}
-                                value={answer}
-                                onChange={(e) => {
-                                  const val = e.target.value.toUpperCase();
-                                  if (val.length <= 1) {
-                                    updateMCAnswer(studentIdx, qIdx, val, true);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const nextInput = document.querySelector(
-                                      `input[data-student="${studentIdx}"][data-question="${qIdx + 1}"]`
-                                    ) as HTMLInputElement;
-                                    if (nextInput) {
-                                      nextInput.focus();
-                                      nextInput.select();
-                                    }
-                                  }
-                                }}
-                                maxLength={1}
-                                placeholder="-"
-                              />
-                            </TableCell>
-                          );
-                        })}
-                        
-                        {/* Essay Scores */}
-                        {grade.essayScores.map((score, qIdx) => {
-                          const maxScore = useTemplate && selectedTemplate
-                            ? selectedTemplate.essay.weight
-                            : selectedQB?.questions.essay[qIdx]?.weight || 0;
-                          return (
-                            <TableCell key={`essay-${studentIdx}-${qIdx}`} className="border-x p-1">
-                              <Input
-                                className="w-16 text-center font-medium border-gray-300"
-                                type="number"
-                                value={score || ''}
-                                onChange={(e) => updateEssayScore(studentIdx, qIdx, e.target.value)}
-                                max={maxScore}
-                                min={0}
-                                placeholder="0"
-                              />
-                            </TableCell>
-                          );
-                        })}
-                        
-                        {/* Total Score */}
-                        <TableCell className="text-center font-bold bg-blue-50 border-l-2 border-blue-300 text-blue-900">
-                          {grade.isCalculated ? grade.totalScore : '-'}
-                        </TableCell>
-                        
-                        {/* Final Grade (Nilai Ulangan) */}
-                        <TableCell className="text-center font-bold bg-indigo-50 border-x-2 border-indigo-300">
-                          <span className={`text-lg ${
-                            grade.isCalculated 
-                              ? grade.finalGrade >= 75 ? 'text-green-600' : 'text-red-600'
-                              : 'text-gray-400'
-                          }`}>
-                            {grade.isCalculated ? grade.finalGrade : '-'}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent>
+                <div className="flex gap-3 mb-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+                  <Button onClick={() => setStep(2)} variant="outline" size="lg">← Kembali</Button>
+                  <Button onClick={calculateAllScores} disabled={loading} size="lg" className="bg-green-600 hover:bg-green-700 text-white font-semibold">🧮 Hitung Nilai</Button>
+                  <Button onClick={handleSaveGrades} disabled={loading} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} 💾 Simpan
+                  </Button>
                 </div>
-              </div>
 
-            </CardContent>
-          </Card>
-            </div>
-            </div>
-          )}
+                <div className="relative">
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader className="sticky top-0 z-30">
+                        <TableRow className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                          <TableHead className="sticky left-0 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold w-12">No</TableHead>
+                          <TableHead className="sticky left-12 bg-gradient-to-r from-blue-50 to-blue-50 z-20 border-r-2 border-blue-200 font-semibold min-w-[160px]">Nama Siswa</TableHead>
+                          {Array.from({ length: mcCount }, (_, idx) => {
+                            const weight = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.weight : selectedQB?.questions.multipleChoice[idx]?.weight || 1;
+                            return (<TableHead key={`mc-${idx}`} className="text-center bg-green-50 font-semibold border-x">PG {idx + 1}<br /><span className="text-xs font-normal text-gray-500">({weight})</span></TableHead>);
+                          })}
+                          {Array.from({ length: essayCount }, (_, idx) => {
+                            const weight = useTemplate && selectedTemplate ? selectedTemplate.essay.weight : selectedQB?.questions.essay[idx]?.weight || 0;
+                            return (<TableHead key={`essay-${idx}`} className="text-center bg-purple-50 font-semibold border-x">Essay {idx + 1}<br /><span className="text-xs font-normal text-gray-500">(max {weight})</span></TableHead>);
+                          })}
+                          <TableHead className="text-center font-bold bg-blue-100 border-l-2 border-blue-300 w-24">Total Skor</TableHead>
+                          <TableHead className="text-center font-bold bg-indigo-100 border-x-2 border-indigo-300 w-20">Nilai</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {grades.map((grade, studentIdx) => (
+                          <TableRow key={grade.studentId} className="hover:bg-gray-50 transition-colors">
+                            <TableCell className="sticky left-0 bg-white z-10 border-r-2 border-blue-200 font-medium">{studentIdx + 1}</TableCell>
+                            <TableCell className="sticky left-12 bg-white z-10 border-r-2 border-blue-200 font-medium">{grade.studentName}</TableCell>
+                            {grade.mcAnswers.map((answer, qIdx) => {
+                              const correctAnswer = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.answer_keys[qIdx] : selectedQB?.questions.multipleChoice[qIdx]?.correctAnswer;
+                              const isCorrect = answer && answer === correctAnswer;
+                              const isWrong = answer && answer !== correctAnswer;
+                              return (
+                                <TableCell key={`mc-${studentIdx}-${qIdx}`} className="border-x p-1">
+                                  <Input data-student={studentIdx} data-question={qIdx} className={`w-12 text-center font-semibold uppercase transition-colors ${isCorrect ? 'bg-green-100 border-green-400 text-green-800' : isWrong ? 'bg-red-100 border-red-400 text-red-800' : 'border-gray-300'}`} value={answer} onChange={(e) => { const val = e.target.value.toUpperCase(); if (val.length <= 1) updateMCAnswer(studentIdx, qIdx, val, true); }} onKeyDown={(e) => { if (e.key === 'Enter') { const nextInput = document.querySelector(`input[data-student="${studentIdx}"][data-question="${qIdx + 1}"]`) as HTMLInputElement; if (nextInput) { nextInput.focus(); nextInput.select(); } } }} maxLength={1} placeholder="-" />
+                                </TableCell>
+                              );
+                            })}
+                            {grade.essayScores.map((score, qIdx) => {
+                              const maxScore = useTemplate && selectedTemplate ? selectedTemplate.essay.weight : selectedQB?.questions.essay[qIdx]?.weight || 0;
+                              return (
+                                <TableCell key={`essay-${studentIdx}-${qIdx}`} className="border-x p-1">
+                                  <Input className="w-16 text-center font-medium border-gray-300" type="number" value={score || ''} onChange={(e) => updateEssayScore(studentIdx, qIdx, e.target.value)} max={maxScore} min={0} placeholder="0" />
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell className="text-center font-bold bg-blue-50 border-l-2 border-blue-300 text-blue-900">{grade.isCalculated ? grade.totalScore : '-'}</TableCell>
+                            <TableCell className="text-center font-bold bg-indigo-50 border-x-2 border-indigo-300"><span className={`text-lg ${grade.isCalculated ? (grade.finalGrade >= 75 ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`}>{grade.isCalculated ? grade.finalGrade : '-'}</span></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* Horizontal Scrollbar - Fixed at bottom like image 2 */}
       {step === 3 && (
         <div className="sticky bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2 mt-4">
-          <div 
-            id="custom-scrollbar"
-            className="overflow-x-auto overflow-y-hidden px-2"
-          >
-            <div 
-              style={{ 
-                width: `${tableScrollWidth || 2000}px`,
-                height: '1px'
-              }}
-            />
+          <div id="custom-scrollbar" className="overflow-x-auto overflow-y-hidden px-2">
+            <div style={{ width: `${tableScrollWidth || 2000}px`, height: '1px' }} />
           </div>
         </div>
       )}
