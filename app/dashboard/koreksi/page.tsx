@@ -682,22 +682,6 @@ interface SavedGrade {
           {/* ...existing code... */}
         </div>
       );
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {examTemplates.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Belum ada template ujian.</p>
-                <p className="text-sm mt-2">Buat template baru di menu Template Ujian.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {examTemplates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => handleSelectTemplate(template)}
                   >
                     <div className="flex justify-between items-start">
                       <div>
