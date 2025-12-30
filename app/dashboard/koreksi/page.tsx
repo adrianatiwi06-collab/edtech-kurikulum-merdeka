@@ -605,12 +605,35 @@ interface SavedGrade {
     if (!answer) return '';
     return answer === correctAnswer ? 'bg-green-100' : 'bg-red-100';
   };
+  // Precompute grading variables for Step 3 (avoid IIFE inside JSX)
+  const mcCount = useTemplate && selectedTemplate
+    ? selectedTemplate.multiple_choice.count
+    : selectedQB?.questions.multipleChoice?.length || 0;
 
-  // ...existing code...
+  const mcWeight = useTemplate && selectedTemplate
+    ? selectedTemplate.multiple_choice.weight
+    : selectedQB?.questions.multipleChoice[0]?.weight || 1;
 
-      // ...existing code...
+  const essayCount = useTemplate && selectedTemplate
+    ? selectedTemplate.essay.count
+    : selectedQB?.questions.essay?.length || 0;
 
-      {/* Saved Grades List */}
+  const essayWeight = useTemplate && selectedTemplate
+    ? selectedTemplate.essay.weight
+    : 0;
+
+  const essayWeights = useTemplate && selectedTemplate
+    ? new Array(essayCount).fill(essayWeight)
+    : selectedQB?.questions.essay?.map((q: any) => q.weight) || [];
+
+  const totalEssayWeight = essayWeights.reduce((sum: number, w: number) => sum + w, 0);
+  const maxScore = (mcCount * mcWeight) + totalEssayWeight;
+
+  const examTitle = useTemplate && selectedTemplate
+    ? selectedTemplate.exam_name
+    : selectedQB?.examTitle || '';
+
+  // Saved Grades List
       {showSavedGrades && (
         <Card>
           <CardHeader>
@@ -754,36 +777,7 @@ interface SavedGrade {
       )}
 
       {/* Step 3: Grading Table */}
-      {step === 3 && (selectedQB || selectedTemplate) && (() => {
-        // Get counts and weights from either QB or Template
-        const mcCount = useTemplate && selectedTemplate 
-          ? selectedTemplate.multiple_choice.count
-          : selectedQB?.questions.multipleChoice?.length || 0;
-        
-        const mcWeight = useTemplate && selectedTemplate
-          ? selectedTemplate.multiple_choice.weight
-          : selectedQB?.questions.multipleChoice[0]?.weight || 1;
-        
-        const essayCount = useTemplate && selectedTemplate
-          ? selectedTemplate.essay.count
-          : selectedQB?.questions.essay?.length || 0;
-        
-        const essayWeight = useTemplate && selectedTemplate
-          ? selectedTemplate.essay.weight
-          : 0;
-        
-        const essayWeights = useTemplate && selectedTemplate
-          ? new Array(essayCount).fill(essayWeight)
-          : selectedQB?.questions.essay?.map((q: any) => q.weight) || [];
-        
-        const totalEssayWeight = essayWeights.reduce((sum: number, w: number) => sum + w, 0);
-        const maxScore = (mcCount * mcWeight) + totalEssayWeight;
-        
-        const examTitle = useTemplate && selectedTemplate
-          ? selectedTemplate.exam_name
-          : selectedQB?.examTitle || '';
-        
-        return (
+      {step === 3 && (selectedQB || selectedTemplate) && (
           <div id="content-wrapper" className="overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
               <Card>
@@ -965,9 +959,8 @@ interface SavedGrade {
             </CardContent>
           </Card>
             </div>
-          </div>
-        );
-      })()}
+            </div>
+          )}
 
       {/* Horizontal Scrollbar - Fixed at bottom like image 2 */}
       {step === 3 && (
