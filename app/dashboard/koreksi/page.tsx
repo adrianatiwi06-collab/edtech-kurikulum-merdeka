@@ -682,42 +682,6 @@ interface SavedGrade {
           {/* ...existing code... */}
         </div>
       );
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{template.exam_name}</h4>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {template.exam_type} - Kelas {template.grade} - {template.subject}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          PG: {template.multiple_choice.count} soal ({template.multiple_choice.weight} poin) | 
-                          Isian: {template.essay.count} soal ({template.essay.weight} poin) | 
-                          Max: {template.max_score} poin
-                        </p>
-                      </div>
-                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                        {template.tp_ids.length} TP
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 1 && !showSavedGrades && !useTemplate && (
-        <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-teal-900">Pilih Sumber Soal</CardTitle>
-                <CardDescription>Pilih mata pelajaran dan bank soal, atau lanjutkan koreksi tersimpan</CardDescription>
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowSavedGrades(true)}
                 className="gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 border-blue-300 hover:from-blue-200 hover:to-indigo-200"
               >
                 📂 Muat Koreksi Tersimpan
