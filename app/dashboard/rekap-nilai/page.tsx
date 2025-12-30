@@ -16,6 +16,7 @@ interface StudentGrade {
   totalScore: number;
   finalGrade?: number;
   pas?: number;
+  semester?: number; // 1 atau 2
 }
 
 interface Grade {
@@ -28,6 +29,7 @@ interface Grade {
   grades: StudentGrade[];
   created_at: string;
   is_finalized?: boolean;
+  semester?: number; // 1 atau 2
 }
 
 interface ConsolidatedStudentGrade {
@@ -79,13 +81,14 @@ export default function RekapNilaiPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedSemester, setSelectedSemester] = useState<number|''>('');
 
   useEffect(() => {
     if (user) {
       loadMetadata();
       loadGrades();
     }
-  }, [user, selectedSubject, selectedClass, sortBy, sortOrder, currentPage]);
+  }, [user, selectedSubject, selectedClass, sortBy, sortOrder, currentPage, selectedSemester]);
 
   const loadMetadata = async () => {
     if (!user) return;
@@ -112,34 +115,36 @@ export default function RekapNilaiPage() {
   const loadGrades = async (loadMore: boolean = false) => {
     if (!user) return;
     setLoading(true);
-    
     try {
       // Load all grades for the user (client-side filtering for better compatibility)
       const q = query(
         collection(db, 'grades'),
         where('user_id', '==', user.uid)
       );
-
       const querySnapshot = await getDocs(q);
       let gradesData: Grade[] = [];
-
       querySnapshot.forEach((doc) => {
         gradesData.push({ id: doc.id, ...doc.data() } as Grade);
       });
-
       // Apply filters on client-side
       if (selectedSubject) {
         gradesData = gradesData.filter(g => g.subject === selectedSubject);
       }
-
       if (selectedClass) {
         gradesData = gradesData.filter(g => g.class_name === selectedClass);
       }
-
+      if (selectedSemester) {
+        // Filter by semester (Grade level)
+        gradesData = gradesData.filter(g => g.semester === selectedSemester || g.grades.some(sg => sg.semester === selectedSemester));
+        // Optionally, filter student grades inside each grade
+        gradesData = gradesData.map(g => ({
+          ...g,
+          grades: g.grades.filter(sg => sg.semester === selectedSemester || g.semester === selectedSemester)
+        }));
+      }
       // Sort on client-side
       gradesData.sort((a, b) => {
         let aVal: any, bVal: any;
-        
         if (sortBy === 'created_at') {
           aVal = new Date(a.created_at).getTime();
           bVal = new Date(b.created_at).getTime();
@@ -147,19 +152,16 @@ export default function RekapNilaiPage() {
           aVal = a.exam_name.toLowerCase();
           bVal = b.exam_name.toLowerCase();
         }
-        
         if (sortOrder === 'asc') {
           return aVal > bVal ? 1 : -1;
         } else {
           return aVal < bVal ? 1 : -1;
         }
       });
-
       // Implement pagination on client-side
       const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
       const endIdx = startIdx + ITEMS_PER_PAGE;
       const paginatedData = gradesData.slice(startIdx, endIdx);
-
       setGrades(paginatedData);
       setHasMore(endIdx < gradesData.length);
     } catch (error) {
@@ -206,15 +208,12 @@ export default function RekapNilaiPage() {
 
   const consolidateGradesByStudent = () => {
     if (!selectedSubject || !selectedClass) return;
-
-
     // Group grades by student
     const studentMap = new Map<string, {
       uh: number[];
       pts: number;
       pas: number;
     }>();
-
     grades.forEach(grade => {
       // Gabungkan exam_name dan exam_title untuk deteksi jenis ulangan
       const examNameLower = (grade.exam_name || '').toLowerCase();
@@ -247,16 +246,17 @@ export default function RekapNilaiPage() {
           examType = 'uh';
         }
       }
-
       grade.grades.forEach(studentGrade => {
+        // Filter by semester if available
+        if (selectedSemester && studentGrade.semester && studentGrade.semester !== selectedSemester && !(grade.semester === selectedSemester)) {
+          return;
+        }
         const student = studentMap.get(studentGrade.studentName) || {
           uh: [],
           pts: 0,
           pas: 0
         };
-
         const score = studentGrade.finalGrade !== undefined ? studentGrade.finalGrade : studentGrade.totalScore;
-
         // Fallback: jika examType 'uh' tapi ada field pas pada studentGrade, masukkan ke PAS
         if (examType === 'uh') {
           if (typeof studentGrade.pas === 'number' && studentGrade.pas > 0) {
@@ -269,17 +269,14 @@ export default function RekapNilaiPage() {
         } else if (examType === 'pas') {
           student.pas = score;
         }
-
         studentMap.set(studentGrade.studentName, student);
       });
     });
-
     // Calculate consolidated grades
     const consolidated: ConsolidatedStudentGrade[] = Array.from(studentMap.entries()).map(([name, data]) => {
       const rataUH = data.uh.length > 0 ? data.uh.reduce((a, b) => a + b, 0) / data.uh.length : 0;
       // Formula: NA = (Rata UH + PTS + (PAS/2)) / 2.5
       const nilaiRapor = ((rataUH + data.pts + (data.pas / 2)) / 2.5);
-      
       return {
         studentName: name,
         uh: data.uh,
@@ -289,7 +286,6 @@ export default function RekapNilaiPage() {
         nilaiRapor: Math.round(nilaiRapor * 100) / 100
       };
     });
-
     // Sort by student name
     consolidated.sort((a, b) => a.studentName.localeCompare(b.studentName));
     setConsolidatedGrades(consolidated);
@@ -390,7 +386,7 @@ export default function RekapNilaiPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Mata Pelajaran</label>
               <select
@@ -400,6 +396,7 @@ export default function RekapNilaiPage() {
                   setSelectedSubject(e.target.value);
                   setCurrentPage(1);
                 }}
+                title="Pilih Mata Pelajaran"
               >
                 <option value="">Semua</option>
                 {subjects.map((subject) => (
@@ -409,7 +406,6 @@ export default function RekapNilaiPage() {
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-2">Kelas</label>
               <select
@@ -419,6 +415,7 @@ export default function RekapNilaiPage() {
                   setSelectedClass(e.target.value);
                   setCurrentPage(1);
                 }}
+                title="Pilih Kelas"
               >
                 <option value="">Semua</option>
                 {classes.map((cls) => (
@@ -428,7 +425,22 @@ export default function RekapNilaiPage() {
                 ))}
               </select>
             </div>
-
+            <div>
+              <label className="block text-sm font-medium mb-2">Semester</label>
+              <select
+                className="w-full p-2 border rounded-md"
+                value={selectedSemester}
+                onChange={(e) => {
+                  setSelectedSemester(e.target.value ? Number(e.target.value) : '');
+                  setCurrentPage(1);
+                }}
+                title="Pilih Semester"
+              >
+                <option value="">Semua</option>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Urutkan Berdasarkan</label>
               <select
@@ -438,12 +450,12 @@ export default function RekapNilaiPage() {
                   setSortBy(e.target.value as 'created_at' | 'exam_name');
                   setCurrentPage(1);
                 }}
+                title="Urutkan Berdasarkan"
               >
                 <option value="created_at">Tanggal</option>
                 <option value="exam_name">Nama Ujian</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-2">Urutan</label>
               <select
@@ -453,6 +465,7 @@ export default function RekapNilaiPage() {
                   setSortOrder(e.target.value as 'asc' | 'desc');
                   setCurrentPage(1);
                 }}
+                title="Urutan Data"
               >
                 <option value="desc">Terbaru</option>
                 <option value="asc">Terlama</option>
