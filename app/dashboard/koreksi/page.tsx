@@ -1,6 +1,7 @@
-'use client';
-
 import "./koreksi-scrollbar.css";
+
+
+'use client';
 
 // Force rebuild for Vercel deployment
 import { useState, useEffect } from 'react';
@@ -56,9 +57,9 @@ interface SavedGrade {
   grades: StudentGrade[];
   created_at: string;
   updated_at: string;
-}
+  }
 
-export default function KoreksiPage() {
+  export default function KoreksiPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(0); // Start at 0 to choose mode
   const [loading, setLoading] = useState(false);
@@ -99,6 +100,8 @@ export default function KoreksiPage() {
     }
   }, [user, showSavedGrades]);
 
+  // Calculate content width
+
   // Delete a saved grade
   const handleDeleteSavedGrade = async (gradeId: string) => {
     if (!window.confirm('Yakin ingin menghapus data koreksi ini?')) return;
@@ -113,7 +116,6 @@ export default function KoreksiPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {
@@ -597,13 +599,17 @@ export default function KoreksiPage() {
     }
   };
 
+
+
   const getCellColor = (answer: string, correctAnswer: string) => {
     if (!answer) return '';
     return answer === correctAnswer ? 'bg-green-100' : 'bg-red-100';
   };
 
-  return (
-    <div className="container mx-auto p-4 space-y-4">
+  // ...existing code...
+
+      // ...existing code...
+
       {/* Saved Grades List */}
       {showSavedGrades && (
         <Card>
@@ -980,6 +986,10 @@ export default function KoreksiPage() {
         </div>
       )}
       
+
     </div>
   );
 }
+
+// Global styles for custom scrollbars (moved outside component for Next.js compatibility)
+import "./koreksi-scrollbar.css";
