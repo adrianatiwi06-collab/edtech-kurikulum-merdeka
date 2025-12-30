@@ -1,3 +1,4 @@
+import "./koreksi-scrollbar.css";
 
 
 'use client';
@@ -985,7 +986,7 @@ interface SavedGrade {
         </div>
       )}
       
-      {/* ...existing code... */}
+
     </div>
   );
 }
