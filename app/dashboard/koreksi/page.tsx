@@ -679,25 +679,6 @@ interface SavedGrade {
               </CardContent>
             </Card>
           )}
-          {/* ...existing code... */}
-        </div>
-      );
-                className="gap-2 bg-gradient-to-r from-blue-100 to-indigo-100 border-blue-300 hover:from-blue-200 hover:to-indigo-200"
-              >
-                📂 Muat Koreksi Tersimpan
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-3">Mata Pelajaran</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {subjects.map((subject) => (
-                  <Button
-                    key={subject}
-                    variant={selectedSubject === subject ? 'default' : 'outline'}
-                    onClick={() => handleSelectSubject(subject)}
-                  >
                     {subject}
                   </Button>
                 ))}
