@@ -72,6 +72,7 @@ interface SavedGrade {
   // Step 1: Select exam
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState<number|''>('');
   const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]);
   const [selectedQB, setSelectedQB] = useState<QuestionBank | null>(null);
   const [savedGrades, setSavedGrades] = useState<SavedGrade[]>([]);
@@ -442,6 +443,10 @@ interface SavedGrade {
       alert('Mohon masukkan nama ulangan');
       return;
     }
+    if (!selectedSemester) {
+      alert('Mohon pilih semester');
+      return;
+    }
     setStep(3);
   };
 
@@ -534,7 +539,10 @@ interface SavedGrade {
     if (!user || !selectedClass) return;
     if (!useTemplate && !selectedQB) return;
     if (useTemplate && !selectedTemplate) return;
-    
+    if (!selectedSemester) {
+      alert('Mohon pilih semester');
+      return;
+    }
     setLoading(true);
     try {
       if (savedGradeId) {
@@ -542,6 +550,7 @@ interface SavedGrade {
         await updateDoc(doc(db, 'grades', savedGradeId), {
           grades: grades,
           updated_at: new Date().toISOString(),
+          semester: selectedSemester
         });
       } else {
         // Create new grade
@@ -553,13 +562,12 @@ interface SavedGrade {
           grades: grades,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          semester: selectedSemester
         };
-        
         if (useTemplate && selectedTemplate) {
           gradeData.subject = selectedTemplate.subject;
           gradeData.exam_title = selectedTemplate.exam_name;
           gradeData.exam_template_id = selectedTemplate.id;
-          
           // Add TP mapping from template for analysis
           gradeData.tp_mapping = selectedTemplate.tp_details.flatMap((tpDetail) => 
             tpDetail.question_numbers.map(qNum => ({
@@ -573,17 +581,14 @@ interface SavedGrade {
           gradeData.subject = selectedQB.subject;
           gradeData.exam_title = selectedQB.examTitle;
           gradeData.question_bank_id = selectedQB.id;
-          
           // Add TP mapping from question bank for analysis (if available)
           if (selectedQB.question_tp_mapping && Array.isArray(selectedQB.question_tp_mapping) && selectedQB.question_tp_mapping.length > 0) {
             gradeData.tp_mapping = selectedQB.question_tp_mapping;
           }
         }
-        
         const docRef = await addDoc(collection(db, 'grades'), gradeData);
         setSavedGradeId(docRef.id);
       }
-      
       alert('✅ Nilai berhasil disimpan!\n\n💡 Anda dapat melanjutkan koreksi kapan saja dengan klik tombol "Muat Koreksi Tersimpan" di halaman awal.');
     } catch (error) {
       console.error('Error saving grades:', error);
@@ -626,81 +631,81 @@ interface SavedGrade {
         </div>
       )}
 
-      {/* Step 0: Choose Mode */}
-      {step === 0 && !showSavedGrades && (
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-          <CardHeader>
-            <CardTitle className="text-purple-900">Pilih Mode Koreksi</CardTitle>
-            <CardDescription>
-              Gunakan Template Ujian untuk ujian kertas (PAS/PTS) dengan pemetaan TP, 
-              atau Bank Soal untuk ujian digital dengan soal lengkap
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Card
-                className="cursor-pointer hover:border-purple-500 hover:shadow-lg transition-all bg-gradient-to-br from-fuchsia-50 to-purple-100 border-purple-300"
-                onClick={() => {
-                  setUseTemplate(true);
-                  setStep(1);
-                }}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">📝</div>
-                  <h3 className="font-semibold mb-2 text-purple-900">Template Ujian</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Ujian berbasis kertas (PAS/PTS) dengan kunci jawaban & pemetaan TP
-                  </p>
-                  <div className="mt-4 text-xs text-muted-foreground">
-                    ✓ Analisis ketercapaian TP<br />
-                    ✓ Koreksi cepat dengan kunci jawaban<br />
-                    ✓ Tidak perlu input soal lengkap
+      return (
+        <div className="container mx-auto p-6">
+          {/* ...existing code... */}
+          {step === 1 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Pilih Ulangan & Kelas</CardTitle>
+                <CardDescription>
+                  Pilih ulangan, kelas, dan semester yang akan dikoreksi
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Mata Pelajaran</label>
+                    <select
+                      className="w-full p-2 border rounded-md"
+                      value={selectedSubject}
+                      onChange={e => setSelectedSubject(e.target.value)}
+                      title="Pilih Mata Pelajaran"
+                    >
+                      <option value="">Pilih Mapel</option>
+                      {subjects.map(subject => (
+                        <option key={subject} value={subject}>{subject}</option>
+                      ))}
+                    </select>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:border-teal-500 hover:shadow-lg transition-all bg-gradient-to-br from-teal-50 to-cyan-100 border-teal-300"
-                onClick={() => {
-                  setUseTemplate(false);
-                  setStep(1);
-                }}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="text-4xl mb-3">📚</div>
-                  <h3 className="font-semibold mb-2 text-teal-900">Bank Soal</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Soal digital lengkap dari Bank Soal yang sudah dibuat
-                  </p>
-                  <div className="mt-4 text-xs text-muted-foreground">
-                    ✓ Soal lengkap tersimpan<br />
-                    ✓ Bisa dicetak untuk siswa<br />
-                    ✓ Koreksi otomatis PG
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Kelas</label>
+                    <select
+                      className="w-full p-2 border rounded-md"
+                      value={selectedClass?.id || ''}
+                      onChange={e => {
+                        const cls = classes.find(c => c.id === e.target.value);
+                        setSelectedClass(cls || null);
+                      }}
+                      title="Pilih Kelas"
+                    >
+                      <option value="">Pilih Kelas</option>
+                      {classes.map(cls => (
+                        <option key={cls.id} value={cls.id}>{cls.name}</option>
+                      ))}
+                    </select>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="flex justify-center pt-4">
-              <Button variant="outline" onClick={() => setShowSavedGrades(true)}>
-                📂 Atau Lanjutkan Koreksi Tersimpan
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 1: Select Template or Question Bank */}
-      {step === 1 && !showSavedGrades && useTemplate && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Pilih Template Ujian</CardTitle>
-                <CardDescription>Template ujian dengan kunci jawaban dan pemetaan TP</CardDescription>
-              </div>
-              <Button variant="outline" onClick={() => setStep(0)}>
-                ← Kembali
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Semester</label>
+                    <select
+                      className="w-full p-2 border rounded-md"
+                      value={selectedSemester}
+                      onChange={e => setSelectedSemester(e.target.value ? Number(e.target.value) : '')}
+                      title="Pilih Semester"
+                    >
+                      <option value="">Pilih Semester</option>
+                      <option value="1">Semester 1</option>
+                      <option value="2">Semester 2</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-6 flex gap-4">
+                  <Input
+                    className="w-full"
+                    placeholder="Nama Ulangan (misal: UH 1, PTS, PAS)"
+                    value={examName}
+                    onChange={e => setExamName(e.target.value)}
+                  />
+                  <Button onClick={handleStartGrading} disabled={!selectedSubject || !selectedClass || !selectedSemester || !examName}>
+                    Mulai Koreksi
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* ...existing code... */}
+        </div>
+      );
               </Button>
             </div>
           </CardHeader>

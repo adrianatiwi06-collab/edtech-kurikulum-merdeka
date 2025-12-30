@@ -66,6 +66,7 @@ export default function RekapNilaiPage() {
     const [manualUH, setManualUH] = useState<string[]>(['']);
     const [manualPTS, setManualPTS] = useState('');
     const [manualPAS, setManualPAS] = useState('');
+    const [manualSemester, setManualSemester] = useState<number|''>('');
     const [manualLoading, setManualLoading] = useState(false);
     const [manualError, setManualError] = useState('');
   const { user } = useAuth();
@@ -717,6 +718,19 @@ export default function RekapNilaiPage() {
             />
           </div>
           <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Semester</label>
+            <select
+              className="w-full border rounded px-3 py-2"
+              value={manualSemester}
+              onChange={e => setManualSemester(e.target.value ? Number(e.target.value) : '')}
+              title="Pilih Semester"
+            >
+              <option value="">Pilih Semester</option>
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+            </select>
+          </div>
+          <div className="mb-4">
             <label className="block text-sm font-medium mb-1">Nilai UH (bisa lebih dari 1, pisahkan dengan koma)</label>
             <input
               className="w-full border rounded px-3 py-2"
@@ -757,6 +771,10 @@ export default function RekapNilaiPage() {
                   setManualError('Nama siswa wajib diisi');
                   return;
                 }
+                if (!manualSemester) {
+                  setManualError('Semester wajib dipilih');
+                  return;
+                }
                 if (!manualUH.some(u => u && !isNaN(Number(u)))) {
                   setManualError('Minimal 1 nilai UH harus diisi');
                   return;
@@ -786,7 +804,8 @@ export default function RekapNilaiPage() {
                     manualInput: true,
                     uh: manualUH.filter(u => u && !isNaN(Number(u))).map(u => Number(u)),
                     pts: manualPTS ? Number(manualPTS) : 0,
-                    pas: manualPAS ? Number(manualPAS) : 0
+                    pas: manualPAS ? Number(manualPAS) : 0,
+                    semester: manualSemester
                   };
                   // Hitung nilai rapor (mengikuti rumus di consolidateGradesByStudent)
                   const rataUH = newGrade.uh.length > 0 ? newGrade.uh.reduce((a, b) => a + b, 0) / newGrade.uh.length : 0;
@@ -809,7 +828,8 @@ export default function RekapNilaiPage() {
                       exam_title: 'Manual Input',
                       grades: gradesArr,
                       created_at: new Date().toISOString(),
-                      is_finalized: false
+                      is_finalized: false,
+                      semester: manualSemester
                     }));
                   }
                   setManualModalOpen(false);
@@ -817,6 +837,7 @@ export default function RekapNilaiPage() {
                   setManualUH(['']);
                   setManualPTS('');
                   setManualPAS('');
+                  setManualSemester('');
                   setTimeout(() => loadGrades(), 500);
                 } catch (err: any) {
                   setManualError('Gagal menyimpan nilai: ' + (err.message || err));

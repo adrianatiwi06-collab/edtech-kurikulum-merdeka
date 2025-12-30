@@ -50,16 +50,14 @@ interface ClassTPAnalysis {
 export default function AnalisisNilaiPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  
   // Data
   const [subjects, setSubjects] = useState<string[]>([]);
   const [exams, setExams] = useState<Map<string, string[]>>(new Map()); // subject -> exam titles
   const [classAnalysis, setClassAnalysis] = useState<ClassTPAnalysis[]>([]);
-  
   // Filters
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedExam, setSelectedExam] = useState<string>("");
-  
+  const [selectedSemester, setSelectedSemester] = useState<number|''>('');
   // Stats
   const [className, setClassName] = useState<string>("");
   const [totalStudents, setTotalStudents] = useState<number>(0);
@@ -71,12 +69,12 @@ export default function AnalisisNilaiPage() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedSubject && selectedExam) {
+    if (selectedSubject && selectedExam && selectedSemester) {
       analyzeClassTP();
     } else {
       setClassAnalysis([]);
     }
-  }, [selectedSubject, selectedExam]);
+  }, [selectedSubject, selectedExam, selectedSemester]);
 
   const fetchData = async () => {
     try {
@@ -126,17 +124,16 @@ export default function AnalisisNilaiPage() {
   };
 
   const analyzeClassTP = async () => {
-    if (!user || !selectedSubject || !selectedExam) return;
-
+    if (!user || !selectedSubject || !selectedExam || !selectedSemester) return;
     try {
       setLoading(true);
-
-      // Fetch all grades for this subject and exam
+      // Fetch all grades for this subject, exam, and semester
       const gradesQuery = query(
         collection(db, "grades"),
         where("user_id", "==", user.uid),
         where("subject", "==", selectedSubject),
-        where("exam_title", "==", selectedExam)
+        where("exam_title", "==", selectedExam),
+        where("semester", "==", selectedSemester)
       );
 
       const gradesSnapshot = await getDocs(gradesQuery);
@@ -406,11 +403,11 @@ export default function AnalisisNilaiPage() {
         <CardHeader>
           <CardTitle>Filter Data</CardTitle>
           <CardDescription>
-            Pilih mata pelajaran dan ujian untuk melihat analisis penguasaan TP di kelas
+            Pilih mata pelajaran, semester, dan ujian untuk melihat analisis penguasaan TP di kelas
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Filter Mapel */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Mata Pelajaran</label>
@@ -421,6 +418,7 @@ export default function AnalisisNilaiPage() {
                   setSelectedExam(""); // Reset exam when subject changes
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title="Pilih Mata Pelajaran"
               >
                 <option value="">Pilih mata pelajaran...</option>
                 {subjects.map(subject => (
@@ -430,7 +428,20 @@ export default function AnalisisNilaiPage() {
                 ))}
               </select>
             </div>
-
+            {/* Filter Semester */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Semester</label>
+              <select
+                value={selectedSemester}
+                onChange={e => setSelectedSemester(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                title="Pilih Semester"
+              >
+                <option value="">Pilih semester...</option>
+                <option value="1">Semester 1</option>
+                <option value="2">Semester 2</option>
+              </select>
+            </div>
             {/* Filter Ulangan */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Ulangan</label>
@@ -439,6 +450,7 @@ export default function AnalisisNilaiPage() {
                 onChange={(e) => setSelectedExam(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={!selectedSubject}
+                title="Pilih Ulangan"
               >
                 <option value="">Pilih ulangan...</option>
                 {selectedSubject && exams.get(selectedSubject)?.map(exam => (
