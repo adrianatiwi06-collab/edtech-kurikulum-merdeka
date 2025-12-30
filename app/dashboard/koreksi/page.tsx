@@ -989,5 +989,4 @@ interface SavedGrade {
   );
 }
 
-// Global styles for custom scrollbars (moved outside component for Next.js compatibility)
-import "./koreksi-scrollbar.css";
+// (styles imported at top of file)
