@@ -985,8 +985,6 @@ interface SavedGrade {
           </div>
         </div>
       )}
-      
-
     </div>
   );
 }
