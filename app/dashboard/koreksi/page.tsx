@@ -1,6 +1,6 @@
-import "./koreksi-scrollbar.css";
-
 'use client';
+
+import "./koreksi-scrollbar.css";
 
 // Force rebuild for Vercel deployment
 import { useState, useEffect } from 'react';
@@ -604,13 +604,6 @@ export default function KoreksiPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-4">
-      {/* NOTE: Jika file asli Anda memiliki logika untuk Step 0 dan Step 1 di sini 
-        (seperti memilih Mata Pelajaran, Template Ujian, atau Bank Soal),
-        pastikan kode tersebut ada di sini.
-        
-        Kode di bawah ini adalah kelanjutan dari logika yang ada di file Anda.
-      */}
-
       {/* Saved Grades List */}
       {showSavedGrades && (
         <Card>
