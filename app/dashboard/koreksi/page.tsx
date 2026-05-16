@@ -76,6 +76,10 @@ export default function KoreksiPage() {
   const [selectedQB, setSelectedQB] = useState<QuestionBank | null>(null);
   const [savedGrades, setSavedGrades] = useState<SavedGrade[]>([]);
   
+  // FILTER STATE BARU
+  const [filterKelas, setFilterKelas] = useState('');
+  const [filterSubject, setFilterSubject] = useState('');
+  
   // Step 2: Select class
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
@@ -336,6 +340,22 @@ export default function KoreksiPage() {
     finally { setLoading(false); }
   };
 
+  // LOGIKA PEMBUATAN DAFTAR OPSI FILTER DAN PENYARINGAN DATA
+  const activeData = useTemplate ? examTemplates : questionBanks;
+  const availableFilterKelas = Array.from(new Set(activeData.map((item: any) => useTemplate ? item.grade : item.kelas))).filter(Boolean).sort();
+  const availableFilterSubjects = Array.from(new Set(activeData.map((item: any) => item.subject))).filter(Boolean).sort();
+
+  const displayedQBs = questionBanks.filter(qb => {
+    return (filterKelas ? String(qb.kelas) === String(filterKelas) : true) && 
+           (filterSubject ? qb.subject === filterSubject : true);
+  });
+
+  const displayedTemplates = examTemplates.filter((tpl: any) => {
+    const tplKelas = tpl.grade || tpl.kelas;
+    return (filterKelas ? String(tplKelas) === String(filterKelas) : true) && 
+           (filterSubject ? tpl.subject === filterSubject : true);
+  });
+
   const mcCount = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.count : selectedQB?.questions.multipleChoice?.length || 0;
   const mcWeight = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.weight : selectedQB?.questions.multipleChoice?.[0]?.weight || 1;
   const essayCount = useTemplate && selectedTemplate ? selectedTemplate.essay.count : selectedQB?.questions.essay?.length || 0;
@@ -344,7 +364,6 @@ export default function KoreksiPage() {
   const maxScore = (mcCount * mcWeight) + totalEssayWeight;
   const examTitleText = useTemplate && selectedTemplate ? selectedTemplate.exam_name : selectedQB?.examTitle || '';
 
-  // === MULAI PEMBUNGKUS UTAMA YANG HILANG ===
   return (
     <div className="container mx-auto pb-10 px-4 pt-6">
       
@@ -361,13 +380,13 @@ export default function KoreksiPage() {
             </Button>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="hover:shadow-md cursor-pointer border-blue-200 hover:border-blue-500 transition-all" onClick={() => { setUseTemplate(false); setStep(1); }}>
+            <Card className="hover:shadow-md cursor-pointer border-blue-200 hover:border-blue-500 transition-all" onClick={() => { setUseTemplate(false); setStep(1); setFilterKelas(''); setFilterSubject(''); }}>
               <CardHeader>
                 <CardTitle className="text-blue-700">Koreksi dari Bank Soal</CardTitle>
                 <CardDescription>Koreksi jawaban berdasarkan bank soal PDF yang telah Anda ekstrak sebelumnya.</CardDescription>
               </CardHeader>
             </Card>
-            <Card className="hover:shadow-md cursor-pointer border-green-200 hover:border-green-500 transition-all" onClick={() => { setUseTemplate(true); setStep(1); }}>
+            <Card className="hover:shadow-md cursor-pointer border-green-200 hover:border-green-500 transition-all" onClick={() => { setUseTemplate(true); setStep(1); setFilterKelas(''); setFilterSubject(''); }}>
               <CardHeader>
                 <CardTitle className="text-green-700">Koreksi dari Template</CardTitle>
                 <CardDescription>Koreksi menggunakan kerangka/template soal buatan sendiri secara manual.</CardDescription>
@@ -377,35 +396,62 @@ export default function KoreksiPage() {
         </div>
       )}
 
-      {/* STEP 1: Pilih Berkas Soal / Template */}
+      {/* STEP 1: Pilih Berkas Soal / Template Beserta Filternya */}
       {!showSavedGrades && step === 1 && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <Button variant="outline" onClick={() => setStep(0)}>← Kembali ke Awal</Button>
+
+          {/* KOTAK FILTER PENCARIAN BARU */}
+          <Card>
+            <CardHeader><CardTitle>Filter Soal</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Kelas</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md" value={filterKelas} onChange={e => setFilterKelas(e.target.value)}>
+                    <option value="">Semua Kelas</option>
+                    {availableFilterKelas.map(k => <option key={String(k)} value={String(k)}>Kelas {k}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mata Pelajaran</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md" value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
+                    <option value="">Semua Mata Pelajaran</option>
+                    {availableFilterSubjects.map(s => <option key={String(s)} value={String(s)}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={() => { setFilterKelas(''); setFilterSubject(''); }} variant="outline" className="w-full">Reset Filter</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
-              <CardTitle>Pilih {useTemplate ? 'Template Ujian' : 'Dokumen Bank Soal'}</CardTitle>
+              <CardTitle>Pilih Dokumen {useTemplate ? 'Template Ujian' : 'Bank Soal'}</CardTitle>
               <CardDescription>Klik salah satu dokumen yang akan Anda koreksi nilainya.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {!useTemplate ? (
-                  questionBanks.length > 0 ? questionBanks.map(qb => (
+                  displayedQBs.length > 0 ? displayedQBs.map(qb => (
                     <Card key={qb.id} className="cursor-pointer hover:border-blue-500 transition-colors" onClick={() => handleSelectQB(qb)}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-lg">{qb.examTitle}</CardTitle>
                         <CardDescription>Kelas {qb.kelas} - {qb.subject}</CardDescription>
                       </CardHeader>
                     </Card>
-                  )) : <p className="text-gray-500 italic col-span-full">Anda belum memiliki bank soal. Silakan unggah soal di menu Bank Soal terlebih dahulu.</p>
+                  )) : <p className="text-gray-500 italic col-span-full">Tidak ada soal yang cocok dengan filter pencarian Anda.</p>
                 ) : (
-                  examTemplates.length > 0 ? examTemplates.map(tpl => (
+                  displayedTemplates.length > 0 ? displayedTemplates.map(tpl => (
                     <Card key={tpl.id} className="cursor-pointer hover:border-green-500 transition-colors" onClick={() => handleSelectTemplate(tpl)}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-lg">{tpl.exam_name}</CardTitle>
-                        <CardDescription>{tpl.subject}</CardDescription>
+                        <CardDescription>Kelas {tpl.grade} - {tpl.subject}</CardDescription>
                       </CardHeader>
                     </Card>
-                  )) : <p className="text-gray-500 italic col-span-full">Anda belum membuat Template Ujian satupun.</p>
+                  )) : <p className="text-gray-500 italic col-span-full">Tidak ada template yang cocok dengan filter pencarian Anda.</p>
                 )}
               </div>
             </CardContent>
@@ -497,7 +543,6 @@ export default function KoreksiPage() {
                 <Input placeholder="Contoh: Ulangan Harian Bab 1" value={examName} onChange={(e) => setExamName(e.target.value)} className="focus:ring-2 focus:ring-blue-500" />
               </div>
               
-              {/* TOMBOL SEMESTER YANG SEMPAT HILANG ADA DI SINI */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Pilih Semester</label>
                 <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value={selectedSemester} onChange={(e) => setSelectedSemester(Number(e.target.value))}>
@@ -524,7 +569,7 @@ export default function KoreksiPage() {
         </Card>
       )}
 
-      {/* STEP 3: Tabel Grading (Tidak Diubah) */}
+      {/* STEP 3: Tabel Grading */}
       {!showSavedGrades && step === 3 && (selectedQB || selectedTemplate) && (
         <div id="content-wrapper" className="overflow-x-auto overflow-y-visible animate-in fade-in duration-300" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
