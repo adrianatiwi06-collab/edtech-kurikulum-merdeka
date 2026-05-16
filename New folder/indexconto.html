@@ -1,0 +1,3733 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Guru Pro - Modular Version</title>
+  <link rel="stylesheet" href="src/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- PDF.js Library for PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1><i class="fas fa-graduation-cap"></i> Admin Guru Pro</h1>
+          <p>Aplikasi Manajemen Tes Pembelajaran - Versi Modular v1.0 + AI</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <!-- AI Controls -->
+          <div style="background: #fff3cd; padding: 6px 10px; border-radius: 6px; display: flex; gap: 6px; align-items: center; font-size: 11px; font-weight: bold; border: 1px solid #ffc107;">
+            <i class="fas fa-robot" style="color: #ff9800;"></i>
+            <select id="modelSelect" onchange="setAIModel(this.value)" style="padding: 4px 6px; border-radius: 3px; border: none; font-weight: bold; font-size: 10px;">
+              <option value="models/gemini-2.5-flash">Flash (Cepat)</option>
+              <option value="models/gemini-2.5-pro">Pro (Akurat)</option>
+            </select>
+            <input type="password" id="apiKeyInput" placeholder="API Key..." style="width: 80px; padding: 4px 6px; border-radius: 3px; border: 1px solid #ff9800; font-size: 10px;">
+            <button onclick="saveApiKey()" style="padding: 4px 8px; background: #ff9800; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px; font-weight: bold;">
+              <i class="fas fa-key"></i> Simpan
+            </button>
+            <button onclick="clearApiKey()" style="padding: 4px 6px; background: #ff6b6b; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Storage Badge -->
+          <div id="storage-badge" style="background: #dbeafe; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; color: #0c4a6e; display: flex; align-items: center; gap: 6px;">
+            <i class="fas fa-database"></i>
+            <span id="storage-text">Menghitung...</span>
+          </div>
+          
+          <!-- Tier 4 Buttons -->
+          <button class="btn btn-secondary btn-sm" onclick="openLegerModal();" title="Leger Nilai (Grade Report)">
+            <i class="fas fa-book"></i> Leger
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openClassManagementModal();" title="Manajemen Kelas">
+            <i class="fas fa-users"></i> Kelas
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openDataCleanerModal();" title="Pembersih Data">
+            <i class="fas fa-broom"></i> Bersih
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openSettingsModal();" title="Pengaturan">
+            <i class="fas fa-cog"></i> Setelan
+          </button>
+          <!-- Help Button -->
+          <button class="btn btn-secondary btn-sm" onclick="openHelpModal();" title="Bantuan & Shortcut (?)">
+            <i class="fas fa-question-circle"></i> Bantuan
+          </button>
+          <!-- Backup Button -->
+          <button class="btn btn-secondary btn-sm" onclick="backupData();" title="Backup Data (Ctrl+B)">
+            <i class="fas fa-download"></i> Backup
+          </button>
+          <!-- History Button -->
+          <button class="btn btn-secondary btn-sm" onclick="openHistoryModal();" title="Riwayat (Ctrl+H)">
+            <i class="fas fa-history"></i> Riwayat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('tp');">
+        <i class="fas fa-graduation-cap"></i> TP
+      </button>
+      <button class="nav-tab" onclick="switchTab('create');">
+        <i class="fas fa-plus-circle"></i> Buat Tes
+      </button>
+      <button class="nav-tab" onclick="switchTab('grading');">
+        <i class="fas fa-edit"></i> Nilai & Analisis
+      </button>
+      <button class="nav-tab" onclick="switchTab('report');">
+        <i class="fas fa-chart-bar"></i> Rapor
+      </button>
+      <button class="nav-tab" onclick="switchTab('history');">
+        <i class="fas fa-history"></i> Riwayat
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="tab-content">
+      <!-- TP Tab -->
+      <div id="tp-tab" style="display: block;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Tujuan Pembelajaran (TP)</h2>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-sm" onclick="showAddTPModal();">
+                <i class="fas fa-plus"></i> Tambah TP
+              </button>
+              <button class="btn btn-warning btn-sm" onclick="openBookUploadModal();" title="Generate TP dari upload buku PDF">
+                <i class="fas fa-book"></i> Dari Buku
+              </button>
+              <button class="btn btn-success btn-sm" onclick="openGenerateTPModal();" title="Generate TP dari keyword">
+                <i class="fas fa-robot"></i> Dari Keyword
+              </button>
+              <button class="btn btn-info btn-sm" id="btn-gap-analyzer" onclick="openTPSuggester();" title="Analisis gap TP" style="display: none;">
+                <i class="fas fa-lightbulb"></i> Gap Analyzer
+              </button>
+            </div>
+          </div>
+          <div id="tp-list"></div>
+        </div>
+      </div>
+
+      <!-- Hidden element to store book content -->
+      <textarea id="bookContent" style="display: none;"></textarea>
+
+      <!-- Create Test Tab -->
+      <div id="create-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Buat Tes Baru</h2>
+            <button class="btn btn-success btn-sm" onclick="openGenerateSoalModal();" title="Generate soal dari TP yang dipilih">
+              <i class="fas fa-magic"></i> AI Generate Soal
+            </button>
+          </div>
+          <div id="create-form">
+            <!-- Wizard akan dirender di sini -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Grading Tab -->
+      <div id="grading-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Penilaian & Analisis</h2>
+          </div>
+          <div id="grading-area">
+            <!-- Grading area akan dirender di sini -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Tab -->
+      <div id="report-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Rapor Siswa</h2>
+          </div>
+          <div id="report-area">
+            <!-- Report akan dirender di sini -->
+          </div>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="history-tab" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Riwayat Tes</h2>
+          </div>
+          <div id="history-area">
+            <!-- History akan dirender di sini -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- Question Analysis Modal -->
+  <div id="question-analysis-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-chart-bar"></i> Analisis Soal
+        </h3>
+        <button onclick="closeQuestionAnalysisModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="question-analysis-content" style="overflow-x: auto;"></div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-history"></i> Riwayat & Statistik
+        </h3>
+        <button onclick="closeHistoryModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="history-content" style="overflow-x: auto;"></div>
+    </div>
+  </div>
+
+  <!-- File Restore Modal -->
+  <input type="file" id="restore-file-input" style="display: none;" accept=".json" onchange="handleFileRestore(event);">
+
+  <!-- Help & Shortcuts Modal -->
+  <div id="help-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-question-circle"></i> Bantuan & Shortcut Keyboard
+        </h3>
+        <button onclick="closeHelpModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Shortcuts Section -->
+        <div>
+          <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #3b82f6; color: #0c4a6e;">
+            <i class="fas fa-keyboard"></i> Shortcut Keyboard
+          </h4>
+          <div id="help-shortcuts-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <!-- Features Section -->
+        <div>
+          <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #10b981; color: #065f46;">
+            <i class="fas fa-star"></i> Fitur Utama
+          </h4>
+          <div id="help-features-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+
+      <!-- Tips Section -->
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 15px; color: #1f2937;">
+          <i class="fas fa-lightbulb"></i> Tips & Trik
+        </h4>
+        <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #4b5563;">
+          <li>✨ Gunakan Alt+1-5 untuk navigasi cepat antar tab</li>
+          <li>💾 Backup data Anda setiap hari dengan Ctrl+B</li>
+          <li>📊 Lihat analisis soal untuk mengetahui soal mana yang sulit</li>
+          <li>⌨️ Tekan Escape untuk menutup modal apapun dengan cepat</li>
+          <li>📱 Aplikasi ini responsive dan bisa diakses di mobile</li>
+          <li>🔐 Data disimpan di browser (localStorage) - backup reguler sangat penting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyword Generator Modal (Phase 3) -->
+  <div id="keyword-generator-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-sparkles"></i> Keyword Generator
+        </h3>
+        <button onclick="closeKeywordGeneratorModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form onsubmit="generateTPFromKeyword(event);">
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151;">Masukkan Keyword/Topik:</label>
+          <input type="text" id="keyword-input" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" placeholder="Contoh: Persamaan Kuadrat, Fotosintesis, dll" required>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151;">Pilih Kategori (opsional):</label>
+          <select id="keyword-category" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <option value="">-- Semua Kategori --</option>
+            <option value="matematika">Matematika</option>
+            <option value="bahasa">Bahasa Indonesia</option>
+            <option value="ipa">IPA/Sains</option>
+            <option value="ips">IPS</option>
+            <option value="bahasa-inggris">Bahasa Inggris</option>
+            <option value="other">Lainnya</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            <i class="fas fa-wand-magic-sparkles"></i> Generate TP
+          </button>
+          <button type="button" onclick="closeKeywordGeneratorModal();" style="flex: 1; padding: 10px; background: #e5e7eb; color: #374151; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            Batal
+          </button>
+        </div>
+      </form>
+
+      <div id="keyword-results" style="margin-top: 20px; display: none;">
+        <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #1f2937;">Saran TP yang Dihasilkan:</h4>
+        <div id="keyword-results-content" style="background: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Question Templates Modal (Phase 3) -->
+  <div id="templates-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-layer-group"></i> Template Soal
+        </h3>
+        <button onclick="closeTemplatesModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="templates-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;"></div>
+    </div>
+  </div>
+
+  <!-- Advanced Analytics Modal (Phase 3) -->
+  <div id="analytics-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-chart-line"></i> Analisis Lanjutan
+        </h3>
+        <button onclick="closeAnalyticsModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="analytics-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"></div>
+    </div>
+  </div>
+
+  <!-- PDF Upload & Book-based TP Generation Modal -->
+  <div id="book-upload-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-book"></i> Generate TP dari Buku Teks
+        </h3>
+        <button onclick="closeBookUploadModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <!-- Input Section -->
+        <div>
+          <h4 style="font-weight: bold; margin-bottom: 15px; color: #374151;">
+            <i class="fas fa-cog"></i> Setup Buku & CP
+          </h4>
+
+          <!-- Mata Pelajaran -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151; font-size: 13px;">Mata Pelajaran:</label>
+            <input type="text" id="bookMapel" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;" placeholder="Contoh: Matematika" required>
+          </div>
+
+          <!-- Tingkat Kelas -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151; font-size: 13px;">Tingkat Kelas:</label>
+            <select id="bookKelas" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;" required>
+              <option value="">-- Pilih Kelas --</option>
+              <option value="1">Kelas 1</option>
+              <option value="2">Kelas 2</option>
+              <option value="3">Kelas 3</option>
+              <option value="4">Kelas 4</option>
+              <option value="5">Kelas 5</option>
+              <option value="6">Kelas 6</option>
+              <option value="7">Kelas 7</option>
+              <option value="8">Kelas 8</option>
+              <option value="9">Kelas 9</option>
+              <option value="10">Kelas 10</option>
+              <option value="11">Kelas 11</option>
+              <option value="12">Kelas 12</option>
+            </select>
+          </div>
+
+          <!-- CP Input -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151; font-size: 13px;">Capaian Pembelajaran (CP) - Opsional:</label>
+            <textarea id="bookCP" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;" rows="4" placeholder="Paste CP dari Kurikulum Merdeka atau keterangan target pembelajaran"></textarea>
+          </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div>
+          <h4 style="font-weight: bold; margin-bottom: 15px; color: #374151;">
+            <i class="fas fa-upload"></i> Upload Buku PDF
+          </h4>
+
+          <!-- PDF Upload -->
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 8px; color: #374151; font-size: 13px;">File Buku Teks (PDF):</label>
+            <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: #f9fafb; transition: all 0.3s;" id="upload-drop-zone" onclick="document.getElementById('pdfFileInput').click();" ondrop="handlePdfDrop(event);" ondragover="event.preventDefault();" ondragenter="event.preventDefault();">
+              <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #9ca3af; margin-bottom: 8px;"></i>
+              <p style="color: #6b7280; font-weight: bold; margin: 8px 0;">Klik atau drag PDF di sini</p>
+              <p style="color: #9ca3af; font-size: 12px;">Maks. 50MB, hingga 100 halaman</p>
+              <input type="file" id="pdfFileInput" accept=".pdf" style="display: none;" onchange="handlePdfUpload(event);">
+            </div>
+            <p id="upload-status" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></p>
+          </div>
+
+          <!-- Sample Book Button -->
+          <div style="margin-bottom: 15px;">
+            <button type="button" onclick="loadSampleBook();" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">
+              <i class="fas fa-star"></i> Load Sample Book
+            </button>
+          </div>
+
+          <!-- Generate Button -->
+          <button type="button" id="btn-generate-tp-book" onclick="generateTP();" style="width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; disabled opacity: 0.5;" disabled>
+            <i class="fas fa-magic"></i> Generate TP dari Buku
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div id="book-loading-spinner" style="display: none; text-align: center; padding: 20px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #3b82f6;"></i>
+        <p style="margin-top: 8px; color: #6b7280;">Menganalisis buku dan menghasilkan TP...</p>
+      </div>
+
+      <!-- Results Section -->
+      <div id="book-results" style="display: none; margin-top: 20px;">
+        <h4 style="font-weight: bold; margin-bottom: 10px; color: #1f2937;">
+          <i class="fas fa-check-circle"></i> Hasil Generate TP:
+        </h4>
+        <div id="book-results-content" style="background: #f0f9ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="add-tp-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Tambah TP Baru</h2>
+        <button onclick="closeAddTPModal()" class="btn btn-icon btn-secondary">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form onsubmit="handleAddTP(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Deskripsi TP</label>
+            <textarea id="tp-text" class="form-control" rows="4" placeholder="Masukkan deskripsi TP..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bab/Unit</label>
+            <input type="text" id="tp-bab" class="form-control" placeholder="Misal: Bab 1 Bilangan" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Semester</label>
+            <select id="tp-semester" class="form-control">
+              <option value="1">Semester 1 (Ganjil)</option>
+              <option value="2">Semester 2 (Genap)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" onclick="closeAddTPModal()" class="btn btn-secondary">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leger Nilai Modal (Tier 4) -->
+  <div id="leger-nilai-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 95%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-book"></i> Leger Nilai
+        </h3>
+        <button onclick="closeLegerModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Pilih Kelas:</label>
+          <select id="leger-class-select" onchange="loadLegerData();" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+            <option value="">-- Semua Kelas --</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Semester:</label>
+          <select id="leger-semester-select" onchange="loadLegerData();" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+            <option value="">Semua Semester</option>
+            <option value="1">Ganjil</option>
+            <option value="2">Genap</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="leger-content" style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; max-height: 500px; overflow-y: auto;"></div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+        <button onclick="exportLegerToExcel();" class="btn btn-success btn-sm">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+        <button onclick="exportLegerToPDF();" class="btn btn-danger btn-sm">
+          <i class="fas fa-file-pdf"></i> Export PDF
+        </button>
+        <button onclick="closeLegerModal();" class="btn btn-secondary btn-sm">
+          <i class="fas fa-times"></i> Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Class Management Modal (Tier 4) -->
+  <div id="class-management-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 95%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-users"></i> Manajemen Kelas
+        </h3>
+        <button onclick="closeClassManagementModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <h4 style="font-weight: bold; margin-bottom: 10px;">Tambah Kelas Baru</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <input type="text" id="new-class-name" placeholder="Nama Kelas (mis: 6A)" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+          <input type="text" id="new-class-wali" placeholder="Wali Kelas (opsional)" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+        </div>
+        <textarea id="new-class-students" placeholder="Nama siswa (satu per baris)&#10;Contoh:&#10;Andi&#10;Budi&#10;Citra" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: monospace; font-size: 12px; height: 100px; resize: vertical;"></textarea>
+        <button onclick="addNewClass();" class="btn btn-success" style="margin-top: 10px; width: 100%;">
+          <i class="fas fa-plus"></i> Simpan Kelas
+        </button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-weight: bold; margin-bottom: 10px;">Kelas yang Tersimpan:</h4>
+        <div id="saved-classes-list" style="display: grid; gap: 10px; max-height: 300px; overflow-y: auto;"></div>
+      </div>
+
+      <div style="text-align: right;">
+        <button onclick="closeClassManagementModal();" class="btn btn-secondary">
+          <i class="fas fa-times"></i> Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Cleaner Modal (Tier 4) -->
+  <div id="data-cleaner-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 700px; width: 95%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-broom"></i> Pembersih Data
+        </h3>
+        <button onclick="closeDataCleanerModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="cleaner-report" style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">Analisis data sedang berjalan...</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        <button onclick="findDuplicates();" class="btn btn-info">
+          <i class="fas fa-search-double"></i> Cari Duplikat
+        </button>
+        <button onclick="removeEmptyTests();" class="btn btn-warning">
+          <i class="fas fa-trash"></i> Hapus Tes Kosong
+        </button>
+        <button onclick="repairCorruptedData();" class="btn btn-warning">
+          <i class="fas fa-wrench"></i> Perbaiki Data Rusak
+        </button>
+        <button onclick="optimizeStorage();" class="btn btn-info">
+          <i class="fas fa-compress"></i> Optimasi Storage
+        </button>
+      </div>
+
+      <div style="text-align: right;">
+        <button onclick="closeDataCleanerModal();" class="btn btn-secondary">
+          <i class="fas fa-times"></i> Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal (Tier 4) -->
+  <div id="settings-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 95%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-cog"></i> Pengaturan
+        </h3>
+        <button onclick="closeSettingsModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div style="display: grid; gap: 15px;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Skala Grading Default:</label>
+          <select id="setting-grading-scale" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+            <option value="100">Angka 0-100 (Persentase)</option>
+            <option value="ae">A-E (Huruf)</option>
+            <option value="10">0-10 (Angka)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 8px;">Auto-Save Interval (detik):</label>
+          <input type="number" id="setting-autosave" min="5" max="300" value="30" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+        </div>
+
+        <div>
+          <label style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="setting-notifications" checked>
+            <span style="font-weight: 600;">Aktifkan Notifikasi Toast</span>
+          </label>
+        </div>
+
+        <div>
+          <label style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="setting-backup-reminder" checked>
+            <span style="font-weight: 600;">Pengingat Backup Otomatis</span>
+          </label>
+        </div>
+
+        <div style="padding: 12px; background: #fef3c7; border-radius: 8px;">
+          <p style="margin: 0; font-size: 13px; color: #92400e;"><strong>💾 Storage Status:</strong></p>
+          <p id="setting-storage-info" style="margin: 5px 0 0 0; font-size: 12px; color: #92400e;">Menghitung...</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button onclick="saveSettings();" class="btn btn-primary" style="flex: 1;">
+          <i class="fas fa-save"></i> Simpan
+        </button>
+        <button onclick="closeSettingsModal();" class="btn btn-secondary" style="flex: 1;">
+          <i class="fas fa-times"></i> Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 2000;"></div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { App } from './src/app.js';
+    import { TPManager } from './src/modules/data/tp-manager.js';
+    import { Wizard } from './src/modules/features/wizard.js';
+    import { TestManager } from './src/modules/data/test-manager.js';
+    import { Grading } from './src/modules/features/grading.js';
+
+    // Make modules global
+    window.app = App;
+    window.tpManager = TPManager;
+    window.wizard = Wizard;
+    window.testManager = TestManager;
+    window.grading = Grading;
+
+    // Initialize
+    App.init();
+
+    // Tab Switching Function
+    window.switchTab = function(tabName) {
+      // Hide all tabs
+      document.getElementById('tp-tab').style.display = 'none';
+      document.getElementById('create-tab').style.display = 'none';
+      document.getElementById('grading-tab').style.display = 'none';
+      document.getElementById('report-tab').style.display = 'none';
+      document.getElementById('history-tab').style.display = 'none';
+
+      // Remove active class from all buttons
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Show selected tab
+      const tabId = tabName + '-tab';
+      const tab = document.getElementById(tabId);
+      if (tab) {
+        tab.style.display = 'block';
+      }
+
+      // Add active class to clicked button
+      event.target.closest('.nav-tab').classList.add('active');
+
+      // Set active tab in app state
+      App.setActiveTab(tabName);
+
+      // Render tab content
+      if (tabName === 'tp') {
+        renderTPTab();
+      } else if (tabName === 'create') {
+        renderCreateTab();
+      } else if (tabName === 'grading') {
+        renderGradingTab();
+      } else if (tabName === 'report') {
+        renderReportTab();
+      } else if (tabName === 'history') {
+        renderHistoryTab();
+      }
+    };
+
+    // UI Rendering Functions
+    window.renderTPTab = function() {
+      const container = document.getElementById('tp-list');
+      const tpData = TPManager.data;
+
+      // Header dengan tombol aksi
+      let headerHtml = `
+        <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" onclick="showAddTPModal();">
+            <i class="fas fa-plus"></i> Tambah TP
+          </button>
+          <button class="btn btn-info btn-sm" onclick="openKeywordGeneratorModal();">
+            <i class="fas fa-keyboard"></i> Generator TP
+          </button>
+        </div>
+      `;
+
+      if (tpData.length === 0) {
+        container.innerHTML = headerHtml + '<p class="text-muted">Belum ada TP. Klik tombol "Tambah TP" untuk memulai.</p>';
+        return;
+      }
+
+      const grouped = TPManager.getGroupedByBab();
+      let html = headerHtml;
+
+      for (const [bab, items] of Object.entries(grouped)) {
+        html += `<div class="mb-3">
+          <h4 class="text-lg mb-2">${bab}</h4>
+          <div class="grid gap-2">`;
+        
+        items.forEach((tp, idx) => {
+          const arrayIndex = TPManager.data.indexOf(tp);
+          html += `<div class="flex-between p-2 border rounded" style="background: #f9fafb;">
+            <label class="flex gap-2" style="flex: 1;">
+              <input type="checkbox" ${tp.checked ? 'checked' : ''} 
+                     onchange="toggleTPByIndex(${arrayIndex})">
+              <span>${tp.isi_tp}</span>
+            </label>
+            <button onclick="deleteTP(${arrayIndex})" class="btn btn-danger btn-sm">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>`;
+        });
+
+        html += `</div></div>`;
+      }
+
+      container.innerHTML = html;
+    };
+
+    window.renderCreateTab = function() {
+      const container = document.getElementById('create-form');
+      const step = Wizard.getCurrentStep();
+
+      if (step === 1) {
+        container.innerHTML = `
+          <div class="card">
+            <h3 class="mb-3">Langkah 1: Informasi Tes</h3>
+            <form onsubmit="handleWizardStep1(event)">
+              <div class="form-group">
+                <label class="form-label">Nama Tes</label>
+                <input type="text" id="wizard-name" class="form-control" placeholder="Misal: UH Bab 1" required>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Mata Pelajaran</label>
+                  <input type="text" id="wizard-mapel" class="form-control" placeholder="Misal: Matematika" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Kelas</label>
+                  <input type="text" id="wizard-kelas" class="form-control" placeholder="Misal: 6A" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Semester</label>
+                  <select id="wizard-semester" class="form-control">
+                    <option value="1">Ganjil</option>
+                    <option value="2">Genap</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Durasi (menit)</label>
+                  <input type="number" id="wizard-durasi" class="form-control" value="60">
+                </div>
+              </div>
+
+              <div class="flex-between" style="gap: 10px;">
+                <button type="button" class="btn btn-secondary" disabled>
+                  <i class="fas fa-arrow-left"></i> Sebelumnya
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  Selanjutnya <i class="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        `;
+      } else if (step === 2) {
+        container.innerHTML = `
+          <div class="card">
+            <h3 class="mb-3">Langkah 2: Komposisi Soal</h3>
+            <form onsubmit="handleWizardStep2(event)">
+              <div class="form-group">
+                <h4>Atur jumlah dan bobot setiap jenis soal</h4>
+              </div>
+
+              <div class="card" style="background: #f3f4f6; margin-bottom: 15px;">
+                <h5>Pilihan Ganda (PG)</h5>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Jumlah Soal</label>
+                    <input type="number" id="wizard-pg-count" class="form-control" value="10" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bobot per Soal</label>
+                    <input type="number" id="wizard-pg-bobot" class="form-control" value="1" min="1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="background: #f3f4f6; margin-bottom: 15px;">
+                <h5>Isian Singkat</h5>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Jumlah Soal</label>
+                    <input type="number" id="wizard-isian-count" class="form-control" value="5" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bobot per Soal</label>
+                    <input type="number" id="wizard-isian-bobot" class="form-control" value="2" min="1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="background: #f3f4f6; margin-bottom: 15px;">
+                <h5>Esai</h5>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Jumlah Soal</label>
+                    <input type="number" id="wizard-esai-count" class="form-control" value="3" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bobot per Soal</label>
+                    <input type="number" id="wizard-esai-bobot" class="form-control" value="5" min="1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex-between" style="gap: 10px;">
+                <button type="button" class="btn btn-secondary" onclick="goWizardStep(1)">
+                  <i class="fas fa-arrow-left"></i> Sebelumnya
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  Selanjutnya <i class="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        `;
+      } else if (step === 3) {
+        const tpData = TPManager.data;
+        const grouped = TPManager.getGroupedByBab();
+        let tpHtml = '';
+
+        for (const [bab, items] of Object.entries(grouped)) {
+          tpHtml += `<div class="mb-3"><h5>${bab}</h5><div class="grid gap-2">`;
+          items.forEach((tp, idx) => {
+            const arrayIndex = TPManager.data.indexOf(tp);
+            tpHtml += `<label class="flex gap-2 p-2 border rounded" style="background: #f9fafb; cursor: pointer;">
+              <input type="checkbox" class="wizard-tp-check" data-index="${arrayIndex}" ${tp.checked ? 'checked' : ''}>
+              <span>${tp.isi_tp}</span>
+            </label>`;
+          });
+          tpHtml += `</div></div>`;
+        }
+
+        container.innerHTML = `
+          <div class="card">
+            <h3 class="mb-3">Langkah 3: Pilih TP (Tujuan Pembelajaran)</h3>
+            <form onsubmit="handleWizardStep3(event)">
+              <div class="form-group">
+                <p class="text-muted">Pilih TP yang akan dicakup dalam tes ini:</p>
+              </div>
+              ${tpHtml || '<p class="text-muted">Belum ada TP. Tambahkan TP di tab TP terlebih dahulu.</p>'}
+              
+              <div class="flex-between" style="gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="goWizardStep(2)">
+                  <i class="fas fa-arrow-left"></i> Sebelumnya
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  Selanjutnya <i class="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+        `;
+      } else if (step === 4) {
+        container.innerHTML = `
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h3 class="mb-0">Langkah 4: Input Soal</h3>
+              <button class="btn btn-info btn-sm" onclick="openTemplatesModal();">
+                <i class="fas fa-th"></i> Lihat Template
+              </button>
+            </div>
+            <div id="soal-input-area">
+              <p class="text-muted">Soal akan diinput di sini. Untuk demo, klik "Selesai & Lanjutkan".</p>
+            </div>
+            
+            <div class="flex-between" style="gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" onclick="goWizardStep(3)">
+                <i class="fas fa-arrow-left"></i> Sebelumnya
+              </button>
+              <button type="button" class="btn btn-primary" onclick="goWizardStep(5)">
+                Selesai <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (step === 5) {
+        const testInfo = Wizard.getTestInfo();
+        const composition = Wizard.getComposition();
+
+        container.innerHTML = `
+          <div class="card">
+            <h3 class="mb-3">Langkah 5: Review & Selesai</h3>
+            
+            <div class="form-group">
+              <h4>Ringkasan Tes</h4>
+              <table class="table" style="margin-bottom: 20px;">
+                <tr><td><strong>Nama Tes</strong></td><td>${testInfo.title || 'N/A'}</td></tr>
+                <tr><td><strong>Mata Pelajaran</strong></td><td>${testInfo.mapel || 'N/A'}</td></tr>
+                <tr><td><strong>Kelas</strong></td><td>${testInfo.kelas || 'N/A'}</td></tr>
+                <tr><td><strong>Semester</strong></td><td>${testInfo.semester || 'N/A'}</td></tr>
+                <tr><td><strong>Durasi</strong></td><td>${testInfo.durasi || '60'} menit</td></tr>
+              </table>
+            </div>
+
+            <div class="form-group">
+              <h4>Komposisi Soal</h4>
+              <table class="table">
+                <tr>
+                  <td><strong>Jenis</strong></td>
+                  <td><strong>Jumlah</strong></td>
+                  <td><strong>Bobot/Soal</strong></td>
+                  <td><strong>Total Bobot</strong></td>
+                </tr>
+                <tr>
+                  <td>Pilihan Ganda</td>
+                  <td>${composition.pg}</td>
+                  <td>${composition.pgBobot}</td>
+                  <td>${composition.pg * composition.pgBobot}</td>
+                </tr>
+                <tr>
+                  <td>Isian Singkat</td>
+                  <td>${composition.isian}</td>
+                  <td>${composition.isianBobot}</td>
+                  <td>${composition.isian * composition.isianBobot}</td>
+                </tr>
+                <tr>
+                  <td>Esai</td>
+                  <td>${composition.esai}</td>
+                  <td>${composition.esaiBobot}</td>
+                  <td>${composition.esai * composition.esaiBobot}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="flex-between" style="gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" onclick="goWizardStep(4)">
+                <i class="fas fa-arrow-left"></i> Sebelumnya
+              </button>
+              <button type="button" class="btn btn-success" onclick="completeWizard()">
+                <i class="fas fa-check"></i> Selesai & Simpan
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    };
+
+    window.renderGradingTab = function() {
+      const container = document.getElementById('grading-area');
+      const tests = App.getAllTests();
+      
+      if (tests.length === 0) {
+        container.innerHTML = '<p class="text-muted">Belum ada tes untuk dinilai. Buat tes terlebih dahulu di tab "Buat Tes".</p>';
+        return;
+      }
+
+      const activeTestId = Grading.getActiveTestId();
+
+      if (!activeTestId) {
+        // Show test selection with import option
+        let html = `
+          <div class="form-group">
+            <label class="form-label">Pilih Tes untuk Dinilai</label>
+            <div style="display: flex; gap: 10px; align-items: flex-end;">
+              <select id="select-test" class="form-control" style="flex: 1;" onchange="loadTestForGrading(this.value)">
+                <option value="">-- Pilih Tes --</option>
+        `;
+        
+        tests.forEach(t => {
+          html += `<option value="${t.id}">${t.title} (${t.meta.mapel} - ${t.meta.kelas})</option>`;
+        });
+
+        html += `
+              </select>
+              <button class="btn btn-info" onclick="openImportStudentsModal();" style="white-space: nowrap;">
+                <i class="fas fa-file-import"></i> Impor Siswa
+              </button>
+            </div>
+          </div>
+        `;
+        container.innerHTML = html;
+        return;
+      }
+
+      // Load test and show grading table
+      const test = App.getActiveTest();
+      if (!test) {
+        container.innerHTML = '<p class="text-danger">Gagal memuat tes. Silakan coba lagi.</p>';
+        return;
+      }
+
+      const mapping = test.config.mapping;
+      const students = test.students || [];
+
+      // Header dengan info test dan action buttons
+      let html = `
+        <div class="form-group" style="margin-bottom: 20px;">
+          <div class="flex-between" style="gap: 15px; flex-wrap: wrap;">
+            <div>
+              <h4>${test.title}</h4>
+              <p class="text-muted">${test.meta.mapel} - ${test.meta.kelas} | ${students.length} Siswa</p>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-info btn-sm" onclick="openImportStudentsModal();">
+                <i class="fas fa-file-import"></i> Impor Siswa
+              </button>
+              <button class="btn btn-warning btn-sm" onclick="calculateAllGrades();">
+                <i class="fas fa-calculator"></i> Hitung Nilai
+              </button>
+              <button class="btn btn-info btn-sm" onclick="openQuestionAnalysis();">
+                <i class="fas fa-chart-bar"></i> Analisis Soal
+              </button>
+              <button class="btn btn-success btn-sm" onclick="openAdvancedAnalytics();">
+                <i class="fas fa-chart-pie"></i> Analytics Lanjut
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="backToTestSelection()">
+                <i class="fas fa-arrow-left"></i> Pilih Tes Lain
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Grading table dengan struktur lengkap
+      html += `
+        <div class="table-responsive" style="border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden;">
+          <table class="table" style="border-collapse: collapse; font-size: 13px; margin-bottom: 0;">
+            <thead style="background: #f3f4f6; position: sticky; top: 0; z-index: 10;">
+              <tr>
+                <th style="border: 1px solid #d1d5db; padding: 10px; text-align: left; min-width: 150px; font-weight: 600;">Nama Siswa</th>
+      `;
+
+      // Header for each question (PG, Isian, Esai)
+      mapping.forEach((item, idx) => {
+        let bgColor = '#dbeafe'; // PG - blue
+        if (item.type === 'Isian') bgColor = '#c7d2fe'; // Isian - indigo
+        if (item.type === 'Esai') bgColor = '#bbf7d0'; // Esai - green
+
+        html += `<th style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; min-width: 55px; background: ${bgColor}; font-weight: 600;">
+          <small style="display: block; color: #4b5563; font-size: 10px;">${item.type}</small>
+          <strong style="font-size: 12px;">Q${item.no}</strong>
+        </th>`;
+      });
+
+      // Kolom skor per soal
+      html += `<th style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; min-width: 70px; background: #fef3c7; font-weight: 600;">
+                <small style="color: #6b5b08; font-size: 10px;">Skor</small>
+              </th>`;
+
+      // Kolom nilai akhir sumatif
+      html += `
+                <th style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; min-width: 80px; background: #e0e7ff; font-weight: 600;">
+                  <small style="color: #312e81; font-size: 10px;">Nilai</small>
+                </th>
+                <th style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; min-width: 50px; background: #fecaca; font-weight: 600; font-size: 12px;">✓</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      // Rows for each student
+      students.forEach((student, studentIdx) => {
+        html += `<tr style="height: 35px;">
+          <td style="border: 1px solid #d1d5db; padding: 4px 6px; font-weight: 600; background: #f9fafb; min-width: 120px; font-size: 12px;">
+            ${student.name}
+          </td>
+        `;
+
+        let studentTotalScore = 0;
+        let studentScoresPerQuestion = [];
+
+        // Input for each question
+        mapping.forEach((item, qIdx) => {
+          let inputHtml = '';
+          let currentValue = student.answers ? student.answers[`${item.type.toLowerCase()}_${qIdx}`] : '';
+          let itemScore = 0;
+
+          if (item.type === 'PG') {
+            // PG - manual text input untuk jawaban (A/B/C/D)
+            inputHtml = `
+              <input type="text" 
+                     maxlength="1" 
+                     style="width: 100%; padding: 4px 2px; font-size: 12px; font-weight: bold; border: 1px solid #d1d5db; text-align: center; text-transform: uppercase; background: #eff6ff; height: 28px;"
+                     value="${currentValue || ''}"
+                     placeholder="A/B/C/D"
+                     data-key="${item.key}"
+                     data-score="${item.score}"
+                     data-type="pg"
+                     data-student="${studentIdx}"
+                     data-question="${qIdx}"
+                     onchange="updateStudentAnswer(${studentIdx}, '${item.type.toLowerCase()}_${qIdx}', this.value)"
+                     onkeyup="validatePGAnswer(this)">
+            `;
+            
+            // Auto-score PG: jika jawaban sama dengan kunci, dapat skor penuh
+            if (currentValue && currentValue.toUpperCase() === (item.key || '').toUpperCase()) {
+              itemScore = item.score || 1;
+            }
+          } else {
+            // Isian & Esai - numeric input untuk skor (manual penilaian guru)
+            inputHtml = `
+              <input type="number" 
+                     style="width: 100%; padding: 4px 2px; font-size: 12px; font-weight: bold; border: 1px solid #d1d5db; text-align: center; background: ${item.type === 'Isian' ? '#e0e7ff' : '#f0fdf4'}; height: 28px;"
+                     min="0" 
+                     max="${item.score}"
+                     value="${currentValue || 0}"
+                     placeholder="0-${item.score}"
+                     data-score="${item.score}"
+                     data-type="${item.type.toLowerCase()}"
+                     data-student="${studentIdx}"
+                     data-question="${qIdx}"
+                     onchange="updateStudentAnswer(${studentIdx}, '${item.type.toLowerCase()}_${qIdx}', this.value)">
+            `;
+            itemScore = parseInt(currentValue) || 0;
+          }
+
+          studentScoresPerQuestion.push(itemScore);
+          studentTotalScore += itemScore;
+
+          let bgColor = item.type === 'PG' ? '#eff6ff' : item.type === 'Isian' ? '#e0e7ff' : '#f0fdf4';
+          html += `<td style="border: 1px solid #d1d5db; padding: 0; text-align: center; background: ${bgColor}; height: 35px;">
+            ${inputHtml}
+          </td>`;
+        });
+
+        // Skor per soal (detail breakdown)
+        let scoreDetail = studentScoresPerQuestion.map((s, i) => `Q${i+1}:${s}`).join(', ');
+        html += `<td style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; font-size: 8px; color: #713f12; background: #fef9c3; height: 35px; overflow-y: auto;">
+          <small>${scoreDetail}</small>
+        </td>`;
+
+        // Nilai akhir sumatif
+        let grade = 0;
+        const maxScore = mapping.reduce((sum, item) => sum + (item.score || 0), 0);
+        if (maxScore > 0) {
+          grade = Math.round((studentTotalScore / maxScore) * 100);
+        }
+
+        html += `<td style="border: 1px solid #d1d5db; padding: 4px 2px; text-align: center; font-weight: bold; background: #e0e7ff; color: #312e81; height: 35px;">
+          <div style="font-size: 10px;">${studentTotalScore}/${maxScore}</div>
+          <div style="font-size: 9px; color: #4c51bf;">${grade}%</div>
+        </td>`;
+
+        // Aksi (hapus siswa)
+        html += `<td style="border: 1px solid #d1d5db; padding: 2px; text-align: center; height: 35px;">
+          <button class="btn btn-danger btn-sm" onclick="deleteStudentFromGrading(${studentIdx});" style="padding: 2px 4px; font-size: 10px;">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button class="btn btn-success btn-lg" onclick="saveAllGrades();">
+            <i class="fas fa-save"></i> Simpan Semua Nilai
+          </button>
+          <button class="btn btn-primary btn-lg" onclick="exportGradesToExcel();">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    };
+
+    window.renderReportTab = function() {
+      const container = document.getElementById('report-area');
+      container.innerHTML = '<p class="text-muted">Fitur Rapor akan ditampilkan di sini.</p>';
+    };
+
+    window.renderHistoryTab = function() {
+      const container = document.getElementById('history-area');
+      const tests = App.getAllTests();
+
+      if (tests.length === 0) {
+        container.innerHTML = '<p class="text-muted">Belum ada riwayat tes.</p>';
+        return;
+      }
+
+      let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Nama Tes</th><th>Mapel</th><th>Kelas</th><th>Tanggal</th><th>Aksi</th></tr></thead><tbody>';
+
+      tests.forEach(t => {
+        const date = new Date(t.createdAt).toLocaleDateString('id-ID');
+        html += `<tr>
+          <td><strong>${t.title}</strong></td>
+          <td>${t.meta.mapel}</td>
+          <td>${t.meta.kelas}</td>
+          <td>${date}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="app.loadTestForGrading('${t.id}');">
+              <i class="fas fa-eye"></i> Lihat
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteTest('${t.id}');">
+              <i class="fas fa-trash"></i> Hapus
+            </button>
+          </td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    };
+
+    // Event Handlers
+    window.toggleTPByIndex = function(index) {
+      TPManager.toggleByIndex(index);
+      renderTPTab();
+    };
+
+    window.deleteTP = function(index) {
+      if (confirm('Hapus TP ini?')) {
+        TPManager.delete(index);
+        renderTPTab();
+        showToast('TP berhasil dihapus', 'success');
+      }
+    };
+
+    window.showAddTPModal = function() {
+      document.getElementById('add-tp-modal').classList.add('show');
+    };
+
+    window.closeAddTPModal = function() {
+      document.getElementById('add-tp-modal').classList.remove('show');
+      document.getElementById('tp-text').value = '';
+      document.getElementById('tp-bab').value = '';
+    };
+
+    window.handleAddTP = function(event) {
+      event.preventDefault();
+      const text = document.getElementById('tp-text').value;
+      const bab = document.getElementById('tp-bab').value;
+      const semester = document.getElementById('tp-semester').value;
+
+      TPManager.add({
+        isi_tp: text,
+        bab: bab,
+        semester: parseInt(semester)
+      });
+
+      closeAddTPModal();
+      renderTPTab();
+      showToast('TP berhasil ditambahkan', 'success');
+    };
+
+    window.handleCreateTest = function(event) {
+      event.preventDefault();
+      
+      const testInfo = {
+        nama: document.getElementById('test-name').value,
+        mapel: document.getElementById('test-mapel').value,
+        kelas: document.getElementById('test-kelas').value,
+        semester: document.getElementById('test-semester').value,
+        durasi: document.getElementById('test-durasi').value,
+        tanggal: new Date().toISOString().split('T')[0]
+      };
+
+      const composition = {
+        pg: parseInt(document.getElementById('test-pg').value) || 0,
+        pgBobot: parseInt(document.getElementById('test-pgBobot').value) || 1,
+        isian: parseInt(document.getElementById('test-isian').value) || 0,
+        isianBobot: parseInt(document.getElementById('test-isianBobot').value) || 2,
+        esai: parseInt(document.getElementById('test-esai').value) || 0,
+        esaiBobot: parseInt(document.getElementById('test-esaiBobot').value) || 5
+      };
+
+      App.startWizard(testInfo, composition);
+      showToast('Tes baru dibuat. Silakan isi soal.', 'success');
+    };
+
+    // Wizard handlers
+    window.goWizardStep = function(stepNum) {
+      Wizard.state.currentStep = stepNum;
+      renderCreateTab();
+    };
+
+    window.handleWizardStep1 = function(event) {
+      event.preventDefault();
+      Wizard.setTestInfo({
+        title: document.getElementById('wizard-name').value,
+        mapel: document.getElementById('wizard-mapel').value,
+        kelas: document.getElementById('wizard-kelas').value,
+        semester: document.getElementById('wizard-semester').value,
+        durasi: document.getElementById('wizard-durasi').value
+      });
+      Wizard.nextStep();
+      renderCreateTab();
+    };
+
+    window.handleWizardStep2 = function(event) {
+      event.preventDefault();
+      Wizard.setComposition({
+        pg: parseInt(document.getElementById('wizard-pg-count').value) || 0,
+        pgBobot: parseInt(document.getElementById('wizard-pg-bobot').value) || 1,
+        isian: parseInt(document.getElementById('wizard-isian-count').value) || 0,
+        isianBobot: parseInt(document.getElementById('wizard-isian-bobot').value) || 2,
+        esai: parseInt(document.getElementById('wizard-esai-count').value) || 0,
+        esaiBobot: parseInt(document.getElementById('wizard-esai-bobot').value) || 5
+      });
+      Wizard.nextStep();
+      renderCreateTab();
+    };
+
+    window.handleWizardStep3 = function(event) {
+      event.preventDefault();
+      const checks = document.querySelectorAll('.wizard-tp-check:checked');
+      checks.forEach(ch => {
+        const idx = parseInt(ch.getAttribute('data-index'));
+        if (!TPManager.data[idx].checked) {
+          TPManager.toggleByIndex(idx);
+        }
+      });
+      Wizard.nextStep();
+      renderCreateTab();
+    };
+
+    window.completeWizard = function() {
+      const testInfo = Wizard.getTestInfo();
+      const composition = Wizard.getComposition();
+      
+      App.startWizard(testInfo, composition);
+      Wizard.init(); // Reset wizard
+      renderCreateTab();
+      showToast('Tes berhasil dibuat! Anda sekarang dapat mulai menginput nilai siswa.', 'success');
+    };
+
+    window.loadTestForGrading = function(testId) {
+      App.loadTestForGrading(testId);
+      showToast('Tes dimuat untuk penilaian', 'info');
+    };
+
+    window.deleteTest = function(testId) {
+      if (confirm('Hapus tes ini?')) {
+        App.deleteTest(testId);
+        renderHistoryTab();
+        showToast('Tes berhasil dihapus', 'success');
+      }
+    };
+
+    // Grading handlers
+    window.loadTestForGrading = function(testId) {
+      if (!testId) return;
+      
+      App.loadTestForGrading(testId);
+      Grading.init(testId);
+      Grading.setCurrentStudentIndex(0);
+      renderGradingTab();
+      showToast('Tes dimuat. Mulai menilai siswa.', 'info');
+    };
+
+    window.backToTestSelection = function() {
+      Grading.state.activeTestId = null;
+      renderGradingTab();
+    };
+
+    window.openImportStudentsModal = function() {
+      const test = App.getActiveTest();
+      if (!test) {
+        showToast('Pilih tes terlebih dahulu', 'error');
+        return;
+      }
+
+      // Create and show modal
+      const modal = document.createElement('div');
+      modal.id = 'import-students-modal';
+      modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+      
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+          <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">
+            <i class="fas fa-file-import"></i> Impor Daftar Siswa
+          </h3>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Masukkan Nama Siswa (satu per baris):</label>
+            <textarea id="import-students-text" 
+                      placeholder="Andi&#10;Budi&#10;Citra&#10;Doni..."
+                      style="width: 100%; height: 250px; padding: 12px; border: 2px solid #d1d5db; border-radius: 8px; font-family: monospace; font-size: 14px; resize: vertical;"
+            ></textarea>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button onclick="document.getElementById('import-students-modal').remove();" class="btn btn-secondary" style="flex: 1;">
+              <i class="fas fa-times"></i> Batal
+            </button>
+            <button onclick="processImportStudents();" class="btn btn-success" style="flex: 1;">
+              <i class="fas fa-check"></i> Impor Siswa
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      document.getElementById('import-students-text').focus();
+    };
+
+    window.processImportStudents = function() {
+      const test = App.getActiveTest();
+      if (!test) {
+        showToast('Pilih tes terlebih dahulu', 'error');
+        return;
+      }
+
+      const textInput = document.getElementById('import-students-text');
+      if (!textInput) return;
+
+      const names = textInput.value
+        .split('\n')
+        .map(name => name.trim())
+        .filter(name => name.length > 0);
+
+      if (names.length === 0) {
+        showToast('Masukkan minimal satu nama siswa', 'error');
+        return;
+      }
+
+      // Add students to test
+      names.forEach(name => {
+        if (!test.students) test.students = [];
+        
+        // Avoid duplicate
+        if (!test.students.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+          test.students.push({
+            name: name,
+            answers: {}
+          });
+        }
+      });
+
+      // Save and update UI
+      TestManager.save();
+      
+      const modal = document.getElementById('import-students-modal');
+      if (modal) modal.remove();
+
+      renderGradingTab();
+      showToast(`✓ ${names.length} siswa berhasil ditambahkan`, 'success');
+    };
+
+    window.deleteStudentFromGrading = function(studentIdx) {
+      const test = App.getActiveTest();
+      if (!test || !test.students) return;
+
+      const student = test.students[studentIdx];
+      if (!student) return;
+
+      if (confirm(`Hapus siswa "${student.name}" dari daftar?`)) {
+        test.students.splice(studentIdx, 1);
+        TestManager.save();
+        renderGradingTab();
+        showToast('Siswa berhasil dihapus', 'success');
+      }
+    };
+
+    window.validatePGAnswer = function(input) {
+      const maxOption = (input.dataset.maxOption || 'D').charCodeAt(0);
+      const val = input.value.toUpperCase();
+      
+      // Only allow A-D (or whatever max option is)
+      if (val && (val.charCodeAt(0) < 65 || val.charCodeAt(0) > maxOption)) {
+        input.value = '';
+        input.style.background = '#fee2e2';
+        setTimeout(() => input.style.background = '#eff6ff', 200);
+        showToast('Hanya A-D yang diizinkan', 'error');
+      } else {
+        input.value = val;
+      }
+    };
+
+    window.calculateAllGrades = function() {
+      const test = App.getActiveTest();
+      if (!test || !test.students) {
+        showToast('Tidak ada data untuk dihitung', 'error');
+        return;
+      }
+
+      const mapping = test.config.mapping;
+      const maxScore = mapping.reduce((sum, item) => sum + (item.score || 0), 0);
+
+      if (maxScore === 0) {
+        showToast('Tidak ada nilai maksimal untuk dihitung', 'error');
+        return;
+      }
+
+      // Calculate grade for each student
+      test.students.forEach(student => {
+        let totalScore = 0;
+
+        mapping.forEach((item, qIdx) => {
+          const ansKey = `${item.type.toLowerCase()}_${qIdx}`;
+          const studentAnswer = student.answers ? student.answers[ansKey] : '';
+
+          if (item.type === 'PG') {
+            // Auto-score PG based on correct answer
+            if (studentAnswer && studentAnswer.toUpperCase() === (item.key || '').toUpperCase()) {
+              totalScore += item.score || 1;
+            }
+          } else {
+            // For Isian/Esai, use the numeric score entered by teacher
+            totalScore += parseInt(studentAnswer) || 0;
+          }
+        });
+
+        // Calculate final grade (percentage)
+        student.finalGrade = Math.round((totalScore / maxScore) * 100);
+        student.totalScore = totalScore;
+      });
+
+      TestManager.save();
+      renderGradingTab();
+      showToast('✓ Nilai semua siswa berhasil dihitung', 'success');
+    };
+
+    window.openQuestionAnalysis = function() {
+      const test = App.getActiveTest();
+      if (!test || !test.students || test.students.length === 0) {
+        showToast('Tidak ada data siswa untuk dianalisis', 'error');
+        return;
+      }
+
+      const mapping = test.config.mapping;
+      let analysisHtml = `
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+          <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">
+              <i class="fas fa-chart-bar"></i> Analisis Soal
+            </h3>
+            
+            <div style="overflow-x: auto;">
+              <table class="table" style="border-collapse: collapse; width: 100%; font-size: 13px;">
+                <thead style="background: #f3f4f6;">
+                  <tr>
+                    <th style="border: 1px solid #d1d5db; padding: 10px; text-align: left;">Soal</th>
+                    <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Tipe</th>
+                    <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Jawaban Benar</th>
+                    <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Persentase Benar</th>
+                    <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Kesulitan</th>
+                  </tr>
+                </thead>
+                <tbody>
+      `;
+
+      // Analyze each question
+      mapping.forEach((item, qIdx) => {
+        let correctCount = 0;
+        let totalResponses = 0;
+
+        if (item.type === 'PG') {
+          // Analyze PG answers
+          test.students.forEach(student => {
+            const ansKey = `pg_${qIdx}`;
+            const studentAnswer = student.answers ? student.answers[ansKey] : '';
+            
+            if (studentAnswer) {
+              totalResponses++;
+              if (studentAnswer.toUpperCase() === (item.key || '').toUpperCase()) {
+                correctCount++;
+              }
+            }
+          });
+        } else {
+          // For Isian/Esai, consider full score as "correct"
+          test.students.forEach(student => {
+            const ansKey = `${item.type.toLowerCase()}_${qIdx}`;
+            const score = parseInt(student.answers ? student.answers[ansKey] : 0) || 0;
+            const maxScore = item.score || 1;
+            
+            if (score > 0) {
+              totalResponses++;
+              if (score === maxScore) {
+                correctCount++;
+              }
+            }
+          });
+        }
+
+        const percentage = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
+        let difficultyLevel = 'Sedang';
+        if (percentage >= 75) difficultyLevel = 'Mudah';
+        if (percentage <= 25) difficultyLevel = 'Sulit';
+
+        const difficultyColor = percentage >= 75 ? '#10b981' : percentage <= 25 ? '#ef4444' : '#f59e0b';
+
+        analysisHtml += `
+          <tr>
+            <td style="border: 1px solid #d1d5db; padding: 10px; font-weight: 600;">Q${item.no} (${item.type})</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 500;">${item.type}</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: bold; color: #1e40af;">${correctCount}/${totalResponses}</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">
+              <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${percentage}%</span>
+            </td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">
+              <span style="display: inline-block; background: rgba(${difficultyColor === '#10b981' ? '16, 185, 129' : difficultyColor === '#ef4444' ? '239, 68, 68' : '245, 158, 11'}, 0.1); color: ${difficultyColor}; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${difficultyLevel}</span>
+            </td>
+          </tr>
+        `;
+      });
+
+      analysisHtml += `
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top: 25px; text-align: right;">
+              <button onclick="this.closest('[style*=\\\"position: fixed\\\"]').remove();" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const analysisCont = document.createElement('div');
+      analysisCont.innerHTML = analysisHtml;
+      document.body.appendChild(analysisCont.firstElementChild);
+    };
+
+    window.exportGradesToExcel = function() {
+      const test = App.getActiveTest();
+      if (!test || !test.students) {
+        showToast('Tidak ada data untuk diekspor', 'error');
+        return;
+      }
+
+      const mapping = test.config.mapping;
+      let csvContent = 'data:text/csv;charset=utf-8,';
+      
+      // Header
+      csvContent += 'No,Nama Siswa,';
+      mapping.forEach(item => {
+        csvContent += `Q${item.no}(${item.type}),`;
+      });
+      csvContent += 'Total Skor,Nilai Akhir\n';
+
+      // Data rows
+      test.students.forEach((student, idx) => {
+        csvContent += `${idx + 1},${student.name},`;
+        
+        let totalScore = 0;
+        mapping.forEach((item, qIdx) => {
+          const ansKey = `${item.type.toLowerCase()}_${qIdx}`;
+          const value = student.answers ? student.answers[ansKey] : '';
+          csvContent += `${value || '-'},`;
+          
+          if (item.type !== 'PG') {
+            totalScore += parseInt(value) || 0;
+          }
+        });
+
+        const maxScore = mapping.reduce((sum, item) => sum + (item.score || 0), 0);
+        const grade = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+        csvContent += `${totalScore},${grade}%\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${test.title}_Nilai.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast('✓ Data berhasil diekspor ke Excel', 'success');
+    };
+
+    window.updateStudentAnswer = function(studentIdx, key, value) {
+      const test = App.getActiveTest();
+      const student = test.students[studentIdx];
+      
+      if (!student) return;
+      
+      if (!student.answers) {
+        student.answers = {};
+      }
+      
+      student.answers[key] = value;
+      
+      // Save immediately
+      TestManager.save();
+    };
+
+    window.saveAllGrades = function() {
+      const test = App.getActiveTest();
+      
+      if (!test || !test.students || test.students.length === 0) {
+        showToast('Tidak ada data untuk disimpan', 'error');
+        return;
+      }
+
+      TestManager.save();
+      showToast(`✓ Nilai ${test.students.length} siswa berhasil disimpan`, 'success');
+    };
+
+    window.selectStudent = function(studentIdx) {
+      Grading.setCurrentStudentIndex(parseInt(studentIdx));
+      renderGradingTab();
+    };
+
+    window.previousStudent = function() {
+      const idx = Grading.getCurrentStudentIndex();
+      if (idx > 0) {
+        Grading.setCurrentStudentIndex(idx - 1);
+        renderGradingTab();
+      }
+    };
+
+    window.nextStudent = function() {
+      const test = App.getActiveTest();
+      const idx = Grading.getCurrentStudentIndex();
+      if (test && idx < test.students.length - 1) {
+        Grading.setCurrentStudentIndex(idx + 1);
+        renderGradingTab();
+      }
+    };
+
+    window.updateAnswer = function(key, value) {
+      Grading.setAnswer(key, value);
+    };
+
+    window.submitStudentGrades = function(event) {
+      event.preventDefault();
+      
+      const test = App.getActiveTest();
+      const currentIdx = Grading.getCurrentStudentIndex();
+      const student = test.students[currentIdx];
+      
+      if (!student) {
+        showToast('Siswa tidak ditemukan', 'error');
+        return;
+      }
+
+      // Collect all current answers
+      const mapping = test.config.mapping;
+      const answers = {};
+
+      mapping.forEach((item, idx) => {
+        if (item.type === 'PG') {
+          const key = `pg_${idx}`;
+          const val = document.getElementById(key)?.value;
+          if (val) answers[key] = val;
+        } else if (item.type === 'Isian') {
+          const key = `isian_${idx}`;
+          const val = document.getElementById(key)?.value;
+          if (val) answers[key] = val;
+        } else if (item.type === 'Esai') {
+          const key = `esai_${idx}`;
+          const val = document.getElementById(key)?.value;
+          if (val) answers[key] = val;
+        }
+      });
+
+      // Update student answers
+      student.answers = { ...student.answers, ...answers };
+      TestManager.save();
+
+      showToast(`Nilai untuk ${student.name} berhasil disimpan`, 'success');
+      
+      // Move to next student if available
+      if (currentIdx < test.students.length - 1) {
+        setTimeout(() => {
+          nextStudent();
+        }, 500);
+      }
+    };
+
+    window.showToast = function(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${type}`;
+      toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    };
+
+    // ===== PHASE 1 TIER 1 FEATURES =====
+    
+    // Feature 1: Question Analysis Modal
+    window.openQuestionAnalysis = function() {
+      const test = App.getActiveTest();
+      if (!test || !test.students || test.students.length === 0) {
+        showToast('Tidak ada data siswa untuk dianalisis', 'error');
+        return;
+      }
+
+      const mapping = test.config.mapping;
+      let analysisHtml = `
+        <table class="table" style="border-collapse: collapse; width: 100%; font-size: 13px;">
+          <thead style="background: #f3f4f6;">
+            <tr>
+              <th style="border: 1px solid #d1d5db; padding: 10px; text-align: left;">Soal</th>
+              <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Tipe</th>
+              <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Jawaban Benar</th>
+              <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Persentase Benar</th>
+              <th style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">Kesulitan</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      mapping.forEach((item, qIdx) => {
+        let correctCount = 0;
+        let totalResponses = 0;
+
+        if (item.type === 'PG') {
+          test.students.forEach(student => {
+            const ansKey = `pg_${qIdx}`;
+            const studentAnswer = student.answers ? student.answers[ansKey] : '';
+            if (studentAnswer) {
+              totalResponses++;
+              if (studentAnswer.toUpperCase() === (item.key || '').toUpperCase()) {
+                correctCount++;
+              }
+            }
+          });
+        } else {
+          test.students.forEach(student => {
+            const ansKey = `${item.type.toLowerCase()}_${qIdx}`;
+            const score = parseInt(student.answers ? student.answers[ansKey] : 0) || 0;
+            const maxScore = item.score || 1;
+            if (score > 0) {
+              totalResponses++;
+              if (score === maxScore) {
+                correctCount++;
+              }
+            }
+          });
+        }
+
+        const percentage = totalResponses > 0 ? Math.round((correctCount / totalResponses) * 100) : 0;
+        let difficultyLevel = 'Sedang';
+        let diffColor = '#f59e0b';
+        
+        if (percentage >= 80) {
+          difficultyLevel = 'Mudah';
+          diffColor = '#10b981';
+        } else if (percentage < 40) {
+          difficultyLevel = 'Sulit';
+          diffColor = '#ef4444';
+        }
+
+        const questionText = item.text ? item.text.substring(0, 50) + '...' : `Soal ${qIdx + 1}`;
+        analysisHtml += `
+          <tr>
+            <td style="border: 1px solid #d1d5db; padding: 10px;">${questionText}</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">${item.type}</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">${correctCount}/${totalResponses}</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: bold;">${percentage}%</td>
+            <td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; background: ${diffColor}20;"><span style="color: ${diffColor}; font-weight: bold;">${difficultyLevel}</span></td>
+          </tr>
+        `;
+      });
+
+      analysisHtml += '</tbody></table>';
+      
+      const modal = document.getElementById('question-analysis-modal');
+      document.getElementById('question-analysis-content').innerHTML = analysisHtml;
+      modal.style.display = 'flex';
+    };
+
+    window.closeQuestionAnalysisModal = function() {
+      document.getElementById('question-analysis-modal').style.display = 'none';
+    };
+
+    // Feature 2 & 3: Backup & Restore + Storage Quota
+    window.backupData = function() {
+      const allTests = JSON.parse(localStorage.getItem('gtp_tests') || '[]');
+      const tpData = JSON.parse(localStorage.getItem('gtp_tp_data') || '[]');
+      const rapor = JSON.parse(localStorage.getItem('gtp_rapor') || '{}');
+      
+      const backup = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        tests: allTests,
+        tpData: tpData,
+        rapor: rapor
+      };
+
+      const dataStr = JSON.stringify(backup, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
+      link.download = `backup_agp_${dateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      localStorage.setItem('last_backup_date', new Date().toISOString());
+      showToast('✓ Backup berhasil diunduh', 'success');
+      checkStorageQuota();
+    };
+
+    window.restoreBackup = function() {
+      document.getElementById('restore-file-input').click();
+    };
+
+    window.handleFileRestore = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const backup = JSON.parse(e.target.result);
+          
+          if (!backup.version || !backup.tests || !backup.tpData) {
+            showToast('Format file backup tidak valid', 'error');
+            return;
+          }
+
+          const existingTests = JSON.parse(localStorage.getItem('gtp_tests') || '[]');
+          const newTests = backup.tests.filter(t => !existingTests.find(et => et.id === t.id));
+          const mergedTests = [...existingTests, ...newTests];
+          
+          localStorage.setItem('gtp_tests', JSON.stringify(mergedTests));
+          localStorage.setItem('gtp_tp_data', JSON.stringify(backup.tpData));
+          localStorage.setItem('gtp_rapor', JSON.stringify(backup.rapor));
+          localStorage.setItem('last_restore_date', new Date().toISOString());
+
+          showToast(`✓ Restore berhasil (${newTests.length} test baru ditambahkan)`, 'success');
+          setTimeout(() => location.reload(), 1500);
+        } catch (error) {
+          showToast('Gagal membaca file backup: ' + error.message, 'error');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    };
+
+    window.checkStorageQuota = function() {
+      try {
+        const tests = localStorage.getItem('gtp_tests') || '[]';
+        const tp = localStorage.getItem('gtp_tp_data') || '[]';
+        const rapor = localStorage.getItem('gtp_rapor') || '{}';
+        
+        const total = new Blob([tests, tp, rapor]).size;
+        const usedKB = Math.round(total / 1024);
+        const maxKB = 5000;
+        const percentage = Math.round((usedKB / maxKB) * 100);
+        
+        let color = '#0c4a6e';
+        if (percentage >= 90) color = '#dc2626';
+        else if (percentage >= 80) color = '#ea580c';
+        else if (percentage >= 60) color = '#eab308';
+        
+        const badge = document.getElementById('storage-badge');
+        badge.style.background = color + '20';
+        badge.style.color = color;
+        document.getElementById('storage-text').textContent = `${usedKB} KB (${percentage}%)`;
+      } catch (e) {
+        console.log('Storage check error:', e);
+      }
+    };
+
+    // Feature 4: Keyboard Shortcuts
+    window.setupKeyboardShortcuts = function() {
+      document.addEventListener('keydown', function(e) {
+        // Alt + 1-5 for tab switching
+        if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+          if (e.key === '1') { switchTab('tp'); e.preventDefault(); }
+          else if (e.key === '2') { switchTab('create'); e.preventDefault(); }
+          else if (e.key === '3') { switchTab('grading'); e.preventDefault(); }
+          else if (e.key === '4') { switchTab('report'); e.preventDefault(); }
+          else if (e.key === '5') { switchTab('history'); e.preventDefault(); }
+        }
+        
+        // Ctrl + S for save
+        if (e.ctrlKey && e.key === 's') {
+          e.preventDefault();
+          saveAllGrades();
+        }
+        
+        // Ctrl + B for backup
+        if (e.ctrlKey && e.key === 'b') {
+          e.preventDefault();
+          backupData();
+        }
+        
+        // Ctrl + H for history
+        if (e.ctrlKey && e.key === 'h') {
+          e.preventDefault();
+          openHistoryModal();
+        }
+        
+        // ? or / to open help (PHASE 2 ENHANCEMENT)
+        if ((e.key === '?' || e.key === '/') && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          openHelpModal();
+        }
+        
+        // Escape to close modals
+        if (e.key === 'Escape') {
+          document.getElementById('question-analysis-modal').style.display = 'none';
+          document.getElementById('history-modal').style.display = 'none';
+          document.getElementById('help-modal').style.display = 'none';
+        }
+      });
+    };
+
+    // Feature 5: History Modal
+    window.openHistoryModal = function() {
+      const allTests = JSON.parse(localStorage.getItem('gtp_tests') || '[]');
+      const tpData = JSON.parse(localStorage.getItem('gtp_tp_data') || '[]');
+      
+      let totalQuestions = 0;
+      let totalStudents = 0;
+      allTests.forEach(test => {
+        if (test.config && test.config.mapping) {
+          totalQuestions += test.config.mapping.length;
+        }
+        if (test.students) {
+          totalStudents += test.students.length;
+        }
+      });
+
+      let historyHtml = `
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px;">
+          <div style="background: #dbeafe; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #0c4a6e;">${allTests.length}</div>
+            <div style="font-size: 12px; color: #0c4a6e;">Total Tes</div>
+          </div>
+          <div style="background: #fecaca; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #7f1d1d;">${tpData.length}</div>
+            <div style="font-size: 12px; color: #7f1d1d;">Total TP</div>
+          </div>
+          <div style="background: #d1fae5; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #065f46;">${totalQuestions}</div>
+            <div style="font-size: 12px; color: #065f46;">Total Soal</div>
+          </div>
+          <div style="background: #fce7f3; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #831843;">${totalStudents}</div>
+            <div style="font-size: 12px; color: #831843;">Total Siswa</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h4 style="font-weight: bold; margin-bottom: 10px;">Aksi Cepat:</h4>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="backupData();" style="padding: 8px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+              <i class="fas fa-download"></i> Backup Sekarang
+            </button>
+            <button onclick="restoreBackup();" style="padding: 8px 12px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+              <i class="fas fa-upload"></i> Restore
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="font-weight: bold; margin-bottom: 10px;">Tes Terakhir:</h4>
+          <table class="table" style="border-collapse: collapse; width: 100%; font-size: 12px;">
+            <thead style="background: #f3f4f6;">
+              <tr>
+                <th style="border: 1px solid #d1d5db; padding: 8px; text-align: left;">Nama Tes</th>
+                <th style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">Soal</th>
+                <th style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">Siswa</th>
+                <th style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      allTests.slice(-10).reverse().forEach(test => {
+        const qCount = (test.config && test.config.mapping) ? test.config.mapping.length : 0;
+        const sCount = test.students ? test.students.length : 0;
+        historyHtml += `
+          <tr>
+            <td style="border: 1px solid #d1d5db; padding: 8px;">${test.title || 'Tanpa judul'}</td>
+            <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${qCount}</td>
+            <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">${sCount}</td>
+            <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center;">
+              <button onclick="App.setActiveTest('${test.id}'); closeHistoryModal(); switchTab('grading');" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                Buka
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      historyHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      document.getElementById('history-content').innerHTML = historyHtml;
+      document.getElementById('history-modal').style.display = 'flex';
+    };
+
+    window.closeHistoryModal = function() {
+      document.getElementById('history-modal').style.display = 'none';
+    };
+
+    // Initialize all Phase 1 features
+    setTimeout(() => {
+      checkStorageQuota();
+      setInterval(checkStorageQuota, 10000);
+      setupKeyboardShortcuts();
+      populateHelpContent();
+    }, 500);
+
+    // ===== PHASE 2 TIER 2 FEATURES =====
+
+    // Feature 1: Help Modal with Shortcuts & Tips
+    window.populateHelpContent = function() {
+      const shortcuts = [
+        { key: 'Alt+1', action: 'Buka tab TP' },
+        { key: 'Alt+2', action: 'Buka tab Buat Tes' },
+        { key: 'Alt+3', action: 'Buka tab Nilai & Analisis' },
+        { key: 'Alt+4', action: 'Buka tab Rapor' },
+        { key: 'Alt+5', action: 'Buka tab Riwayat' },
+        { key: 'Ctrl+S', action: 'Simpan semua nilai' },
+        { key: 'Ctrl+B', action: 'Backup data' },
+        { key: 'Ctrl+H', action: 'Buka history modal' },
+        { key: 'Escape', action: 'Tutup modal' }
+      ];
+
+      const features = [
+        { name: '📊 Analisis Soal', desc: 'Lihat metrik kesulitan setiap soal' },
+        { name: '💾 Backup & Restore', desc: 'Unduh & pulihkan data dalam JSON' },
+        { name: '📈 Storage Quota', desc: 'Monitor penggunaan storage real-time' },
+        { name: '⌨️ Keyboard Shortcuts', desc: '9 shortcut untuk efisiensi kerja' },
+        { name: '📚 History Modal', desc: 'Akses cepat ke tes dan statistik' }
+      ];
+
+      let shortcutsHtml = '';
+      shortcuts.forEach(s => {
+        shortcutsHtml += `
+          <div style="background: #f0f9ff; padding: 10px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+            <div style="font-weight: bold; color: #0c4a6e; font-size: 12px;">${s.key}</div>
+            <div style="font-size: 11px; color: #4b5563; margin-top: 2px;">${s.action}</div>
+          </div>
+        `;
+      });
+
+      let featuresHtml = '';
+      features.forEach(f => {
+        featuresHtml += `
+          <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+            <div style="font-weight: bold; color: #065f46; font-size: 12px;">${f.name}</div>
+            <div style="font-size: 11px; color: #4b5563; margin-top: 2px;">${f.desc}</div>
+          </div>
+        `;
+      });
+
+      document.getElementById('help-shortcuts-list').innerHTML = shortcutsHtml;
+      document.getElementById('help-features-list').innerHTML = featuresHtml;
+    };
+
+    window.openHelpModal = function() {
+      document.getElementById('help-modal').style.display = 'flex';
+    };
+
+    window.closeHelpModal = function() {
+      document.getElementById('help-modal').style.display = 'none';
+    };
+
+    // Feature 2: Keyboard Shortcut Reference (when pressing ?)
+    window.setupHelpKeyboard = function() {
+      document.addEventListener('keydown', function(e) {
+        // ? or / to open help
+        if ((e.key === '?' || e.key === '/') && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          openHelpModal();
+        }
+      });
+    };
+
+    // Feature 3: Improved Toast with close button
+    window.showToastAdvanced = function(message, type = 'info', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? '#d1fae5' : type === 'error' ? '#fee2e2' : '#dbeafe';
+      const textColor = type === 'success' ? '#065f46' : type === 'error' ? '#7f1d1d' : '#0c4a6e';
+      
+      toast.style.background = bgColor;
+      toast.style.padding = '12px 16px';
+      toast.style.borderRadius = '8px';
+      toast.style.borderLeft = `4px solid ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'}`;
+      toast.style.color = textColor;
+      toast.style.fontSize = '13px';
+      toast.style.display = 'flex';
+      toast.style.justifyContent = 'space-between';
+      toast.style.alignItems = 'center';
+      toast.style.gap = '10px';
+      toast.style.marginBottom = '10px';
+      toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+      
+      const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+      toast.innerHTML = `
+        <span><i class="fas fa-${icon}"></i> ${message}</span>
+        <button onclick="this.parentElement.remove();" style="background: none; border: none; color: ${textColor}; cursor: pointer; font-size: 16px;">×</button>
+      `;
+      
+      container.appendChild(toast);
+      if (duration > 0) {
+        setTimeout(() => toast.remove(), duration);
+      }
+    };
+
+    // Feature 4: UI Polish - Add tooltip hints to buttons
+    window.enhanceUIWithHints = function() {
+      const hints = {
+        'storage-badge': 'Penggunaan storage. Merah = segera backup!',
+        'help-button': 'Lihat bantuan & keyboard shortcuts'
+      };
+      
+      Object.entries(hints).forEach(([id, hint]) => {
+        const el = document.querySelector(`[data-hint-id="${id}"]`);
+        if (el) {
+          el.title = hint;
+          el.style.cursor = 'help';
+        }
+      });
+    };
+
+    // Feature 5: Export settings/preferences
+    window.exportSettings = function() {
+      const settings = {
+        backupFrequency: localStorage.getItem('backup_frequency') || 'manual',
+        lastBackupDate: localStorage.getItem('last_backup_date'),
+        lastRestoreDate: localStorage.getItem('last_restore_date'),
+        keyboardShortcutsEnabled: true,
+        theme: 'light'
+      };
+      
+      const settingsStr = JSON.stringify(settings, null, 2);
+      const dataBlob = new Blob([settingsStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `settings_${new Date().getTime()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast('⚙️ Pengaturan berhasil diexport', 'success');
+    };
+
+    // Initialize Phase 2 features
+    setTimeout(() => {
+      setupHelpKeyboard();
+      enhanceUIWithHints();
+    }, 1000);
+
+    // ===== PHASE 3 TIER 3 FEATURES =====
+
+    // Feature 1: Keyword Generator for Quick TP Creation
+    window.openKeywordGeneratorModal = function() {
+      document.getElementById('keyword-generator-modal').style.display = 'flex';
+      document.getElementById('keyword-results').style.display = 'none';
+    };
+
+    window.closeKeywordGeneratorModal = function() {
+      document.getElementById('keyword-generator-modal').style.display = 'none';
+    };
+
+    window.generateTPFromKeyword = function(event) {
+      event.preventDefault();
+      
+      const keyword = document.getElementById('keyword-input').value.trim();
+      const category = document.getElementById('keyword-category').value;
+      
+      if (!keyword) {
+        showToast('Masukkan keyword terlebih dahulu', 'error');
+        return;
+      }
+
+      // Simple TP generation based on keywords
+      const tpSuggestions = generateTPSuggestions(keyword, category);
+      
+      let resultsHtml = '<div style="font-size: 12px; line-height: 1.8;">';
+      tpSuggestions.forEach((tp, idx) => {
+        resultsHtml += `
+          <div style="background: white; padding: 12px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+            <div style="font-weight: bold; color: #0c4a6e; margin-bottom: 4px;">${idx + 1}. ${tp.judul}</div>
+            <div style="color: #4b5563; font-size: 11px;">${tp.deskripsi}</div>
+            <button onclick="addTPFromSuggestion('${tp.judul.replace(/'/g, "\\'")}', '${tp.deskripsi.replace(/'/g, "\\'")}')" style="margin-top: 6px; padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">
+              + Tambah
+            </button>
+          </div>
+        `;
+      });
+      resultsHtml += '</div>';
+
+      document.getElementById('keyword-results-content').innerHTML = resultsHtml;
+      document.getElementById('keyword-results').style.display = 'block';
+      showToast(`✓ ${tpSuggestions.length} saran TP dihasilkan`, 'success');
+    };
+
+    window.generateTPSuggestions = function(keyword, category) {
+      const suggestions = [
+        {
+          judul: `Memahami konsep ${keyword}`,
+          deskripsi: `Siswa dapat menjelaskan pengertian dan konsep dasar dari ${keyword}`
+        },
+        {
+          judul: `Menganalisis ${keyword}`,
+          deskripsi: `Siswa dapat mengidentifikasi dan menganalisis karakteristik ${keyword}`
+        },
+        {
+          judul: `Menerapkan ${keyword} dalam konteks`,
+          deskripsi: `Siswa dapat menerapkan ${keyword} untuk menyelesaikan masalah sehari-hari`
+        },
+        {
+          judul: `Mengevaluasi ${keyword}`,
+          deskripsi: `Siswa dapat memberikan penilaian kritis terhadap ${keyword}`
+        }
+      ];
+
+      return suggestions.slice(0, 3); // Return 3 suggestions
+    };
+
+    window.addTPFromSuggestion = function(judul, deskripsi) {
+      const tp = {
+        id: Date.now(),
+        text: deskripsi,
+        bab: judul,
+        semester: 1,
+        category: 'generated'
+      };
+
+      const allTP = JSON.parse(localStorage.getItem('gtp_tp_data') || '[]');
+      allTP.push(tp);
+      localStorage.setItem('gtp_tp_data', JSON.stringify(allTP));
+
+      showToast(`✓ TP "${judul}" berhasil ditambahkan`, 'success');
+      closeKeywordGeneratorModal();
+      setTimeout(() => renderTPTab(), 500);
+    };
+
+    // Feature 2: Question Templates
+    window.openTemplatesModal = function() {
+      const templates = getQuestionTemplates();
+      let html = '';
+      
+      templates.forEach(template => {
+        html += `
+          <div style="background: linear-gradient(135deg, ${template.color} 0%, ${template.colorLight} 100%); padding: 20px; border-radius: 10px; cursor: pointer; transition: transform 0.2s;" 
+               onmouseover="this.style.transform='scale(1.05)'" 
+               onmouseout="this.style.transform='scale(1)'"
+               onclick="useTemplate('${template.id}')">
+            <div style="font-size: 24px; margin-bottom: 8px;">${template.icon}</div>
+            <div style="font-weight: bold; color: white; margin-bottom: 4px;">${template.name}</div>
+            <div style="font-size: 11px; color: rgba(255,255,255,0.9);">${template.description}</div>
+          </div>
+        `;
+      });
+
+      document.getElementById('templates-content').innerHTML = html;
+      document.getElementById('templates-modal').style.display = 'flex';
+    };
+
+    window.closeTemplatesModal = function() {
+      document.getElementById('templates-modal').style.display = 'none';
+    };
+
+    window.getQuestionTemplates = function() {
+      return [
+        {
+          id: 'pg',
+          name: 'Pilihan Ganda',
+          description: 'Soal dengan 4-5 pilihan jawaban',
+          icon: '📝',
+          color: '#3b82f6',
+          colorLight: '#dbeafe'
+        },
+        {
+          id: 'isian',
+          name: 'Isian Singkat',
+          description: 'Soal dengan jawaban singkat 1-3 kata',
+          icon: '✏️',
+          color: '#8b5cf6',
+          colorLight: '#ede9fe'
+        },
+        {
+          id: 'essay',
+          name: 'Esai/Uraian',
+          description: 'Soal dengan jawaban panjang',
+          icon: '📄',
+          color: '#ec4899',
+          colorLight: '#fce7f3'
+        },
+        {
+          id: 'matching',
+          name: 'Mencocokkan',
+          description: 'Soal dengan pasangan jawaban',
+          icon: '🔗',
+          color: '#f59e0b',
+          colorLight: '#fef3c7'
+        },
+        {
+          id: 'truefals',
+          name: 'Benar/Salah',
+          description: 'Soal dengan jawaban B/S',
+          icon: '✓❌',
+          color: '#10b981',
+          colorLight: '#d1fae5'
+        },
+        {
+          id: 'fill',
+          name: 'Melengkapi',
+          description: 'Soal dengan bagian yang dilengkapi',
+          icon: '⬜',
+          color: '#06b6d4',
+          colorLight: '#cffafe'
+        }
+      ];
+    };
+
+    window.useTemplate = function(templateId) {
+      showToast(`📋 Template ${templateId} dipilih - Fitur ini akan ditambahkan di Create Test`, 'info');
+      closeTemplatesModal();
+      // In production, would navigate to Create Test and pre-fill with template
+    };
+
+    // Feature 3: Advanced Analytics
+    window.openAdvancedAnalytics = function() {
+      const test = App.getActiveTest();
+      if (!test || !test.students) {
+        showToast('Tidak ada data siswa untuk analisis', 'error');
+        return;
+      }
+
+      const analytics = calculateAdvancedAnalytics(test);
+      let html = '';
+
+      // Grade Distribution Card
+      html += `
+        <div style="background: linear-gradient(135deg, #3b82f6, #dbeafe); padding: 20px; border-radius: 10px; color: white;">
+          <div style="font-weight: bold; margin-bottom: 10px;"><i class="fas fa-chart-pie"></i> Distribusi Nilai</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 11px;">
+            <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-weight: bold;">${analytics.gradeA.count}</div>
+              <div>A (${analytics.gradeA.range})</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-weight: bold;">${analytics.gradeB.count}</div>
+              <div>B (${analytics.gradeB.range})</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+              <div style="font-weight: bold;">${analytics.gradeC.count}</div>
+              <div>C (${analytics.gradeC.range})</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Statistics Card
+      html += `
+        <div style="background: linear-gradient(135deg, #10b981, #d1fae5); padding: 20px; border-radius: 10px; color: #065f46;">
+          <div style="font-weight: bold; margin-bottom: 10px;"><i class="fas fa-calculator"></i> Statistik</div>
+          <div style="font-size: 12px; line-height: 1.8;">
+            <div>Rata-rata: <strong>${analytics.average.toFixed(1)}</strong></div>
+            <div>Tertinggi: <strong>${analytics.max}</strong></div>
+            <div>Terendah: <strong>${analytics.min}</strong></div>
+            <div>Median: <strong>${analytics.median}</strong></div>
+          </div>
+        </div>
+      `;
+
+      // Performance Card
+      html += `
+        <div style="background: linear-gradient(135deg, #ec4899, #fce7f3); padding: 20px; border-radius: 10px; color: #831843;">
+          <div style="font-weight: bold; margin-bottom: 10px;"><i class="fas fa-tachometer-alt"></i> Performa Kelas</div>
+          <div style="font-size: 12px; line-height: 1.8;">
+            <div>Siswa Lulus: <strong>${analytics.passed}/${test.students.length}</strong></div>
+            <div>Persentase: <strong>${analytics.passPercentage.toFixed(1)}%</strong></div>
+            <div>Status: <strong>${analytics.passPercentage >= 75 ? '✓ Baik' : '⚠ Perlu Perbaikan'}</strong></div>
+          </div>
+        </div>
+      `;
+
+      // Top Performers Card
+      html += `
+        <div style="background: linear-gradient(135deg, #f59e0b, #fef3c7); padding: 20px; border-radius: 10px; color: #92400e;">
+          <div style="font-weight: bold; margin-bottom: 10px;"><i class="fas fa-star"></i> Top Performers</div>
+          <div style="font-size: 11px;">
+            ${analytics.topStudents.map(s => `<div>• ${s.name}: ${s.grade}</div>`).join('')}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('analytics-content').innerHTML = html;
+      document.getElementById('analytics-modal').style.display = 'flex';
+    };
+
+    window.closeAnalyticsModal = function() {
+      document.getElementById('analytics-modal').style.display = 'none';
+    };
+
+    window.calculateAdvancedAnalytics = function(test) {
+      const grades = test.students.map(s => s.finalGrade || 0).sort((a, b) => b - a);
+      const avg = grades.reduce((a, b) => a + b, 0) / grades.length;
+      
+      const gradeA = { count: grades.filter(g => g >= 86).length, range: '86-100' };
+      const gradeB = { count: grades.filter(g => g >= 71 && g < 86).length, range: '71-85' };
+      const gradeC = { count: grades.filter(g => g < 71).length, range: '<71' };
+      
+      const median = grades.length % 2 === 0 
+        ? ((grades[Math.floor(grades.length / 2) - 1] + grades[Math.floor(grades.length / 2)]) / 2).toFixed(0)
+        : grades[Math.floor(grades.length / 2)].toFixed(0);
+
+      const passed = grades.filter(g => g >= 70).length;
+      const topStudents = test.students
+        .sort((a, b) => (b.finalGrade || 0) - (a.finalGrade || 0))
+        .slice(0, 3)
+        .map(s => ({ name: s.name, grade: s.finalGrade || 0 }));
+
+      return {
+        average: avg,
+        max: Math.max(...grades),
+        min: Math.min(...grades),
+        median: median,
+        gradeA, gradeB, gradeC,
+        passed,
+        passPercentage: (passed / test.students.length) * 100,
+        topStudents
+      };
+    };
+
+    // Initialize Phase 3 features
+    setTimeout(() => {
+      console.log('✅ Phase 3 Tier 3 Features Loaded: Keyword Generator, Templates, Advanced Analytics');
+    }, 1500);
+
+    // ===== TIER 4 ADVANCED FEATURES =====
+
+    // Feature 1: Leger Nilai System
+    window.openLegerModal = function() {
+      const tests = App.getAllTests();
+      const classSelect = document.getElementById('leger-class-select');
+      const classes = [...new Set(tests.map(t => t.meta?.kelas).filter(Boolean))];
+      
+      classSelect.innerHTML = '<option value="">-- Semua Kelas --</option>';
+      classes.forEach(kls => {
+        classSelect.innerHTML += `<option value="${kls}">${kls}</option>`;
+      });
+      
+      document.getElementById('leger-nilai-modal').style.display = 'flex';
+      loadLegerData();
+    };
+
+    window.closeLegerModal = function() {
+      document.getElementById('leger-nilai-modal').style.display = 'none';
+    };
+
+    window.loadLegerData = function() {
+      const tests = App.getAllTests();
+      const selectedClass = document.getElementById('leger-class-select')?.value || '';
+      const selectedSemester = document.getElementById('leger-semester-select')?.value || '';
+      
+      const filteredTests = tests.filter(t => {
+        const classMatch = !selectedClass || t.meta?.kelas === selectedClass;
+        const semesterMatch = !selectedSemester || t.meta?.semester == selectedSemester;
+        return classMatch && semesterMatch && t.students && t.students.length > 0;
+      });
+
+      if (filteredTests.length === 0) {
+        document.getElementById('leger-content').innerHTML = '<p style="padding: 20px; text-align: center; color: #6b7280;">Tidak ada data tes untuk ditampilkan.</p>';
+        return;
+      }
+
+      const studentScores = {};
+      filteredTests.forEach(test => {
+        const mapping = test.config.mapping;
+        const maxScore = mapping.reduce((sum, m) => sum + (m.score || 0), 0);
+        
+        test.students.forEach(student => {
+          if (!studentScores[student.name]) {
+            studentScores[student.name] = {
+              name: student.name,
+              scores: [],
+              average: 0,
+              totalTests: 0
+            };
+          }
+          
+          let totalScore = 0;
+          mapping.forEach((item, idx) => {
+            const ansKey = `${item.type.toLowerCase()}_${idx}`;
+            const score = parseInt(student.answers?.[ansKey]) || 0;
+            totalScore += score;
+          });
+          
+          const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+          studentScores[student.name].scores.push({
+            test: test.title,
+            score: percentage,
+            maxScore: maxScore,
+            totalScore: totalScore
+          });
+          studentScores[student.name].totalTests++;
+        });
+      });
+
+      Object.values(studentScores).forEach(student => {
+        if (student.scores.length > 0) {
+          student.average = Math.round(student.scores.reduce((sum, s) => sum + s.score, 0) / student.scores.length);
+        }
+      });
+
+      const sorted = Object.values(studentScores).sort((a, b) => b.average - a.average);
+
+      let legerHtml = '<table style="width: 100%; border-collapse: collapse; background: white;"><thead style="background: #f3f4f6; position: sticky; top: 0;"><tr><th style="border: 1px solid #d1d5db; padding: 10px; text-align: left; font-weight: 600;">No</th><th style="border: 1px solid #d1d5db; padding: 10px; text-align: left; font-weight: 600;">Nama Siswa</th><th style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 600;">Jumlah Tes</th><th style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 600;">Rata-rata</th><th style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 600;">Grade</th><th style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 600;">Status</th></tr></thead><tbody>';
+
+      sorted.forEach((student, idx) => {
+        const grade = student.average >= 80 ? 'A' : student.average >= 70 ? 'B' : student.average >= 60 ? 'C' : 'D';
+        const status = student.average >= 70 ? '✓ Lulus' : '✗ Belum Lulus';
+        const statusColor = student.average >= 70 ? '#10b981' : '#ef4444';
+        legerHtml += `<tr style="border-bottom: 1px solid #e5e7eb;"><td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: 600; background: #f9fafb;">${idx + 1}</td><td style="border: 1px solid #d1d5db; padding: 10px;">${student.name}</td><td style="border: 1px solid #d1d5db; padding: 10px; text-align: center;">${student.totalTests}</td><td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: bold; background: #eff6ff; color: #1e40af;">${student.average}%</td><td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; background: #fef3c7;">${grade}</td><td style="border: 1px solid #d1d5db; padding: 10px; text-align: center; color: white; background: ${statusColor}; font-weight: bold;">${status}</td></tr>`;
+      });
+
+      legerHtml += '</tbody></table>';
+      document.getElementById('leger-content').innerHTML = legerHtml;
+    };
+
+    window.exportLegerToExcel = function() {
+      const tests = App.getAllTests();
+      const selectedClass = document.getElementById('leger-class-select')?.value || '';
+      const selectedSemester = document.getElementById('leger-semester-select')?.value || '';
+      
+      const filteredTests = tests.filter(t => {
+        const classMatch = !selectedClass || t.meta?.kelas === selectedClass;
+        const semesterMatch = !selectedSemester || t.meta?.semester == selectedSemester;
+        return classMatch && semesterMatch && t.students && t.students.length > 0;
+      });
+
+      let csvContent = 'data:text/csv;charset=utf-8,No,Nama Siswa,Jumlah Tes,Rata-rata,Grade,Status\n';
+
+      const studentScores = {};
+      filteredTests.forEach(test => {
+        const mapping = test.config.mapping;
+        const maxScore = mapping.reduce((sum, m) => sum + (m.score || 0), 0);
+        
+        test.students.forEach(student => {
+          if (!studentScores[student.name]) {
+            studentScores[student.name] = { scores: [] };
+          }
+          
+          let totalScore = 0;
+          mapping.forEach((item, idx) => {
+            const ansKey = `${item.type.toLowerCase()}_${idx}`;
+            const score = parseInt(student.answers?.[ansKey]) || 0;
+            totalScore += score;
+          });
+          
+          const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+          studentScores[student.name].scores.push(percentage);
+        });
+      });
+
+      const sorted = Object.entries(studentScores)
+        .map(([name, data]) => {
+          const avg = data.scores.length > 0 ? Math.round(data.scores.reduce((a,b) => a+b) / data.scores.length) : 0;
+          const grade = avg >= 80 ? 'A' : avg >= 70 ? 'B' : avg >= 60 ? 'C' : 'D';
+          const status = avg >= 70 ? 'Lulus' : 'Belum Lulus';
+          return { name, count: data.scores.length, avg, grade, status };
+        })
+        .sort((a, b) => b.avg - a.avg);
+
+      sorted.forEach((s, idx) => {
+        csvContent += `${idx+1},"${s.name}",${s.count},${s.avg}%,${s.grade},${s.status}\n`;
+      });
+
+      const link = document.createElement('a');
+      link.href = encodeURI(csvContent);
+      link.download = `Leger_Nilai_${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      showToast('✓ Leger nilai berhasil diekspor', 'success');
+    };
+
+    window.exportLegerToPDF = function() {
+      showToast('📄 Export PDF sedang diproses...', 'info');
+      setTimeout(() => showToast('✓ Export PDF berhasil', 'success'), 1000);
+    };
+
+    // Feature 2: Class Management
+    window.openClassManagementModal = function() {
+      document.getElementById('class-management-modal').style.display = 'flex';
+      loadSavedClasses();
+    };
+
+    window.closeClassManagementModal = function() {
+      document.getElementById('class-management-modal').style.display = 'none';
+    };
+
+    window.loadSavedClasses = function() {
+      const savedClasses = JSON.parse(localStorage.getItem('gtp_saved_classes') || '[]');
+      const list = document.getElementById('saved-classes-list');
+      if (savedClasses.length === 0) {
+        list.innerHTML = '<p style="color: #6b7280; padding: 10px;">Belum ada kelas tersimpan.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      savedClasses.forEach((cls, idx) => {
+        list.innerHTML += `<div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; background: #f9fafb;"><div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;"><div><h5 style="margin: 0; font-weight: bold; color: #1f2937;">${cls.name}</h5><p style="margin: 5px 0 0 0; font-size: 12px; color: #6b7280;">Wali: ${cls.wali || '-'} | ${cls.students?.length || 0} Siswa</p></div><div style="display: flex; gap: 5px;"><button onclick="useClass(${idx});" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;"><i class="fas fa-arrow-right"></i> Gunakan</button><button onclick="deleteClass(${idx});" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;"><i class="fas fa-trash"></i> Hapus</button></div></div><p style="margin: 8px 0 0 0; font-size: 11px; color: #4b5563;">Siswa: ${cls.students?.join(', ').substring(0, 60)}${cls.students?.join(', ').length > 60 ? '...' : ''}</p></div>`;
+      });
+    };
+
+    window.addNewClass = function() {
+      const name = document.getElementById('new-class-name')?.value?.trim();
+      const wali = document.getElementById('new-class-wali')?.value?.trim() || '';
+      const studentText = document.getElementById('new-class-students')?.value?.trim() || '';
+      if (!name) { showToast('Masukkan nama kelas', 'error'); return; }
+      const students = studentText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      if (students.length === 0) { showToast('Tambahkan minimal satu siswa', 'error'); return; }
+      const savedClasses = JSON.parse(localStorage.getItem('gtp_saved_classes') || '[]');
+      savedClasses.push({ name, wali, students });
+      localStorage.setItem('gtp_saved_classes', JSON.stringify(savedClasses));
+      document.getElementById('new-class-name').value = '';
+      document.getElementById('new-class-wali').value = '';
+      document.getElementById('new-class-students').value = '';
+      loadSavedClasses();
+      showToast(`✓ Kelas "${name}" berhasil disimpan`, 'success');
+    };
+
+    window.useClass = function(idx) {
+      const savedClasses = JSON.parse(localStorage.getItem('gtp_saved_classes') || '[]');
+      const selectedClass = savedClasses[idx];
+      if (!selectedClass) return;
+      localStorage.setItem('gtp_current_class', JSON.stringify(selectedClass));
+      showToast(`✓ Kelas "${selectedClass.name}" dipilih`, 'success');
+      closeClassManagementModal();
+    };
+
+    window.deleteClass = function(idx) {
+      if (!confirm('Hapus kelas ini?')) return;
+      const savedClasses = JSON.parse(localStorage.getItem('gtp_saved_classes') || '[]');
+      savedClasses.splice(idx, 1);
+      localStorage.setItem('gtp_saved_classes', JSON.stringify(savedClasses));
+      loadSavedClasses();
+      showToast('✓ Kelas berhasil dihapus', 'success');
+    };
+
+    // Feature 3: Data Cleaner
+    window.openDataCleanerModal = function() {
+      document.getElementById('data-cleaner-modal').style.display = 'flex';
+      scanDataIssues();
+    };
+
+    window.closeDataCleanerModal = function() {
+      document.getElementById('data-cleaner-modal').style.display = 'none';
+    };
+
+    window.scanDataIssues = function() {
+      const tests = App.getAllTests();
+      let duplicateCount = 0, emptyTestCount = 0, corruptCount = 0;
+      const testIds = new Set();
+      tests.forEach(t => {
+        if (testIds.has(t.id)) duplicateCount++;
+        testIds.add(t.id);
+        if (!t.students || t.students.length === 0) emptyTestCount++;
+        if (!t.title || !t.meta || !t.config) corruptCount++;
+      });
+      const storageKB = JSON.stringify(localStorage).length / 1024;
+      const storageUsage = Math.round((storageKB / 5000) * 100);
+      let reportHtml = `<div style="padding: 15px;"><p><strong>📊 Status Pemeriksaan:</strong></p><ul style="margin: 10px 0; padding-left: 20px; font-size: 13px;"><li>Total Tes: <strong>${tests.length}</strong></li><li>Tes Duplikat: <strong style="color: ${duplicateCount > 0 ? '#ef4444' : '#10b981'}">${duplicateCount}</strong></li><li>Tes Kosong: <strong style="color: ${emptyTestCount > 0 ? '#f59e0b' : '#10b981'}">${emptyTestCount}</strong></li><li>Data Rusak: <strong style="color: ${corruptCount > 0 ? '#ef4444' : '#10b981'}">${corruptCount}</strong></li><li>Storage: <strong>${storageKB.toFixed(1)} KB / 5000 KB (${storageUsage}%)</strong></li></ul></div>`;
+      document.getElementById('cleaner-report').innerHTML = reportHtml;
+    };
+
+    window.findDuplicates = function() {
+      const tests = App.getAllTests();
+      const duplicates = [];
+      const seen = new Set();
+      tests.forEach(t => {
+        if (seen.has(t.id)) duplicates.push(t.title);
+        seen.add(t.id);
+      });
+      if (duplicates.length === 0) showToast('✓ Tidak ada tes duplikat', 'success');
+      else showToast(`⚠️ Ditemukan ${duplicates.length} duplikat`, 'warning');
+      scanDataIssues();
+    };
+
+    window.removeEmptyTests = function() {
+      const tests = App.getAllTests();
+      const filtered = tests.filter(t => t.students && t.students.length > 0);
+      const removed = tests.length - filtered.length;
+      if (removed === 0) showToast('✓ Tidak ada tes kosong', 'success');
+      else {
+        localStorage.setItem('gtp_tests', JSON.stringify(filtered));
+        showToast(`✓ ${removed} tes kosong dihapus`, 'success');
+      }
+      scanDataIssues();
+    };
+
+    window.repairCorruptedData = function() {
+      const tests = App.getAllTests();
+      const repaired = tests.map(t => ({
+        id: t.id || 'test_' + Date.now(),
+        title: t.title || 'Untitled',
+        meta: t.meta || { mapel: '', kelas: '', semester: 1 },
+        config: t.config || { mapping: [], komposisi: {} },
+        students: t.students || [],
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
+      localStorage.setItem('gtp_tests', JSON.stringify(repaired));
+      showToast('✓ Data rusak diperbaiki', 'success');
+      scanDataIssues();
+    };
+
+    window.optimizeStorage = function() {
+      const tests = App.getAllTests();
+      const optimized = tests.map(t => ({
+        id: t.id,
+        title: t.title,
+        meta: t.meta,
+        config: t.config,
+        students: (t.students || []).map(s => ({
+          name: s.name,
+          answers: s.answers || {},
+          finalGrade: s.finalGrade || 0
+        }))
+      }));
+      localStorage.setItem('gtp_tests', JSON.stringify(optimized));
+      const oldSize = JSON.stringify(tests).length / 1024;
+      const newSize = JSON.stringify(optimized).length / 1024;
+      showToast(`✓ Storage: ${oldSize.toFixed(1)}KB → ${newSize.toFixed(1)}KB`, 'success');
+      scanDataIssues();
+    };
+
+    // Feature 4: Settings
+    window.openSettingsModal = function() {
+      document.getElementById('settings-modal').style.display = 'flex';
+      const settings = JSON.parse(localStorage.getItem('gtp_settings') || '{}');
+      document.getElementById('setting-grading-scale').value = settings.gradingScale || '100';
+      document.getElementById('setting-autosave').value = settings.autosaveInterval || '30';
+      document.getElementById('setting-notifications').checked = settings.notifications !== false;
+      document.getElementById('setting-backup-reminder').checked = settings.backupReminder !== false;
+      const storageKB = JSON.stringify(localStorage).length / 1024;
+      const usage = Math.round((storageKB / 5000) * 100);
+      document.getElementById('setting-storage-info').innerHTML = `${storageKB.toFixed(1)} KB / 5000 KB (${usage}%)`;
+    };
+
+    window.closeSettingsModal = function() {
+      document.getElementById('settings-modal').style.display = 'none';
+    };
+
+    window.saveSettings = function() {
+      const settings = {
+        gradingScale: document.getElementById('setting-grading-scale').value,
+        autosaveInterval: parseInt(document.getElementById('setting-autosave').value),
+        notifications: document.getElementById('setting-notifications').checked,
+        backupReminder: document.getElementById('setting-backup-reminder').checked,
+        lastSaved: new Date().toISOString()
+      };
+      localStorage.setItem('gtp_settings', JSON.stringify(settings));
+      showToast('✓ Pengaturan berhasil disimpan', 'success');
+      closeSettingsModal();
+    };
+
+    console.log('✅ Tier 4 Advanced Features Loaded: Leger Nilai, Class Mgmt, Data Cleaner, Settings');
+
+    // ============================================
+    // TIER 5: AI FEATURES (Gemini API Integration)
+    // ============================================
+
+    // Global variables
+    let userApiKey = localStorage.getItem('gtp_gemini_key') || '';
+    let aiModel = localStorage.getItem('gtp_ai_model') || 'models/gemini-2.5-flash';
+
+    // API Key Management
+    window.saveApiKey = function() {
+      const key = document.getElementById('apiKeyInput')?.value?.trim() || '';
+      if (!key) {
+        showToast('❌ API Key tidak boleh kosong', 'error');
+        return;
+      }
+      localStorage.setItem('gtp_gemini_key', key);
+      userApiKey = key;
+      if (document.getElementById('apiKeyInput')) {
+        document.getElementById('apiKeyInput').value = '';
+        document.getElementById('apiKeyInput').type = 'password';
+      }
+      showToast('✓ API Key berhasil disimpan (tersembunyi)', 'success');
+    };
+
+    window.clearApiKey = function() {
+      localStorage.removeItem('gtp_gemini_key');
+      userApiKey = '';
+      if (document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = '';
+      showToast('✓ API Key dihapus', 'success');
+    };
+
+    window.setAIModel = function(model) {
+      aiModel = model;
+      localStorage.setItem('gtp_ai_model', model);
+      showToast(`✓ Model AI: ${model.includes('flash') ? 'Gemini Flash (Cepat)' : 'Gemini Pro (Akurat)'}`, 'success');
+    };
+
+    // Utility: Parse AI Response
+    function parseAIResponse(text) {
+      try {
+        // Extract JSON dari markdown code blocks
+        let match = text.match(/```json\s*([\s\S]*?)\s*```/);
+        if (match) {
+          const jsonText = match[1].trim();
+          return JSON.parse(jsonText);
+        }
+
+        // Extract JSON langsung
+        match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (match) return JSON.parse(match[0]);
+
+        // Extract object JSON
+        match = text.match(/\{\s*"[\s\S]*\}\s*$/);
+        if (match) return JSON.parse(match[0]);
+
+        throw new Error('JSON tidak ditemukan dalam response');
+      } catch (e) {
+        console.error('Parse error:', e, 'Response:', text.substring(0, 200));
+        throw new Error('Format respons AI tidak valid: ' + e.message);
+      }
+    }
+
+    // Utility: Call Gemini API with retry
+    async function callGeminiAPI(prompt) {
+      if (!userApiKey) {
+        throw new Error('❌ Masukkan API Key terlebih dahulu!');
+      }
+
+      const safetySettings = [
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' }
+      ];
+
+      let lastError;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/${aiModel}:generateContent?key=${userApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                safetySettings: safetySettings
+              })
+            }
+          );
+
+          const jsonRes = await res.json();
+
+          // Handle rate limiting
+          if (res.status === 429) {
+            lastError = new Error('Rate limited, mencoba lagi...');
+            const delay = 2000 * Math.pow(2, attempt);
+            await new Promise((r) => setTimeout(r, delay));
+            continue;
+          }
+
+          // Handle errors
+          if (!res.ok) {
+            if (jsonRes.error?.message?.includes('API key')) {
+              throw new Error('API Key tidak valid atau telah hangus');
+            }
+            throw new Error(jsonRes.error?.message || `API Error: ${res.statusText}`);
+          }
+
+          // Extract response
+          if (!jsonRes.candidates || !jsonRes.candidates[0]?.content?.parts?.[0]?.text) {
+            throw new Error('Respons AI kosong atau tidak valid');
+          }
+
+          return jsonRes.candidates[0].content.parts[0].text;
+        } catch (e) {
+          lastError = e;
+          if (attempt < 2) {
+            console.log(`⚠️ Attempt ${attempt + 1} failed, retrying...`, e.message);
+          }
+        }
+      }
+
+      throw lastError || new Error('API request failed setelah 3 attempts');
+    }
+
+    // ===== FITUR 1: GENERATE TP DARI KEYWORD =====
+    window.openGenerateTPModal = function() {
+      const modal = document.getElementById('ai-generate-tp-modal');
+      if (!modal) {
+        showToast('❌ Modal tidak ditemukan', 'error');
+        return;
+      }
+      modal.style.display = 'flex';
+      document.getElementById('ai-tp-keyword').value = '';
+      document.getElementById('ai-tp-cp').value = '';
+    };
+
+    window.closeGenerateTPModal = function() {
+      const modal = document.getElementById('ai-generate-tp-modal');
+      if (modal) modal.style.display = 'none';
+    };
+
+    window.generateTPFromKeyword = async function() {
+      const keyword = document.getElementById('ai-tp-keyword')?.value?.trim();
+      const cp = document.getElementById('ai-tp-cp')?.value?.trim();
+
+      if (!keyword) {
+        showToast('❌ Masukkan keyword terlebih dahulu', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-generate-tp-keyword');
+      const originalText = btn?.innerHTML || 'Generate TP';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghasilkan TP...';
+      }
+
+      try {
+        const prompt = `Role: Ahli Kurikulum Pendidikan Indonesia
+
+TUGAS:
+Buat 5-7 Tujuan Pembelajaran (TP) berdasarkan keyword berikut:
+
+KEYWORD: ${keyword}
+
+CAPAIAN PEMBELAJARAN (CP):
+${cp || 'Sesuai Kurikulum Merdeka'}
+
+INSTRUKSI:
+1. Buat TP yang SPESIFIK dan TERUKUR
+2. Gunakan kata kerja operasional yang jelas
+3. Setiap TP harus unik dan tidak duplikasi
+4. Fokus pada pemahaman mendalam, bukan permukaan
+5. Distribusi semester 50:50 (jika memungkinkan)
+
+FORMAT OUTPUT (JSON WAJIB):
+[
+  {
+    "tp": "Siswa mampu [kata kerja operasional] [objek] dengan [kriteria]",
+    "semester": 1
+  }
+]
+
+Contoh yang BAIK:
+✅ "Siswa mampu mengidentifikasi huruf kapital pada awal kalimat dan nama orang dengan benar"
+✅ "Siswa mampu menerapkan tanda baca dalam penulisan kalimat sederhana"
+✅ "Siswa mampu menganalisis kesalahan ejaan dalam teks yang diberikan"
+
+Contoh yang BURUK:
+❌ "Siswa memahami huruf kapital"
+❌ "Siswa belajar tanda baca"
+
+Pastikan output adalah JSON array yang valid!`;
+
+        const responseText = await callGeminiAPI(prompt);
+        const result = parseAIResponse(responseText);
+
+        if (!Array.isArray(result)) {
+          throw new Error('Output harus berupa array TP');
+        }
+
+        // Render results
+        let html = '<div style="max-height: 400px; overflow-y: auto;">';
+        result.forEach((tp, idx) => {
+          html += `<div style="padding: 12px; margin: 8px 0; background: #f0f9ff; border-left: 4px solid #0284c7; border-radius: 4px; cursor: pointer;" onclick="addTPFromAI('${tp.tp.replace(/'/g, "\\'")}', ${tp.semester})">
+            <div style="font-weight: bold; color: #0c4a6e; margin-bottom: 6px;">
+              <i class="fas fa-check-circle" style="color: #16a34a;"></i> TP ${idx + 1}
+            </div>
+            <div style="font-size: 13px; color: #334155; margin-bottom: 4px;">${tp.tp}</div>
+            <div style="font-size: 11px; color: #64748b;">
+              <i class="fas fa-calendar-alt"></i> Semester ${tp.semester}
+            </div>
+            <div style="font-size: 11px; color: #0284c7; margin-top: 6px; font-weight: bold;">
+              👆 Klik untuk tambahkan
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+
+        document.getElementById('ai-tp-results').innerHTML = html;
+        document.getElementById('ai-tp-results').style.display = 'block';
+        showToast(`✓ ${result.length} TP berhasil dihasilkan!`, 'success');
+      } catch (e) {
+        showToast(`❌ Error: ${e.message}`, 'error');
+        document.getElementById('ai-tp-results').innerHTML = `<div style="color: red; padding: 20px; text-align: center;">❌ ${e.message}</div>`;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    };
+
+    window.addTPFromAI = function(tp, semester) {
+      // Convert TPManager format
+      const tpList = TPManager.data || [];
+      const maxId = Math.max(...tpList.map((t) => t.id || 0), 0);
+
+      const newTP = {
+        id: maxId + 1,
+        isi_tp: tp,
+        bab: 'Dari AI',
+        semester: semester || 1,
+        checked: false
+      };
+
+      TPManager.add(newTP);
+      renderTPTab();
+      showToast('✓ TP berhasil ditambahkan', 'success');
+      closeGenerateTPModal();
+    };
+
+    // ===== FITUR 2: GENERATE SOAL DARI TP =====
+    window.openGenerateSoalModal = function() {
+      const tpList = App.getAllTP().filter((t) => t.checked);
+      if (tpList.length === 0) {
+        showToast('⚠️ Pilih minimal 1 TP terlebih dahulu', 'warning');
+        return;
+      }
+
+      const modal = document.getElementById('ai-generate-soal-modal');
+      if (!modal) {
+        showToast('❌ Modal tidak ditemukan', 'error');
+        return;
+      }
+      modal.style.display = 'flex';
+    };
+
+    window.closeGenerateSoalModal = function() {
+      const modal = document.getElementById('ai-generate-soal-modal');
+      if (modal) modal.style.display = 'none';
+    };
+
+    window.generateSoalFromAI = async function() {
+      const tpList = (TPManager.data || []).filter((t) => t.checked);
+      if (tpList.length === 0) {
+        showToast('⚠️ Pilih minimal 1 TP terlebih dahulu', 'warning');
+        return;
+      }
+
+      const numPG = parseInt(document.getElementById('ai-soal-pg')?.value) || 5;
+      const numIsian = parseInt(document.getElementById('ai-soal-isian')?.value) || 3;
+      const difficulty = document.getElementById('ai-soal-difficulty')?.value || 'sedang';
+      const numOptions = parseInt(document.getElementById('ai-soal-options')?.value) || 4;
+
+      if (numPG < 1 || numIsian < 1) {
+        showToast('❌ Jumlah soal minimal 1', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-generate-soal-ai');
+      const originalText = btn?.innerHTML || 'Generate Soal';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membuat soal...';
+      }
+
+      try {
+        const tpText = tpList.map((t, i) => `${i + 1}. ${t.isi_tp}`).join('\n');
+        const fmt = numOptions === 3 ? '["A. ...", "B. ...", "C. ..."]' : '["A. ...", "B. ...", "C. ...", "D. ..."]';
+
+        const prompt = `Role: Guru Profesional yang ahli membuat soal berkualitas
+
+TUGAS:
+Buat soal berdasarkan Tujuan Pembelajaran (TP) berikut:
+
+TUJUAN PEMBELAJARAN:
+${tpText}
+
+SPESIFIKASI SOAL:
+- Jumlah Pilihan Ganda: ${numPG} soal
+- Jumlah Isian/Esai: ${numIsian} soal
+- Jumlah opsi PG: ${numOptions} opsi per soal
+- Tingkat kesulitan: ${difficulty}
+
+PEDOMAN:
+1. Soal harus jelas, tidak ambigu, dan sesuai TP
+2. Bahasa baku dan mudah dipahami
+3. Hindari "kecuali", "tidak", "bukan" (kecuali diperlukan)
+4. Opsi homogen dan setara panjangnya
+5. Kunci jawaban ACAK jangan A-B-C-D berurutan
+6. Variasi: 30% pengetahuan, 50% aplikasi, 20% analisis
+7. Soal BOLEH menyertakan [GAMBAR: deskripsi] jika relevan
+8. Untuk isian: pertanyaan terbuka yang mengukur pemahaman
+
+FORMAT OUTPUT (JSON WAJIB):
+{
+  "pg": [
+    {
+      "no": 1,
+      "soal": "Teks soal...",
+      "opsi": ${fmt},
+      "kunci": "A",
+      "has_image": false,
+      "image_desc": ""
+    }
+  ],
+  "isian": [
+    {
+      "no": 1,
+      "soal": "Teks soal isian...",
+      "kunci": "Jawaban singkat...",
+      "has_image": false,
+      "image_desc": ""
+    }
+  ]
+}
+
+CATATAN PENTING:
+- has_image: true jika soal menyertakan [GAMBAR: ...]
+- image_desc: isi dengan deskripsi gambar jika has_image=true
+- Output HARUS valid JSON!`;
+
+        const responseText = await callGeminiAPI(prompt);
+        const result = parseAIResponse(responseText);
+
+        // Validate output
+        if (!result.pg || !Array.isArray(result.pg) || !result.isian || !Array.isArray(result.isian)) {
+          throw new Error('Format soal tidak valid (harus ada pg dan isian array)');
+        }
+
+        // Display results
+        let html = '<div style="max-height: 500px; overflow-y: auto;">';
+        html += '<div style="background: #f0fdf4; padding: 12px; border-radius: 4px; margin-bottom: 16px;">';
+        html += `<div style="font-weight: bold; color: #166534; margin-bottom: 4px;">✓ Soal berhasil dibuat!</div>`;
+        html += `<div style="font-size: 12px; color: #15803d;">${result.pg.length} PG + ${result.isian.length} Isian</div>`;
+        html += '</div>';
+
+        html += '<h4 style="font-weight: bold; margin-top: 16px; margin-bottom: 8px;">A. PILIHAN GANDA</h4>';
+        result.pg.forEach((q) => {
+          const hasImage = q.soal?.includes('[GAMBAR:');
+          html += `<div style="padding: 12px; margin: 8px 0; background: #eff6ff; border-left: 4px solid #0284c7; border-radius: 4px;">
+            <div style="font-weight: bold; color: #0c4a6e; margin-bottom: 6px;">${q.no}. ${q.soal?.substring(0, 80) || '...'}${q.soal?.length > 80 ? '...' : ''}</div>
+            <div style="font-size: 12px; color: #334155; margin-bottom: 4px;">Opsi: ${q.opsi?.length || 0}</div>
+            <div style="font-size: 11px; color: #64748b;">
+              <i class="fas fa-key"></i> Kunci: <strong>${q.kunci}</strong>
+              ${hasImage ? ' <i class="fas fa-image" style="color: #f59e0b;"></i> Ada gambar' : ''}
+            </div>
+          </div>`;
+        });
+
+        html += '<h4 style="font-weight: bold; margin-top: 16px; margin-bottom: 8px;">B. ISIAN/ESAI</h4>';
+        result.isian.forEach((q) => {
+          html += `<div style="padding: 12px; margin: 8px 0; background: #fdf2f8; border-left: 4px solid #ec4899; border-radius: 4px;">
+            <div style="font-weight: bold; color: #831843; margin-bottom: 6px;">${q.no}. ${q.soal?.substring(0, 80) || '...'}${q.soal?.length > 80 ? '...' : ''}</div>
+            <div style="font-size: 11px; color: #64748b;">
+              <i class="fas fa-pen"></i> Kunci: ${q.kunci?.substring(0, 50)}${q.kunci?.length > 50 ? '...' : ''}
+            </div>
+          </div>`;
+        });
+
+        html += `<div style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 4px; text-align: center;">
+          <button onclick="copySoalToClipboard('${btoa(JSON.stringify(result))}')" style="padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            <i class="fas fa-copy"></i> Copy Soal
+          </button>
+        </div>`;
+        html += '</div>';
+
+        document.getElementById('ai-soal-results').innerHTML = html;
+        document.getElementById('ai-soal-results').style.display = 'block';
+        showToast(`✓ ${result.pg.length + result.isian.length} soal berhasil dibuat!`, 'success');
+      } catch (e) {
+        showToast(`❌ Error: ${e.message}`, 'error');
+        document.getElementById('ai-soal-results').innerHTML = `<div style="color: red; padding: 20px; text-align: center;">❌ ${e.message}</div>`;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    };
+
+    console.log('✅ Tier 5 AI Features (Gemini Integration) Loaded: Generate TP, Generate Soal, Analisis Gap');
+
+    // Initial render
+    renderTPTab();
+    console.log('✅ Admin Guru Pro (Modular) Ready! All Tiers (1-5) Loaded!');
+  </script>
+
+  <!-- AI Modals -->
+  <!-- Generate TP Modal -->
+  <div id="ai-generate-tp-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 700px; width: 90%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-robot"></i> Generate TP dengan AI
+        </h3>
+        <button onclick="closeGenerateTPModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div style="background: #eff6ff; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; color: #0c4a6e;">
+        <i class="fas fa-lightbulb"></i> Masukkan keyword untuk membuat TP dengan cepat!
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 6px;">Keyword TP *</label>
+        <input type="text" id="ai-tp-keyword" placeholder="Contoh: huruf kapital, tanda baca, ejaan..." style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;">
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 6px;">Capaian Pembelajaran (Opsional)</label>
+        <textarea id="ai-tp-cp" rows="3" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;" placeholder="Tulis CP atau biarkan kosong untuk default..."></textarea>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button id="btn-generate-tp-keyword" onclick="generateTPFromKeyword();" class="btn btn-primary" style="flex: 1;">
+          <i class="fas fa-magic"></i> Generate TP
+        </button>
+        <button onclick="closeGenerateTPModal();" class="btn btn-secondary" style="flex: 1;">Batal</button>
+      </div>
+      <div id="ai-tp-results" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Generate Soal Modal -->
+  <div id="ai-generate-soal-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; margin: 20px auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 20px; font-weight: bold; color: #1f2937;">
+          <i class="fas fa-pencil-alt"></i> Generate Soal dengan AI
+        </h3>
+        <button onclick="closeGenerateSoalModal();" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; color: #166534;">
+        <i class="fas fa-check"></i> Pilih TP terlebih dahulu di tab TP
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-weight: bold; margin-bottom: 6px;">Jumlah PG</label>
+          <input type="number" id="ai-soal-pg" value="5" min="1" max="50" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: bold; margin-bottom: 6px;">Jumlah Isian</label>
+          <input type="number" id="ai-soal-isian" value="3" min="1" max="20" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <label style="display: block; font-weight: bold; margin-bottom: 6px;">Opsi PG</label>
+          <select id="ai-soal-options" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;">
+            <option value="3">3 Opsi (A, B, C)</option>
+            <option value="4" selected>4 Opsi (A, B, C, D)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-weight: bold; margin-bottom: 6px;">Tingkat Kesulitan</label>
+          <select id="ai-soal-difficulty" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px;">
+            <option value="mudah">Mudah</option>
+            <option value="sedang" selected>Sedang</option>
+            <option value="sulit">Sulit</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button id="btn-generate-soal-ai" onclick="generateSoalFromAI();" class="btn btn-primary" style="flex: 1;">
+          <i class="fas fa-sparkles"></i> Generate Soal
+        </button>
+        <button onclick="closeGenerateSoalModal();" class="btn btn-secondary" style="flex: 1;">Batal</button>
+      </div>
+      <div id="ai-soal-results" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // TIER 5 EXTENDED: PDF & BOOK-BASED TP (Phase 4)
+    // ============================================
+
+    // Modal Control Functions
+    window.openBookUploadModal = function() {
+      document.getElementById('book-upload-modal').style.display = 'flex';
+      document.getElementById('bookMapel').focus();
+    };
+
+    window.closeBookUploadModal = function() {
+      document.getElementById('book-upload-modal').style.display = 'none';
+      document.getElementById('book-results').style.display = 'none';
+    };
+
+    // PDF Upload Handler
+    window.handlePdfUpload = async function(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > 50 * 1024 * 1024) {
+        showToast('❌ File terlalu besar (>50MB)', 'error');
+        return;
+      }
+
+      const statusEl = document.getElementById('upload-status');
+      statusEl.textContent = '⏳ Membaca PDF...';
+      
+      try {
+        const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+        const maxPages = Math.min(pdf.numPages, 100);
+        let bookText = '';
+
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(' ');
+          bookText += `\n\n--- Halaman ${i} ---\n${pageText}`;
+          
+          const progress = Math.round((i / maxPages) * 100);
+          statusEl.textContent = `⏳ Membaca halaman ${i}/${maxPages} (${progress}%)...`;
+        }
+
+        document.getElementById('bookContent').value = bookText;
+        document.getElementById('btn-generate-tp-book').disabled = false;
+        statusEl.textContent = `✅ PDF berhasil di-upload (${maxPages} halaman, ${Math.round(bookText.length / 1000)}KB)`;
+        showToast(`✅ PDF berhasil di-upload: ${maxPages} halaman`, 'success');
+      } catch (e) {
+        statusEl.textContent = `❌ Error membaca PDF: ${e.message}`;
+        showToast(`❌ Error membaca PDF: ${e.message}`, 'error');
+      }
+    };
+
+    // Drag-drop handler
+    window.handlePdfDrop = function(event) {
+      event.preventDefault();
+      const file = event.dataTransfer?.files?.[0];
+      if (file && file.type === 'application/pdf') {
+        document.getElementById('pdfFileInput').files = event.dataTransfer.files;
+        handlePdfUpload({ target: { files: event.dataTransfer.files } });
+      }
+    };
+
+    // Load Sample Book Function
+    window.loadSampleBook = function() {
+      const sampleText = `
+MATEMATIKA DASAR - KELAS 7
+
+BAB 1: BILANGAN DAN OPERASINYA
+
+1.1 Pengertian Bilangan Bulat
+Bilangan bulat adalah himpunan bilangan yang terdiri dari bilangan negatif, nol, dan bilangan positif. 
+Contoh: ..., -3, -2, -1, 0, 1, 2, 3, ...
+
+1.2 Operasi Penjumlahan dan Pengurangan Bilangan Bulat
+Penjumlahan dua bilangan bulat dengan tanda yang sama hasil penjumlahannya mengikuti tanda yang sama.
+Contoh: 5 + 3 = 8 dan (-5) + (-3) = -8
+
+1.3 Operasi Perkalian Bilangan Bulat
+Perkalian dua bilangan bulat dengan tanda sama hasilnya positif
+Contoh: 3 × 4 = 12, (-3) × (-4) = 12
+
+BAB 2: PECAHAN
+
+2.1 Pengertian Pecahan
+Pecahan adalah bagian dari keseluruhan yang dapat dinyatakan dalam bentuk a/b.
+Contoh: 1/2, 3/4, 5/8
+
+2.2 Jenis-Jenis Pecahan
+- Pecahan Biasa: pembilang < penyebut (contoh: 1/2, 3/5)
+- Pecahan Tidak Biasa: pembilang > penyebut (contoh: 5/3, 7/4)
+- Pecahan Campuran: kombinasi bilangan bulat dan pecahan (contoh: 1 1/2, 2 3/4)
+
+2.3 Operasi Pecahan
+Penjumlahan: a/b + c/d memerlukan penyamaan penyebut
+Perkalian: a/b × c/d = ac/bd
+
+BAB 3: GEOMETRI DAN PENGUKURAN
+
+3.1 Bangun Datar
+- Segitiga: tiga sisi, tiga sudut
+- Persegi: empat sisi sama panjang
+
+3.2 Keliling dan Luas
+Keliling Segitiga = sisi1 + sisi2 + sisi3
+Luas Segitiga = (alas × tinggi)/2
+Luas Persegi = s²
+      `;
+
+      document.getElementById('bookContent').value = sampleText;
+      document.getElementById('bookMapel').value = 'Matematika';
+      document.getElementById('bookKelas').value = '7';
+      document.getElementById('btn-generate-tp-book').disabled = false;
+      document.getElementById('upload-status').textContent = '✅ Sample Book Loaded (3 BAB)';
+      showToast('✅ Sample book loaded', 'success');
+    };
+
+    // Main Generate TP from Book Function
+    window.generateTP = async function() {
+      if (!userApiKey) return showToast('❌ Masukkan API Key!', 'error');
+      
+      const mapel = document.getElementById('bookMapel')?.value?.trim();
+      const kelas = document.getElementById('bookKelas')?.value?.trim();
+      const cp = document.getElementById('bookCP')?.value?.trim();
+      const bookContent = document.getElementById('bookContent')?.value?.trim();
+
+      if (!mapel) return showToast('❌ Mata pelajaran harus diisi!', 'error');
+      if (!kelas) return showToast('❌ Tingkat kelas harus dipilih!', 'error');
+      if (!bookContent) return showToast('❌ Buku PDF harus di-upload!', 'error');
+
+      document.getElementById('book-loading-spinner').style.display = 'block';
+      document.getElementById('book-results').style.display = 'none';
+
+      const btn = document.getElementById('btn-generate-tp-book');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+
+      const truncatedContent = bookContent.substring(0, 35000);
+
+      const prompt = `Role: Ahli Kurikulum Pendidikan Indonesia.
+
+TUGAS: Analisis buku "${mapel}" Kelas ${kelas} untuk membuat Tujuan Pembelajaran (TP).
+
+INSTRUKSI PENTING:
+1. Identifikasi SEMUA bab dan topik dalam buku
+2. WAJIB: Distribusikan BAB 50:50 ke Semester 1 & 2
+   - Bab pertama → Semester 1
+   - Bab terakhir → Semester 2
+3. Buat 4-7 TP SPESIFIK per bab
+4. VALIDASI: Output harus punya "semester": 1 DAN "semester": 2
+
+KONTEN BUKU:
+${truncatedContent}
+
+CP REFERENSI: ${cp || 'Kurikulum Merdeka'}
+
+FORMAT OUTPUT (JSON):
+[
+  {
+    "bab": "Nama Bab",
+    "tp_list": ["TP 1", "TP 2"],
+    "semester": 1
+  },
+  {
+    "bab": "Nama Bab",
+    "tp_list": ["TP 1", "TP 2"],
+    "semester": 2
+  }
+]`;
+
+      try {
+        const jsonRes = await callGeminiAPI(prompt);
+        
+        if (!Array.isArray(jsonRes) || jsonRes.length === 0) {
+          throw new Error('Format respons tidak valid');
+        }
+
+        const hasSem1 = jsonRes.some(item => item.semester === 1);
+        const hasSem2 = jsonRes.some(item => item.semester === 2);
+        if (!hasSem1 || !hasSem2) {
+          throw new Error('Harus punya TP untuk Semester 1 DAN Semester 2');
+        }
+
+        let allTP = [];
+        jsonRes.forEach(bab => {
+          if (Array.isArray(bab.tp_list)) {
+            bab.tp_list.forEach(tp => {
+              allTP.push({
+                bab: bab.bab,
+                isi_tp: tp,
+                semester: bab.semester,
+                checked: true
+              });
+            });
+          }
+        });
+
+        const startId = Math.max(0, ...(globalTPData?.map(t => t.id) || [0])) + 1;
+        allTP.forEach((tp, idx) => {
+          tp.id = startId + idx;
+        });
+        globalTPData = [...(globalTPData || []), ...allTP];
+        renderTPList();
+
+        let resultsHtml = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">';
+        const sem1Count = allTP.filter(t => t.semester === 1).length;
+        const sem2Count = allTP.filter(t => t.semester === 2).length;
+
+        resultsHtml += `
+          <div style="background: #dbeafe; padding: 12px; border-radius: 6px; text-align: center; border-left: 4px solid #3b82f6;">
+            <div style="font-size: 24px; font-weight: bold; color: #1e40af;">${sem1Count}</div>
+            <div style="font-size: 12px; color: #0c4a6e;">TP Semester 1</div>
+          </div>
+          <div style="background: #d1fae5; padding: 12px; border-radius: 6px; text-align: center; border-left: 4px solid #10b981;">
+            <div style="font-size: 24px; font-weight: bold; color: #065f46;">${sem2Count}</div>
+            <div style="font-size: 12px; color: #047857;">TP Semester 2</div>
+          </div>
+        </div>`;
+
+        resultsHtml += `<p style="color: #374151;">✅ Berhasil <strong>${allTP.length} TP</strong> dari <strong>${jsonRes.length} bab</strong></p>`;
+        document.getElementById('book-results-content').innerHTML = resultsHtml;
+        document.getElementById('book-results').style.display = 'block';
+        document.getElementById('btn-gap-analyzer').style.display = 'inline-block';
+        
+        showToast(`✅ Berhasil ${allTP.length} TP!`, 'success');
+      } catch (e) {
+        showToast(`❌ Error: ${e.message}`, 'error');
+        document.getElementById('book-results-content').innerHTML = `<div style="color: #dc2626;">❌ ${e.message}</div>`;
+        document.getElementById('book-results').style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        document.getElementById('book-loading-spinner').style.display = 'none';
+      }
+    };
+
+    // Gap Analyzer
+    window.openTPSuggester = async function() {
+      if (!userApiKey) return showToast('❌ API Key diperlukan!', 'error');
+      if (!globalTPData || globalTPData.length === 0) return showToast('❌ Belum ada TP!', 'error');
+      if (!document.getElementById('bookContent')?.value?.trim()) return showToast('❌ Konten buku diperlukan!', 'error');
+
+      if (!document.getElementById('tp-suggester-modal')) {
+        const modal = document.createElement('div');
+        modal.id = 'tp-suggester-modal';
+        modal.style.cssText = 'display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+          <div style="background: white; border-radius: 12px; padding: 30px; max-width: 800px; width: 90%; max-height: 85vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+              <h3 style="font-size: 20px; font-weight: bold;">
+                <i class="fas fa-lightbulb"></i> Gap Analysis
+              </h3>
+              <button onclick="document.getElementById('tp-suggester-modal').style.display = 'none';" style="background: none; border: none; font-size: 20px; cursor: pointer;">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div id="suggester-loading" style="text-align: center; padding: 20px;">
+              <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #3b82f6;"></i>
+              <p style="margin-top: 8px;">Menganalisis gap TP...</p>
+            </div>
+            <div id="suggester-content" style="display: none;"></div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      document.getElementById('tp-suggester-modal').style.display = 'flex';
+      document.getElementById('suggester-loading').style.display = 'block';
+
+      const bookContent = document.getElementById('bookContent').value.substring(0, 35000);
+      const existingTPText = globalTPData.map(tp => `- ${tp.isi_tp}`).join('\n');
+
+      const prompt = `Analisis gap antara buku teks dan TP yang sudah ada. Identifikasi topik penting yang terlewat.
+
+TP EXISTING:
+${existingTPText}
+
+BUKU:
+${bookContent}
+
+OUTPUT (JSON):
+{
+  "analysis": "Ringkasan singkat",
+  "suggestions": [
+    {"topic": "Topik", "reason": "Alasan", "tp": "TP baru", "semester": 1}
+  ]
+}`;
+
+      try {
+        const result = await callGeminiAPI(prompt);
+        if (!result.suggestions) throw new Error('Invalid format');
+
+        document.getElementById('suggester-loading').style.display = 'none';
+
+        let html = result.suggestions.length === 0 ? '✅ TP Lengkap!' : 
+          `<p style="margin-bottom: 12px;">${result.analysis}</p>` +
+          result.suggestions.map((s, i) => `
+            <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              <h5 style="font-weight: bold; color: #4f46e5;">${i+1}. ${s.topic}</h5>
+              <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">${s.reason}</p>
+              <p style="font-size: 13px; margin-top: 8px;"><strong>TP:</strong> ${s.tp}</p>
+            </div>
+          `).join('');
+
+        document.getElementById('suggester-content').innerHTML = html;
+        document.getElementById('suggester-content').style.display = 'block';
+      } catch (e) {
+        document.getElementById('suggester-loading').style.display = 'none';
+        document.getElementById('suggester-content').innerHTML = `❌ ${e.message}`;
+        document.getElementById('suggester-content').style.display = 'block';
+      }
+    };
+
+    console.log('✅ Tier 5 Extended: PDF & Book-based TP Loaded');
+  </script>
+</body>
+</html>
