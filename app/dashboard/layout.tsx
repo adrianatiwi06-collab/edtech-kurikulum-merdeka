@@ -3,7 +3,6 @@
 import { useEffect, ReactNode, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
 import { BookOpen, FileText, ClipboardCheck, BarChart3, Users, LogOut, Loader2, Database, ChevronDown, ChevronRight, Home, FileCheck, Brain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,9 +12,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [navigating, setNavigating] = useState(false);
+  
+  // State untuk buka/tutup menu
   const [masterDataOpen, setMasterDataOpen] = useState(true);
   const [assessmentOpen, setAssessmentOpen] = useState(true);
+  const [administrasiOpen, setAdministrasiOpen] = useState(true); // <-- Kategori Baru
   const [analysisOpen, setAnalysisOpen] = useState(true);
+  
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -105,6 +108,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             }`}>Dashboard</span>
           </button>
 
+          {/* MASTER DATA */}
           <div className="pt-2">
             <button
               onClick={() => setMasterDataOpen(!masterDataOpen)}
@@ -182,6 +186,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
+          {/* ASSESSMENT */}
           <div className="pt-2">
             <button
               onClick={() => setAssessmentOpen(!assessmentOpen)}
@@ -237,6 +242,52 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
+          {/* ADMINISTRASI (BARU) */}
+          <div className="pt-2">
+            <button
+              onClick={() => setAdministrasiOpen(!administrasiOpen)}
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-white hover:bg-white/20 rounded-xl transition-all duration-300 group hover:scale-105 ${
+                sidebarCollapsed ? 'justify-center' : ''
+              }`}
+              title={sidebarCollapsed ? 'Administrasi' : ''}
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                <span className={`font-medium transition-all duration-300 ${
+                  sidebarCollapsed ? 'hidden' : 'block'
+                }`}>Administrasi</span>
+              </div>
+              {!sidebarCollapsed && (administrasiOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
+            </button>
+            {administrasiOpen && !sidebarCollapsed && (
+              <div className="ml-4 mt-1 space-y-1 border-l border-white/30 pl-3">
+                <button
+                  onClick={() => handleNavigation('/dashboard/jurnal')}
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 hover:scale-105 ${
+                    pathname === '/dashboard/jurnal' 
+                      ? 'text-purple-700 bg-white font-semibold shadow-lg' 
+                      : 'text-purple-100 hover:text-white hover:bg-white/20'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Jurnal & Absensi
+                </button>
+                <button
+                  onClick={() => handleNavigation('/dashboard/riwayat-jurnal')}
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 hover:scale-105 ${
+                    pathname === '/dashboard/riwayat-jurnal' 
+                      ? 'text-purple-700 bg-white font-semibold shadow-lg' 
+                      : 'text-purple-100 hover:text-white hover:bg-white/20'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Riwayat Jurnal
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ANALYSIS */}
           <div className="pt-2">
             <button
               onClick={() => setAnalysisOpen(!analysisOpen)}
