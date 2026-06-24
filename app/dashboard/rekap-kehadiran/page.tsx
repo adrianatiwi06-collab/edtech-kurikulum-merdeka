@@ -324,7 +324,7 @@ export default function RekapKehadiranPage() {
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                     {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                   </Pie>
-                  <RechartsTooltip formatter={(value: number) => [`${value} Anak`, 'Total']} />
+                 <RechartsTooltip formatter={(value: number | string | undefined) => [`${value} Anak`, 'Total']} />
                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
