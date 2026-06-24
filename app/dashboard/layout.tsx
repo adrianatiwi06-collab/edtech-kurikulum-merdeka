@@ -3,7 +3,7 @@
 import { useEffect, ReactNode, useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, FileText, ClipboardCheck, BarChart3, Users, LogOut, Loader2, Database, ChevronDown, ChevronRight, Home, FileCheck, Brain, Menu, X } from 'lucide-react';
+import { BookOpen, FileText, ClipboardCheck, BarChart3, BarChart2, Users, LogOut, Loader2, Database, ChevronDown, ChevronRight, Home, FileCheck, Brain, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -283,6 +283,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <FileText className="w-4 h-4" />
                   Riwayat Jurnal
                 </button>
+                <button
+                  onClick={() => handleNavigation('/dashboard/rekap-kehadiran')}
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 hover:scale-105 ${
+                    pathname === '/dashboard/rekap-kehadiran' 
+                      ? 'text-purple-700 bg-white font-semibold shadow-lg' 
+                      : 'text-purple-100 hover:text-white hover:bg-white/20'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Rekap Kehadiran
+                </button>
               </div>
             )}
           </div>
@@ -327,6 +338,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   <Users className="w-4 h-4" />
                   Analisis Nilai Siswa
+                </button>
+                <button
+                  onClick={() => handleNavigation('/dashboard/analisis-butir-soal')}
+                  className={`w-full flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all duration-300 hover:scale-105 ${
+                    pathname === '/dashboard/analisis-butir-soal' 
+                      ? 'text-purple-700 bg-white font-semibold shadow-lg' 
+                      : 'text-purple-100 hover:text-white hover:bg-white/20'
+                  }`}
+                >
+                  <BarChart2 className="w-4 h-4" />
+                  Analisis Butir Soal
                 </button>
               </div>
             )}

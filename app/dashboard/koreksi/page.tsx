@@ -41,6 +41,7 @@ interface StudentGrade {
   totalScore: number;
   finalGrade: number;
   isCalculated: boolean;
+  semester?: number; // Terinjeksi otomatis
 }
 
 interface SavedGrade {
@@ -55,6 +56,7 @@ interface SavedGrade {
   grades: StudentGrade[];
   created_at: string;
   updated_at: string;
+  semester?: number;
 }
 
 export default function KoreksiPage() {
@@ -63,29 +65,22 @@ export default function KoreksiPage() {
   const [loading, setLoading] = useState(false);
   const [showSavedGrades, setShowSavedGrades] = useState(false);
   
-  // Mode selection
   const [useTemplate, setUseTemplate] = useState(false);
   const [examTemplates, setExamTemplates] = useState<ExamTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ExamTemplate | null>(null);
   
-  // Step 1: Select exam
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedSemester, setSelectedSemester] = useState<number|''>('');
   const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]);
   const [selectedQB, setSelectedQB] = useState<QuestionBank | null>(null);
   const [savedGrades, setSavedGrades] = useState<SavedGrade[]>([]);
   
-  // FILTER STATE BARU
   const [filterKelas, setFilterKelas] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
   
-  // Step 2: Select class
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   
-  // Step 3: Grading
   const [examName, setExamName] = useState('');
   const [grades, setGrades] = useState<StudentGrade[]>([]);
   const [savedGradeId, setSavedGradeId] = useState<string | null>(null);
@@ -96,9 +91,7 @@ export default function KoreksiPage() {
       loadQuestionBanks();
       loadExamTemplates();
       loadClasses();
-      if (showSavedGrades) {
-        loadSavedGrades();
-      }
+      if (showSavedGrades) loadSavedGrades();
     }
   }, [user, showSavedGrades]);
 
@@ -108,46 +101,21 @@ export default function KoreksiPage() {
     try {
       await deleteDoc(doc(db, 'grades', gradeId));
       setSavedGrades((prev) => prev.filter((g) => g.id !== gradeId));
-    } catch (error) {
-      console.error('Gagal menghapus data koreksi:', error);
-      alert('Gagal menghapus data koreksi');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { alert('Gagal menghapus data koreksi'); } 
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {
         const contentWrapper = document.getElementById('content-wrapper');
-        if (contentWrapper) {
-          setTableScrollWidth(contentWrapper.scrollWidth);
-        }
+        if (contentWrapper) setTableScrollWidth(contentWrapper.scrollWidth);
       };
-      setTimeout(updateWidth, 100);
       setTimeout(updateWidth, 500);
-      setTimeout(updateWidth, 1000);
       window.addEventListener('resize', updateWidth);
       return () => window.removeEventListener('resize', updateWidth);
     }
-  }, [step, selectedQB, grades.length]);
-
-  useEffect(() => {
-    if (step === 3 && tableScrollWidth > 0) {
-      const contentWrapper = document.getElementById('content-wrapper');
-      const customScrollbar = document.getElementById('custom-scrollbar');
-      if (contentWrapper && customScrollbar) {
-        const syncScroll = () => { if (customScrollbar.scrollLeft !== contentWrapper.scrollLeft) customScrollbar.scrollLeft = contentWrapper.scrollLeft; };
-        const syncScrollReverse = () => { if (contentWrapper.scrollLeft !== customScrollbar.scrollLeft) contentWrapper.scrollLeft = customScrollbar.scrollLeft; };
-        contentWrapper.addEventListener('scroll', syncScroll);
-        customScrollbar.addEventListener('scroll', syncScrollReverse);
-        return () => {
-          contentWrapper.removeEventListener('scroll', syncScroll);
-          customScrollbar.removeEventListener('scroll', syncScrollReverse);
-        };
-      }
-    }
-  }, [step, tableScrollWidth]);
+  }, [step, grades.length]);
 
   const loadExamTemplates = async () => {
     if (!user) return;
@@ -213,6 +181,7 @@ export default function KoreksiPage() {
         setSelectedClass(foundClass); setExamName(savedGrade.exam_name); setGrades(savedGrade.grades);
       }
       setSavedGradeId(savedGrade.id);
+      setSelectedSemester(savedGrade.semester || '');
       setStep(3); setShowSavedGrades(false);
     } catch (error) { alert('Gagal memuat data koreksi'); } 
     finally { setLoading(false); }
@@ -268,7 +237,8 @@ export default function KoreksiPage() {
     setGrades(updated);
     
     if (autoTab && answer) {
-      const nextInput = document.querySelector(`input[data-student="${studentIdx}"][data-question="${questionIdx + 1}"]`) as HTMLInputElement;
+      let nextInput = document.querySelector(`input[data-student="${studentIdx}"][data-question="${questionIdx + 1}"]`) as HTMLInputElement;
+      if (!nextInput) nextInput = document.querySelector(`input[data-student="${studentIdx + 1}"][data-question="0"]`) as HTMLInputElement;
       if (nextInput) { nextInput.focus(); nextInput.select(); }
     }
   };
@@ -318,14 +288,20 @@ export default function KoreksiPage() {
   const handleSaveGrades = async () => {
     if (!user || !selectedClass) return;
     if (!selectedSemester) return alert('Mohon pilih semester');
+    
+    const isAllCalculated = grades.every(g => g.isCalculated);
+    if (!isAllCalculated) return alert('⚠️ Mohon hitung ulang nilai sebelum menyimpan!');
+
     setLoading(true);
     try {
+      const gradesWithSemester = grades.map(g => ({ ...g, semester: selectedSemester }));
+
       if (savedGradeId) {
-        await updateDoc(doc(db, 'grades', savedGradeId), { grades: grades, updated_at: new Date().toISOString(), semester: selectedSemester });
+        await updateDoc(doc(db, 'grades', savedGradeId), { grades: gradesWithSemester, updated_at: new Date().toISOString(), semester: selectedSemester });
       } else {
         const gradeData: any = {
           user_id: user.uid, exam_name: examName, class_id: selectedClass.id, class_name: selectedClass.name,
-          grades: grades, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), semester: selectedSemester
+          grades: gradesWithSemester, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), semester: selectedSemester
         };
         if (useTemplate && selectedTemplate) {
           gradeData.subject = selectedTemplate.subject; gradeData.exam_title = selectedTemplate.exam_name; gradeData.exam_template_id = selectedTemplate.id;
@@ -340,21 +316,12 @@ export default function KoreksiPage() {
     finally { setLoading(false); }
   };
 
-  // LOGIKA PEMBUATAN DAFTAR OPSI FILTER DAN PENYARINGAN DATA
   const activeData = useTemplate ? examTemplates : questionBanks;
   const availableFilterKelas = Array.from(new Set(activeData.map((item: any) => useTemplate ? item.grade : item.kelas))).filter(Boolean).sort();
   const availableFilterSubjects = Array.from(new Set(activeData.map((item: any) => item.subject))).filter(Boolean).sort();
 
-  const displayedQBs = questionBanks.filter(qb => {
-    return (filterKelas ? String(qb.kelas) === String(filterKelas) : true) && 
-           (filterSubject ? qb.subject === filterSubject : true);
-  });
-
-  const displayedTemplates = examTemplates.filter((tpl: any) => {
-    const tplKelas = tpl.grade || tpl.kelas;
-    return (filterKelas ? String(tplKelas) === String(filterKelas) : true) && 
-           (filterSubject ? tpl.subject === filterSubject : true);
-  });
+  const displayedQBs = questionBanks.filter(qb => (filterKelas ? String(qb.kelas) === String(filterKelas) : true) && (filterSubject ? qb.subject === filterSubject : true));
+  const displayedTemplates = examTemplates.filter((tpl: any) => { const tplKelas = tpl.grade || tpl.kelas; return (filterKelas ? String(tplKelas) === String(filterKelas) : true) && (filterSubject ? tpl.subject === filterSubject : true); });
 
   const mcCount = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.count : selectedQB?.questions.multipleChoice?.length || 0;
   const mcWeight = useTemplate && selectedTemplate ? selectedTemplate.multiple_choice.weight : selectedQB?.questions.multipleChoice?.[0]?.weight || 1;
