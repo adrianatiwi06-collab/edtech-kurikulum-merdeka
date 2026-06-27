@@ -8,7 +8,6 @@ import { ExamTemplate, LearningGoal } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { toast } from 'sonner';
 
 type Step = 0 | 1 | 2 | 3; // 0 for saved templates view
 
@@ -99,7 +98,6 @@ export default function TemplateUjianPage() {
       setSavedTemplates(templates);
     } catch (error) {
       console.error('Error loading templates:', error);
-      toast.error('Gagal memuat template tersimpan');
     }
   };
 
@@ -121,13 +119,13 @@ export default function TemplateUjianPage() {
     setPgWeight(template.multiple_choice.weight);
     setPgAnswerKeys(template.multiple_choice.answer_keys);
     
-    // tp_mapping is already an object { [questionNumber]: tpId }
+    // tp_mapping is already an object { [questionNumber]: tpId }, just use it directly
     setPgTPMapping(template.multiple_choice.tp_mapping);
     
     setEssayCount(template.essay.count);
     setEssayWeight(template.essay.weight);
     
-    // Essay mapping
+    // Essay mapping is also an object
     setEssayTPMapping(template.essay.tp_mapping);
     
     setShowSavedTemplates(false);
@@ -139,11 +137,11 @@ export default function TemplateUjianPage() {
     
     try {
       await deleteDoc(doc(db, 'exam_templates', templateId));
-      toast.success('Template berhasil dihapus');
+      alert('Template berhasil dihapus');
       loadSavedTemplates();
     } catch (error) {
       console.error('Error deleting template:', error);
-      toast.error('Gagal menghapus template');
+      alert('Gagal menghapus template');
     }
   };
 
@@ -189,7 +187,7 @@ export default function TemplateUjianPage() {
       setAvailableTPs(tps);
     } catch (error) {
       console.error('Error loading TPs:', error);
-      toast.error('Gagal memuat TP');
+      alert('Gagal memuat TP');
     } finally {
       setLoadingTPs(false);
     }
@@ -197,11 +195,11 @@ export default function TemplateUjianPage() {
 
   const handleStep1Next = () => {
     if (!examName.trim()) {
-      toast.error('Nama ujian harus diisi');
+      alert('Nama ujian harus diisi');
       return;
     }
     if (!selectedSubject) {
-      toast.error('Mata pelajaran harus dipilih');
+      alert('Mata pelajaran harus dipilih');
       return;
     }
     setCurrentStep(2);
@@ -209,7 +207,7 @@ export default function TemplateUjianPage() {
 
   const handleStep2Next = () => {
     if (selectedTPs.size === 0) {
-      toast.error('Pilih minimal 1 TP');
+      alert('Pilih minimal 1 TP');
       return;
     }
     setCurrentStep(3);
@@ -225,53 +223,29 @@ export default function TemplateUjianPage() {
     setSelectedTPs(newSet);
   };
 
-  // Select/Deselect All Functions
-  const handleSelectAllTPs = () => {
-    const allIds = new Set(availableTPs.map(tp => tp.id));
-    setSelectedTPs(allIds);
-  };
-
-  const handleClearTPs = () => {
-    setSelectedTPs(new Set());
-  };
-
-  const handlePgCountChange = (newCount: number) => {
-    setPgCount(newCount);
-    
-    // Pertahankan jawaban yang sudah ada saat mengubah ukuran array
-    setPgAnswerKeys(prev => {
-      const newKeys = [...prev];
-      if (newCount > prev.length) {
-        return [...newKeys, ...Array(newCount - prev.length).fill('')];
+  const handlePgCountChange = (count: number) => {
+    setPgCount(count);
+    setPgAnswerKeys(Array(count).fill(''));
+    // Clear mappings beyond new count
+    const newMapping = { ...pgTPMapping };
+    Object.keys(newMapping).forEach(key => {
+      if (parseInt(key) > count) {
+        delete newMapping[parseInt(key)];
       }
-      return newKeys.slice(0, newCount);
     });
-
-    // Cleanup mapping TP
-    setPgTPMapping(prev => {
-      const newMapping = { ...prev };
-      Object.keys(newMapping).forEach(key => {
-        if (parseInt(key) > newCount) {
-          delete newMapping[parseInt(key)];
-        }
-      });
-      return newMapping;
-    });
+    setPgTPMapping(newMapping);
   };
 
-  const handleEssayCountChange = (newCount: number) => {
-    setEssayCount(newCount);
-    
-    // Cleanup mappings
-    setEssayTPMapping(prev => {
-      const newMapping = { ...prev };
-      Object.keys(newMapping).forEach(key => {
-        if (parseInt(key) > newCount) {
-          delete newMapping[parseInt(key)];
-        }
-      });
-      return newMapping;
+  const handleEssayCountChange = (count: number) => {
+    setEssayCount(count);
+    // Clear mappings beyond new count
+    const newMapping = { ...essayTPMapping };
+    Object.keys(newMapping).forEach(key => {
+      if (parseInt(key) > count) {
+        delete newMapping[parseInt(key)];
+      }
     });
+    setEssayTPMapping(newMapping);
   };
 
   const autoDistributeTPs = () => {
@@ -296,7 +270,6 @@ export default function TemplateUjianPage() {
     
     setPgTPMapping(newPgMapping);
     setEssayTPMapping(newEssayMapping);
-    toast.success('Distribusi TP otomatis berhasil diterapkan');
   };
 
   const handleSaveTemplate = async () => {
@@ -305,19 +278,19 @@ export default function TemplateUjianPage() {
     // Validation
     const allPGAnswered = pgAnswerKeys.every((key, idx) => idx >= pgCount || key !== '');
     if (!allPGAnswered) {
-      toast.error('Semua kunci jawaban PG harus diisi');
+      alert('Semua kunci jawaban PG harus diisi');
       return;
     }
     
     const allPGMapped = Object.keys(pgTPMapping).length === pgCount;
     if (!allPGMapped) {
-      toast.error('Semua soal PG harus dipetakan ke TP');
+      alert('Semua soal PG harus dipetakan ke TP');
       return;
     }
     
     const allEssayMapped = Object.keys(essayTPMapping).length === essayCount;
     if (!allEssayMapped) {
-      toast.error('Semua soal Isian harus dipetakan ke TP');
+      alert('Semua soal Isian harus dipetakan ke TP');
       return;
     }
     
@@ -384,11 +357,11 @@ export default function TemplateUjianPage() {
         // Update existing template - don't include created_at
         const { created_at, ...updateData } = template;
         await updateDoc(doc(db, 'exam_templates', editingTemplateId), updateData);
-        toast.success('Template ujian berhasil diperbarui!');
+        alert('Template ujian berhasil diperbarui!');
       } else {
         // Create new template
         await addDoc(collection(db, 'exam_templates'), template);
-        toast.success('Template ujian berhasil disimpan!');
+        alert('Template ujian berhasil disimpan!');
       }
       
       // Reset form and go back to saved templates
@@ -404,7 +377,7 @@ export default function TemplateUjianPage() {
       
     } catch (error) {
       console.error('Error saving template:', error);
-      toast.error('Gagal menyimpan template');
+      alert('Gagal menyimpan template');
     } finally {
       setSaving(false);
     }
@@ -502,8 +475,7 @@ export default function TemplateUjianPage() {
 
       {/* Step Indicator */}
       {!showSavedTemplates && currentStep > 0 && (
-      <div className="flex items-center gap-4 mb-8">
-        <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
+      <div className="flex items-center gap-4 mb-8">\n        <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-primary' : 'text-muted-foreground'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             1
           </div>
@@ -618,24 +590,10 @@ export default function TemplateUjianPage() {
       {/* Step 2: TP Selection */}
       {currentStep === 2 && (
         <Card className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h2 className="text-xl font-semibold">Pilih Tujuan Pembelajaran</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Kelas {selectedGrade} - {selectedSubject} - Semester {selectedSemester}
-              </p>
-            </div>
-            {availableTPs.length > 0 && (
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleSelectAllTPs}>
-                  Pilih Semua
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleClearTPs} className="text-red-600">
-                  Kosongkan
-                </Button>
-              </div>
-            )}
-          </div>
+          <h2 className="text-xl font-semibold mb-4">Pilih Tujuan Pembelajaran</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Kelas {selectedGrade} - {selectedSubject} - Semester {selectedSemester}
+          </p>
           
           {loadingTPs ? (
             <p className="text-center py-8">Memuat TP...</p>
@@ -659,8 +617,8 @@ export default function TemplateUjianPage() {
                     <input
                       type="checkbox"
                       checked={selectedTPs.has(tp.id)}
-                      readOnly
-                      className="mt-1 pointer-events-none"
+                      onChange={() => {}}
+                      className="mt-1"
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium mb-1">{tp.chapter}</p>
@@ -737,7 +695,7 @@ export default function TemplateUjianPage() {
             </div>
             
             <div className="bg-muted p-4 rounded">
-              <p className="text-sm font-medium">
+              <p className="text-sm">
                 Total Soal: {pgCount + essayCount} | 
                 Nilai Maksimal: {(pgCount * pgWeight) + (essayCount * essayWeight)}
               </p>
@@ -750,7 +708,7 @@ export default function TemplateUjianPage() {
                   <span>📋</span> TP yang Dipilih ({selectedTPs.size})
                 </h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {Array.from(selectedTPs).map((tpId) => {
+                  {Array.from(selectedTPs).map((tpId, index) => {
                     const tp = availableTPs.find(t => t.id === tpId);
                     return (
                       <div key={tpId} className="bg-white p-3 rounded border border-blue-200">
@@ -765,7 +723,7 @@ export default function TemplateUjianPage() {
             
             {/* Auto Distribute Button */}
             <div>
-              <Button onClick={autoDistributeTPs} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <Button onClick={autoDistributeTPs} variant="outline">
                 🔄 Distribusi TP Otomatis
               </Button>
               <p className="text-xs text-muted-foreground mt-1">
@@ -777,14 +735,14 @@ export default function TemplateUjianPage() {
             {pgCount > 0 && (
               <div>
                 <h3 className="font-semibold mb-3">Kunci Jawaban & Pemetaan TP - Pilihan Ganda</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 max-h-[500px] overflow-y-auto p-1">
+                <div className="grid grid-cols-5 gap-3 max-h-96 overflow-y-auto">
                   {Array.from({ length: pgCount }, (_, i) => i + 1).map((num) => {
                     const selectedTP = availableTPs.find(t => t.id === pgTPMapping[num]);
                     return (
-                      <div key={num} className="space-y-2 p-3 border border-gray-200 rounded shadow-sm">
-                        <p className="text-sm font-medium text-gray-700">No. {num}</p>
+                      <div key={num} className="space-y-2 p-3 border rounded">
+                        <p className="text-sm font-medium">No. {num}</p>
                         <select
-                          className="w-full p-2 text-sm border rounded bg-white"
+                          className="w-full p-1 text-sm border rounded"
                           value={pgAnswerKeys[num - 1] || ''}
                           onChange={(e) => {
                             const newKeys = [...pgAnswerKeys];
@@ -792,7 +750,7 @@ export default function TemplateUjianPage() {
                             setPgAnswerKeys(newKeys);
                           }}
                         >
-                          <option value="">Kunci Jawaban</option>
+                          <option value="">Pilih</option>
                           <option value="A">A</option>
                           <option value="B">B</option>
                           <option value="C">C</option>
@@ -800,15 +758,16 @@ export default function TemplateUjianPage() {
                           <option value="E">E</option>
                         </select>
                         <select
-                          className="w-full p-2 text-sm border rounded bg-white"
+                          className="w-full p-1 text-sm border rounded h-auto"
+                          size={5}
                           value={pgTPMapping[num] || ''}
                           onChange={(e) => setPgTPMapping({ ...pgTPMapping, [num]: e.target.value })}
                         >
-                          <option value="">Pilih TP...</option>
+                          <option value="">TP...</option>
                           {Array.from(selectedTPs).map((tpId) => {
                             const tp = availableTPs.find(t => t.id === tpId);
                             return (
-                              <option key={tpId} value={tpId}>
+                              <option key={tpId} value={tpId} className="whitespace-normal py-1">
                                 {tp?.chapter}
                               </option>
                             );
@@ -816,7 +775,8 @@ export default function TemplateUjianPage() {
                         </select>
                         {selectedTP && (
                           <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                            <p className="text-blue-800 line-clamp-2" title={selectedTP.tp}>{selectedTP.chapter}</p>
+                            <p className="font-medium text-blue-900">TP Dipilih:</p>
+                            <p className="text-blue-800 mt-1">{selectedTP.chapter}</p>
                           </div>
                         )}
                       </div>
@@ -828,24 +788,25 @@ export default function TemplateUjianPage() {
             
             {/* Essay Mapping */}
             {essayCount > 0 && (
-              <div className="pt-4 border-t">
+              <div>
                 <h3 className="font-semibold mb-3">Pemetaan TP - Soal Isian</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 max-h-[500px] overflow-y-auto p-1">
+                <div className="grid grid-cols-5 gap-3">
                   {Array.from({ length: essayCount }, (_, i) => i + 1).map((num) => {
                     const selectedTP = availableTPs.find(t => t.id === essayTPMapping[num]);
                     return (
-                      <div key={num} className="space-y-2 p-3 border border-gray-200 rounded shadow-sm">
-                        <p className="text-sm font-medium text-gray-700">No. {num}</p>
+                      <div key={num} className="space-y-2 p-3 border rounded">
+                        <p className="text-sm font-medium">No. {num}</p>
                         <select
-                          className="w-full p-2 text-sm border rounded bg-white"
+                          className="w-full p-1 text-sm border rounded h-auto"
+                          size={5}
                           value={essayTPMapping[num] || ''}
                           onChange={(e) => setEssayTPMapping({ ...essayTPMapping, [num]: e.target.value })}
                         >
-                          <option value="">Pilih TP...</option>
+                          <option value="">TP...</option>
                           {Array.from(selectedTPs).map((tpId) => {
                             const tp = availableTPs.find(t => t.id === tpId);
                             return (
-                              <option key={tpId} value={tpId}>
+                              <option key={tpId} value={tpId} className="whitespace-normal py-1">
                                 {tp?.chapter}
                               </option>
                             );
@@ -853,7 +814,8 @@ export default function TemplateUjianPage() {
                         </select>
                         {selectedTP && (
                           <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                            <p className="text-blue-800 line-clamp-2" title={selectedTP.tp}>{selectedTP.chapter}</p>
+                            <p className="font-medium text-blue-900">TP Dipilih:</p>
+                            <p className="text-blue-800 mt-1">{selectedTP.chapter}</p>
                           </div>
                         )}
                       </div>
@@ -864,11 +826,11 @@ export default function TemplateUjianPage() {
             )}
           </div>
           
-          <div className="flex justify-between gap-2 mt-8 pt-4 border-t">
+          <div className="flex justify-between gap-2 mt-6">
             <Button variant="outline" onClick={() => setCurrentStep(2)}>
               ← Kembali
             </Button>
-            <Button onClick={handleSaveTemplate} disabled={saving} className="bg-primary">
+            <Button onClick={handleSaveTemplate} disabled={saving}>
               {saving ? 'Menyimpan...' : editingTemplateId ? '💾 Update Template' : '💾 Simpan Template'}
             </Button>
           </div>

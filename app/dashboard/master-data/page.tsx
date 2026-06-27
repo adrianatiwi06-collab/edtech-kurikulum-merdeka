@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, limit, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Edit2, Plus, Users as UsersIcon } from 'lucide-react';
+import { Trash2, Edit2, Plus, Users as UsersIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Class {
   id: string;
@@ -30,6 +31,7 @@ export default function MasterDataPage() {
   const [students, setStudents] = useState<{ [classId: string]: Student[] }>({});
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false); // Untuk tombol aksi agar UI tidak terkunci total
 
   // Class form state
   const [showClassForm, setShowClassForm] = useState(false);
@@ -59,26 +61,31 @@ export default function MasterDataPage() {
       const q = query(
         collection(db, 'classes'), 
         where('user_id', '==', user.uid),
-        limit(50) // Limit to 50 classes for performance
+        limit(50)
       );
       const querySnapshot = await getDocs(q);
       const classesData: Class[] = [];
       querySnapshot.forEach((doc) => {
         classesData.push({ id: doc.id, ...doc.data() } as Class);
       });
+
+      // Urutkan kelas secara alfanumerik (misal: 1A, 1B, 2A)
+      classesData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      
       setClasses(classesData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading classes:', error);
+      toast.error('Gagal memuat daftar kelas');
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  const loadStudents = useCallback(async (classId: string) => {
+  const loadStudents = useCallback(async (classId: string, forceReload = false) => {
     if (!user) return;
     
-    // Check cache first
-    if (students[classId]) {
+    // Check cache first, kecuali dipaksa reload (setelah insert/delete)
+    if (!forceReload && students[classId]) {
       setSelectedClass(classId);
       return;
     }
@@ -86,16 +93,21 @@ export default function MasterDataPage() {
     setLoading(true);
     try {
       const studentsRef = collection(db, 'classes', classId, 'students');
-      const q = query(studentsRef, limit(100)); // Limit students
+      const q = query(studentsRef, limit(100)); 
       const querySnapshot = await getDocs(q);
       const studentsData: Student[] = [];
       querySnapshot.forEach((doc) => {
         studentsData.push({ id: doc.id, class_id: classId, ...doc.data() } as Student);
       });
+
+      // Urutkan siswa berdasarkan nama (A-Z)
+      studentsData.sort((a, b) => a.name.localeCompare(b.name));
+      
       setStudents((prev) => ({ ...prev, [classId]: studentsData }));
       setSelectedClass(classId);
     } catch (error) {
       console.error('Error loading students:', error);
+      toast.error('Gagal memuat daftar siswa');
     } finally {
       setLoading(false);
     }
@@ -103,31 +115,38 @@ export default function MasterDataPage() {
 
   // Class CRUD operations
   const handleSaveClass = async () => {
-    if (!user || !className || !classGrade) return;
-    setLoading(true);
+    if (!user || !className || !classGrade) {
+      toast.error('Nama Kelas dan Tingkat harus diisi');
+      return;
+    }
+    
+    setActionLoading(true);
     try {
       if (editingClass) {
         await updateDoc(doc(db, 'classes', editingClass.id), {
-          name: className,
-          grade: classGrade,
+          name: className.trim(),
+          grade: classGrade.trim(),
         });
+        toast.success('Kelas berhasil diperbarui');
       } else {
         await addDoc(collection(db, 'classes'), {
-          name: className,
-          grade: classGrade,
+          name: className.trim(),
+          grade: classGrade.trim(),
           user_id: user.uid,
           created_at: new Date().toISOString(),
         });
+        toast.success('Kelas berhasil ditambahkan');
       }
       setClassName('');
       setClassGrade('');
       setShowClassForm(false);
       setEditingClass(null);
       loadClasses();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving class:', error);
+      toast.error('Gagal menyimpan kelas: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -139,47 +158,82 @@ export default function MasterDataPage() {
   };
 
   const handleDeleteClass = async (classId: string) => {
-    if (!confirm('Hapus kelas ini? Semua data siswa akan ikut terhapus.')) return;
-    setLoading(true);
+    if (!confirm('PERINGATAN: Hapus kelas ini? Semua data siswa di dalam kelas ini akan ikut terhapus permanen.')) return;
+    setActionLoading(true);
     try {
-      await deleteDoc(doc(db, 'classes', classId));
+      // BATCH DELETE: Hapus semua siswa dulu, baru hapus kelasnya agar tidak ada Orphan Data
+      const studentsRef = collection(db, 'classes', classId, 'students');
+      const studentSnapshot = await getDocs(studentsRef);
+      
+      const batch = writeBatch(db);
+      studentSnapshot.docs.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      
+      // Tambahkan instruksi hapus dokumen kelas ke dalam batch
+      batch.delete(doc(db, 'classes', classId));
+      
+      // Eksekusi semua perintah hapus secara bersamaan
+      await batch.commit();
+
+      toast.success('Kelas beserta seluruh siswanya berhasil dihapus');
       loadClasses();
       if (selectedClass === classId) {
         setSelectedClass(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting class:', error);
+      toast.error('Gagal menghapus kelas: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   // Student CRUD operations
   const handleSaveStudent = async () => {
-    if (!user || !selectedClass || !studentName || !studentNisn) return;
-    setLoading(true);
+    if (!user || !selectedClass || !studentName || !studentNisn) {
+      toast.error('Nama dan NISN harus diisi');
+      return;
+    }
+
+    // Validasi NISN ganda di kelas yang sama
+    const isDuplicateNisn = students[selectedClass]?.some(
+      s => s.nisn === studentNisn && s.id !== editingStudent?.id
+    );
+
+    if (isDuplicateNisn) {
+      toast.error('Gagal menyimpan: NISN ini sudah terdaftar untuk siswa lain di kelas ini');
+      return;
+    }
+
+    setActionLoading(true);
     try {
       if (editingStudent) {
         await updateDoc(doc(db, 'classes', selectedClass, 'students', editingStudent.id), {
-          name: studentName,
-          nisn: studentNisn,
+          name: studentName.trim(),
+          nisn: studentNisn.trim(),
         });
+        toast.success('Data siswa berhasil diperbarui');
       } else {
         await addDoc(collection(db, 'classes', selectedClass, 'students'), {
-          name: studentName,
-          nisn: studentNisn,
+          name: studentName.trim(),
+          nisn: studentNisn.trim(),
           created_at: new Date().toISOString(),
         });
+        toast.success('Siswa berhasil ditambahkan');
       }
       setStudentName('');
       setStudentNisn('');
       setShowStudentForm(false);
       setEditingStudent(null);
-      loadStudents(selectedClass);
-    } catch (error) {
+      
+      // Paksa reload data siswa (bypass cache)
+      loadStudents(selectedClass, true);
+    } catch (error: any) {
       console.error('Error saving student:', error);
+      toast.error('Gagal menyimpan data siswa: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -192,14 +246,16 @@ export default function MasterDataPage() {
 
   const handleDeleteStudent = async (studentId: string) => {
     if (!selectedClass || !confirm('Hapus data siswa ini?')) return;
-    setLoading(true);
+    setActionLoading(true);
     try {
       await deleteDoc(doc(db, 'classes', selectedClass, 'students', studentId));
-      loadStudents(selectedClass);
-    } catch (error) {
+      toast.success('Siswa berhasil dihapus');
+      loadStudents(selectedClass, true);
+    } catch (error: any) {
       console.error('Error deleting student:', error);
+      toast.error('Gagal menghapus siswa: ' + error.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -208,7 +264,7 @@ export default function MasterDataPage() {
     if (!file || !selectedClass) return;
 
     setImportError('');
-    setLoading(true);
+    setActionLoading(true);
 
     try {
       const { read, utils } = await import('xlsx');
@@ -218,49 +274,53 @@ export default function MasterDataPage() {
       
       if (!worksheet) {
         setImportError('File XLSX tidak valid atau kosong');
+        toast.error('File Excel tidak valid');
         return;
       }
 
       const data: any[] = utils.sheet_to_json(worksheet, { header: 1 });
       
       if (data.length < 2) {
-        setImportError('File XLSX kosong atau tidak valid');
+        setImportError('File XLSX kosong atau tidak memiliki data siswa');
         return;
       }
 
-      // Skip header (first row)
       const dataLines = data.slice(1);
-      let successCount = 0;
-      let errorCount = 0;
+      const batch = writeBatch(db);
+      let validRowsCount = 0;
 
       for (const row of dataLines) {
         const name = String(row[0] || '').trim();
         const nisn = String(row[1] || '').trim();
         
-        if (!name || !nisn) {
-          errorCount++;
-          continue;
-        }
-
-        try {
-          await addDoc(collection(db, 'classes', selectedClass, 'students'), {
+        if (name && nisn) {
+          const newStudentRef = doc(collection(db, 'classes', selectedClass, 'students'));
+          batch.set(newStudentRef, {
             name,
             nisn,
-            created_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
           });
-          successCount++;
-        } catch {
-          errorCount++;
+          validRowsCount++;
         }
       }
 
-      loadStudents(selectedClass);
-      setShowImportForm(false);
-      alert(`Import selesai: ${successCount} berhasil, ${errorCount} gagal`);
-    } catch (error) {
+      if (validRowsCount > 0) {
+        await batch.commit(); // Eksekusi import massal secara bersamaan
+        toast.success(`Berhasil mengimpor ${validRowsCount} siswa`);
+        loadStudents(selectedClass, true);
+        setShowImportForm(false);
+      } else {
+        setImportError('Tidak ada data siswa yang valid ditemukan');
+      }
+      
+    } catch (error: any) {
+      console.error('Import error:', error);
       setImportError('Gagal membaca file XLSX');
+      toast.error('Terjadi kesalahan saat import data');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+      // Reset input file agar bisa memilih file yang sama lagi jika perlu
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -268,16 +328,21 @@ export default function MasterDataPage() {
     try {
       const XLSX = await import('xlsx');
       const data = [
-        ['Nama', 'NISN'],
-        ['Contoh Siswa 1', '1234567890'],
-        ['Contoh Siswa 2', '0987654321']
+        ['Nama Lengkap', 'NISN'],
+        ['Budi Santoso', '0012345678'],
+        ['Siti Aminah', '0098765432']
       ];
       const worksheet = XLSX.utils.aoa_to_sheet(data);
+      
+      // Auto-size columns
+      worksheet['!cols'] = [{ wch: 30 }, { wch: 15 }];
+      
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Siswa');
-      XLSX.writeFile(workbook, 'template_siswa.xlsx');
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa');
+      XLSX.writeFile(workbook, 'Template_Import_Siswa.xlsx');
     } catch (error) {
       console.error('Error downloading template:', error);
+      toast.error('Gagal mengunduh template');
     }
   };
 
@@ -341,23 +406,25 @@ export default function MasterDataPage() {
           </CardHeader>
           <CardContent>
             {showClassForm && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3 border border-gray-200">
                 <Input
-                  placeholder="Nama Kelas (contoh: 7A)"
+                  placeholder="Nama Kelas (contoh: 7A / Kelas Bintang)"
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                 />
                 <Input
-                  placeholder="Tingkat (contoh: 7)"
+                  placeholder="Tingkat (contoh: 7 / Fase D)"
                   value={classGrade}
                   onChange={(e) => setClassGrade(e.target.value)}
                 />
                 <div className="flex gap-2">
-                  <Button onClick={handleSaveClass} disabled={loading}>
+                  <Button onClick={handleSaveClass} disabled={actionLoading}>
+                    {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     {editingClass ? 'Update' : 'Simpan'}
                   </Button>
                   <Button
                     variant="outline"
+                    disabled={actionLoading}
                     onClick={() => {
                       setShowClassForm(false);
                       setEditingClass(null);
@@ -371,7 +438,7 @@ export default function MasterDataPage() {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
               {classes.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-8">
                   Belum ada kelas. Tambahkan kelas pertama Anda.
@@ -382,23 +449,26 @@ export default function MasterDataPage() {
                     key={cls.id}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       selectedClass === cls.id
-                        ? 'bg-blue-50 border-blue-200'
+                        ? 'bg-blue-50 border-blue-400 shadow-sm'
                         : 'hover:bg-gray-50'
                     }`}
                     onClick={() => loadStudents(cls.id)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <UsersIcon className="w-5 h-5 text-gray-400" />
+                        <div className={`p-2 rounded-full ${selectedClass === cls.id ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                           <UsersIcon className={`w-5 h-5 ${selectedClass === cls.id ? 'text-blue-600' : 'text-gray-500'}`} />
+                        </div>
                         <div>
-                          <p className="font-medium">{cls.name}</p>
-                          <p className="text-sm text-gray-500">Tingkat {cls.grade}</p>
+                          <p className="font-semibold text-gray-900">{cls.name}</p>
+                          <p className="text-xs text-gray-500">Tingkat / Fase: {cls.grade}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="ghost"
+                          className="h-8 w-8 text-gray-500 hover:text-blue-600"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditClass(cls);
@@ -407,14 +477,15 @@ export default function MasterDataPage() {
                           <Edit2 className="w-4 h-4" />
                         </Button>
                         <Button
-                          size="sm"
+                          size="icon"
                           variant="ghost"
+                          className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteClass(cls.id);
                           }}
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
@@ -433,25 +504,12 @@ export default function MasterDataPage() {
                 <CardTitle>Daftar Siswa</CardTitle>
                 <CardDescription>
                   {selectedClass
-                    ? `Siswa di kelas ${classes.find((c) => c.id === selectedClass)?.name}`
-                    : 'Pilih kelas untuk melihat siswa'}
+                    ? `Siswa di ${classes.find((c) => c.id === selectedClass)?.name}`
+                    : 'Pilih kelas di sebelah kiri'}
                 </CardDescription>
               </div>
               {selectedClass && (
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setShowStudentForm(!showStudentForm);
-                      setShowImportForm(false);
-                      setEditingStudent(null);
-                      setStudentName('');
-                      setStudentNisn('');
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Siswa
-                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -463,36 +521,53 @@ export default function MasterDataPage() {
                   >
                     Import XLSX
                   </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setShowStudentForm(!showStudentForm);
+                      setShowImportForm(false);
+                      setEditingStudent(null);
+                      setStudentName('');
+                      setStudentNisn('');
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah
+                  </Button>
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent>
             {!selectedClass ? (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-16 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50">
                 <UsersIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Pilih kelas di sebelah kiri untuk melihat daftar siswa</p>
+                <p>Pilih kelas dari daftar untuk mengelola siswa</p>
               </div>
             ) : (
               <>
                 {showStudentForm && (
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                  <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3 shadow-sm">
                     <Input
                       placeholder="Nama Lengkap Siswa"
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
                     />
                     <Input
-                      placeholder="NISN"
+                      placeholder="Nomor Induk Siswa (NISN/NIS)"
                       value={studentNisn}
                       onChange={(e) => setStudentNisn(e.target.value)}
                     />
-                    <div className="flex gap-2">
-                      <Button onClick={handleSaveStudent} disabled={loading}>
-                        {editingStudent ? 'Update' : 'Simpan'}
+                    <div className="flex gap-2 pt-2 border-t border-gray-200">
+                      <Button onClick={handleSaveStudent} disabled={actionLoading} className="w-full sm:w-auto">
+                        {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {editingStudent ? 'Update Data' : 'Simpan Siswa'}
                       </Button>
                       <Button
                         variant="outline"
+                        disabled={actionLoading}
+                        className="w-full sm:w-auto"
                         onClick={() => {
                           setShowStudentForm(false);
                           setEditingStudent(null);
@@ -507,11 +582,11 @@ export default function MasterDataPage() {
                 )}
 
                 {showImportForm && (
-                  <div className="mb-4 p-4 bg-blue-50 rounded-lg space-y-3">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Import Data Siswa dari XLSX</p>
-                      <p className="text-xs text-gray-600">
-                        Format XLSX: Kolom A = Nama, Kolom B = NISN (dengan header di baris pertama)
+                  <div className="mb-4 p-4 bg-blue-50/50 border border-blue-100 rounded-lg space-y-4 shadow-sm">
+                    <div className="space-y-1 border-b border-blue-100 pb-3">
+                      <p className="text-sm font-semibold text-blue-900">Import Data Masal dari Excel</p>
+                      <p className="text-xs text-blue-700">
+                        Format file harus <b>.xlsx</b> dengan Kolom A: Nama, Kolom B: NISN (Baris 1 khusus untuk judul/header).
                       </p>
                     </div>
                     
@@ -521,46 +596,55 @@ export default function MasterDataPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="bg-white"
                         onClick={downloadTemplateXLSX}
                       >
-                        Download Template
+                        Unduh Template
                       </Button>
-                      <label className="cursor-pointer">
-                        <Button size="sm" asChild disabled={loading}>
-                          <span>{loading ? 'Mengimpor...' : 'Pilih File XLSX'}</span>
+                      
+                      <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
+
+                      <label className="cursor-pointer flex-1">
+                        <Button size="sm" asChild disabled={actionLoading} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
+                          <span>
+                            {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2"/>}
+                            {actionLoading ? 'Membaca Data...' : 'Pilih & Upload File'}
+                          </span>
                         </Button>
                         <input
                           type="file"
                           accept=".xlsx,.xls"
                           className="hidden"
                           onChange={handleImportXLSX}
-                          disabled={loading}
+                          disabled={actionLoading}
                         />
                       </label>
+
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
+                        className="text-gray-500"
                         onClick={() => {
                           setShowImportForm(false);
                           setImportError('');
                         }}
                       >
-                        Batal
+                        Tutup
                       </Button>
                     </div>
                   </div>
                 )}
 
-                <div className="overflow-x-auto">
+                <div className="rounded-md border">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead>No</TableHead>
-                        <TableHead>Nama</TableHead>
+                        <TableHead className="w-12 text-center">No</TableHead>
+                        <TableHead>Nama Siswa</TableHead>
                         <TableHead>NISN</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
@@ -568,31 +652,33 @@ export default function MasterDataPage() {
                     <TableBody>
                       {students[selectedClass]?.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-gray-500">
-                            Belum ada siswa di kelas ini
+                          <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                            Belum ada siswa di kelas ini. Klik "Tambah" atau "Import XLSX".
                           </TableCell>
                         </TableRow>
                       ) : (
                         students[selectedClass]?.map((student, index) => (
-                          <TableRow key={student.id}>
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell>{student.name}</TableCell>
-                            <TableCell>{student.nisn}</TableCell>
+                          <TableRow key={student.id} className="hover:bg-gray-50/50">
+                            <TableCell className="text-center font-medium text-gray-500">{index + 1}</TableCell>
+                            <TableCell className="font-medium text-gray-900">{student.name}</TableCell>
+                            <TableCell className="text-gray-600">{student.nisn}</TableCell>
                             <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
+                              <div className="flex gap-1 justify-end">
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
+                                  className="h-8 w-8 text-gray-500 hover:text-blue-600"
                                   onClick={() => handleEditStudent(student)}
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
+                                  className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
                                   onClick={() => handleDeleteStudent(student.id)}
                                 >
-                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
