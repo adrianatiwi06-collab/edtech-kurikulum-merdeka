@@ -414,7 +414,7 @@ export default function BankSoalPage() {
                     {selectedSoal.questions.multipleChoice.map((q: any, idx: number) => (
                       <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-100 relative">
                         <span className="absolute top-4 right-4 text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">Bobot: {q.weight || 1}</span>
-                        <p className="font-medium text-gray-900 mb-3 pr-16">{q.questionNumber}. {q.question}</p>
+                        <p className="font-medium text-gray-900 mb-3 pr-16">{idx + 1}. {q.question}</p>
                         <div className="ml-4 space-y-2 text-sm">
                           {Object.entries(q.options).map(([key, value]) => (
                             <p key={key} className={key === q.correctAnswer ? 'text-green-700 font-bold bg-green-50 p-1 rounded inline-block w-full' : 'p-1'}>
@@ -440,7 +440,7 @@ export default function BankSoalPage() {
                     {selectedSoal.questions.essay.map((q: any, idx: number) => (
                       <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-100 relative">
                         <span className="absolute top-4 right-4 text-xs font-bold bg-purple-100 text-purple-800 px-2 py-1 rounded">Bobot: {q.weight || 10}</span>
-                        <p className="font-medium text-gray-900 pr-16">{q.questionNumber}. {q.question}</p>
+                        <p className="font-medium text-gray-900 pr-16">{idx + 1}. {q.question}</p>
                         {(q.relatedTP || q.tp || q.tp_text) && (
                            <p className="text-xs text-gray-500 italic mt-3 pt-2 border-t border-gray-200">
                              TP: {q.relatedTP || q.tp || q.tp_text}
@@ -494,7 +494,21 @@ export default function BankSoalPage() {
                   <div className="p-4 space-y-6">
                     {editMC.map((q, idx) => (
                       <div key={idx} className="pb-6 border-b border-gray-200 last:border-0 last:pb-0">
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Pertanyaan {idx + 1}</label>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="block text-sm font-bold text-gray-700">Pertanyaan {idx + 1}</label>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if(confirm('Yakin ingin menghapus soal Pilihan Ganda ini?')) {
+                                const newMC = editMC.filter((_, i) => i !== idx);
+                                setEditMC(newMC);
+                              }
+                            }}
+                            className="flex items-center text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" /> Hapus Soal
+                          </button>
+                        </div>
                         <textarea className="w-full border border-gray-300 rounded-md px-3 py-2 mb-3 min-h-[80px]" value={q.question} onChange={e => { const newQ = [...editMC]; newQ[idx].question = e.target.value; setEditMC(newQ); }} />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -545,7 +559,21 @@ export default function BankSoalPage() {
                   <div className="p-4 space-y-4">
                     {editEssay.map((q, idx) => (
                       <div key={idx} className="pb-4 border-b border-gray-200 last:border-0 last:pb-0">
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Pertanyaan {idx + 1}</label>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="block text-sm font-bold text-gray-700">Pertanyaan {idx + 1}</label>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              if(confirm('Yakin ingin menghapus soal Essay ini?')) {
+                                const newEssay = editEssay.filter((_, i) => i !== idx);
+                                setEditEssay(newEssay);
+                              }
+                            }}
+                            className="flex items-center text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" /> Hapus Soal
+                          </button>
+                        </div>
                         <textarea className="w-full border border-gray-300 rounded-md px-3 py-2 min-h-[80px]" value={q.question} onChange={e => { const newQ = [...editEssay]; newQ[idx].question = e.target.value; setEditEssay(newQ); }} />
                         
                         <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100 flex flex-row gap-3 items-end mt-3">
