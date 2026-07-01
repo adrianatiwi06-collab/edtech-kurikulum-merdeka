@@ -416,7 +416,10 @@ export default function BankSoalPage() {
                         <span className="absolute top-4 right-4 text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">Bobot: {q.weight || 1}</span>
                         <p className="font-medium text-gray-900 mb-3 pr-16">{idx + 1}. {q.question}</p>
                         <div className="ml-4 space-y-2 text-sm">
-                          {Object.entries(q.options).map(([key, value]) => (
+                          {/* PENAMBAHAN SORTING DI SINI (VIEW MODE) */}
+                          {Object.entries(q.options)
+                            .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+                            .map(([key, value]) => (
                             <p key={key} className={key === q.correctAnswer ? 'text-green-700 font-bold bg-green-50 p-1 rounded inline-block w-full' : 'p-1'}>
                               {key}. {value as React.ReactNode} {key === q.correctAnswer && " ✓ (Kunci)"}
                             </p>
@@ -512,7 +515,10 @@ export default function BankSoalPage() {
                         <textarea className="w-full border border-gray-300 rounded-md px-3 py-2 mb-3 min-h-[80px]" value={q.question} onChange={e => { const newQ = [...editMC]; newQ[idx].question = e.target.value; setEditMC(newQ); }} />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                          {Object.keys(q.options).map((key) => (
+                          {/* PENAMBAHAN SORTING DI SINI (EDIT MODE) */}
+                          {Object.keys(q.options)
+                            .sort((a, b) => a.localeCompare(b))
+                            .map((key) => (
                             <div key={key} className={`flex items-start gap-2 p-2 rounded-md border ${q.correctAnswer === key ? 'bg-green-50 border-green-300' : 'bg-gray-50'}`}>
                               <input type="radio" name={`correct-${idx}`} checked={q.correctAnswer === key} onChange={() => { const newQ = [...editMC]; newQ[idx].correctAnswer = key; setEditMC(newQ); }} className="mt-2.5 w-4 h-4 cursor-pointer" />
                               <div className="flex-1">
