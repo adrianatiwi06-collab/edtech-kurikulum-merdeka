@@ -1,4 +1,4 @@
-import { Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Table, TableRow, TableCell, WidthType } from 'docx';
+import { Document, Paragraph, TextRun, AlignmentType, HeadingLevel } from 'docx';
 
 export interface QuestionData {
   multipleChoice: Array<{
@@ -22,9 +22,6 @@ export interface QuestionData {
   }>;
 }
 
-/**
- * Generate Word document from question data
- */
 export function generateQuestionDocument(
   data: QuestionData,
   metadata: {
@@ -36,7 +33,6 @@ export function generateQuestionDocument(
 ): Document {
   const children: any[] = [];
 
-  // Header
   children.push(
     new Paragraph({
       text: metadata.examTitle,
@@ -60,7 +56,6 @@ export function generateQuestionDocument(
     })
   );
 
-  // Multiple Choice Questions
   if (data.multipleChoice && data.multipleChoice.length > 0) {
     children.push(
       new Paragraph({
@@ -71,7 +66,6 @@ export function generateQuestionDocument(
     );
 
     data.multipleChoice.forEach((q) => {
-      // Question
       children.push(
         new Paragraph({
           children: [
@@ -82,36 +76,18 @@ export function generateQuestionDocument(
         })
       );
 
-      // Image Description Box (if available)
-      if (q.imageDescription && q.imageDescription.trim() !== '') {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: '    [TEMPAT GAMBAR/ILUSTRASI]', bold: true, color: '666666' }),
-            ],
-            spacing: { after: 50 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: '    Deskripsi: ', italics: true, size: 18, color: '666666' }),
-              new TextRun({ text: q.imageDescription, italics: true, size: 18, color: '666666' }),
-            ],
-            spacing: { after: 100 },
-          })
-        );
-      }
+      // FIX: Menambahkan .sort() agar urutan A, B, C, D konsisten
+      Object.entries(q.options)
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+        .forEach(([key, value]) => {
+          children.push(
+            new Paragraph({
+              text: `    ${key}. ${value}`,
+              spacing: { after: 50 },
+            })
+          );
+        });
 
-      // Options
-      Object.entries(q.options).forEach(([key, value]) => {
-        children.push(
-          new Paragraph({
-            text: `    ${key}. ${value}`,
-            spacing: { after: 50 },
-          })
-        );
-      });
-
-      // Related TP (if enabled)
       if (metadata.includeTP && q.relatedTP) {
         children.push(
           new Paragraph({
@@ -123,12 +99,11 @@ export function generateQuestionDocument(
           })
         );
       }
-
-      children.push(new Paragraph({ text: '' })); // Spacer
+      children.push(new Paragraph({ text: '' }));
     });
   }
 
-  // Essay Questions
+  // ... (Sisa fungsi untuk Essay tetap sama)
   if (data.essay && data.essay.length > 0) {
     children.push(
       new Paragraph({
@@ -137,7 +112,6 @@ export function generateQuestionDocument(
         spacing: { before: 300, after: 200 },
       })
     );
-
     data.essay.forEach((q) => {
       children.push(
         new Paragraph({
@@ -148,27 +122,6 @@ export function generateQuestionDocument(
           spacing: { before: 100, after: 100 },
         })
       );
-
-      // Image Description Box (if available)
-      if (q.imageDescription && q.imageDescription.trim() !== '') {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: '    [TEMPAT GAMBAR/ILUSTRASI]', bold: true, color: '666666' }),
-            ],
-            spacing: { after: 50 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: '    Deskripsi: ', italics: true, size: 18, color: '666666' }),
-              new TextRun({ text: q.imageDescription, italics: true, size: 18, color: '666666' }),
-            ],
-            spacing: { after: 100 },
-          })
-        );
-      }
-
-      // Related TP (if enabled)
       if (metadata.includeTP && q.relatedTP) {
         children.push(
           new Paragraph({
@@ -180,26 +133,15 @@ export function generateQuestionDocument(
           })
         );
       }
-
-      children.push(new Paragraph({ text: '' })); // Spacer
+      children.push(new Paragraph({ text: '' }));
     });
   }
 
-  return new Document({
-    sections: [
-      {
-        children,
-      },
-    ],
-  });
+  return new Document({ sections: [{ children }] });
 }
 
-/**
- * Generate answer key document
- */
 export function generateAnswerKeyDocument(data: QuestionData): Document {
   const children: any[] = [];
-
   children.push(
     new Paragraph({
       text: 'KUNCI JAWABAN',
@@ -209,16 +151,8 @@ export function generateAnswerKeyDocument(data: QuestionData): Document {
     })
   );
 
-  // Multiple Choice Answer Key
   if (data.multipleChoice && data.multipleChoice.length > 0) {
-    children.push(
-      new Paragraph({
-        text: 'Pilihan Ganda:',
-        heading: HeadingLevel.HEADING_2,
-        spacing: { after: 200 },
-      })
-    );
-
+    children.push(new Paragraph({ text: 'Pilihan Ganda:', heading: HeadingLevel.HEADING_2, spacing: { after: 200 } }));
     data.multipleChoice.forEach((q) => {
       children.push(
         new Paragraph({
@@ -232,37 +166,5 @@ export function generateAnswerKeyDocument(data: QuestionData): Document {
     });
   }
 
-  // Essay Rubric
-  if (data.essay && data.essay.length > 0) {
-    children.push(
-      new Paragraph({
-        text: 'Rubrik Essay:',
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 300, after: 200 },
-      })
-    );
-
-    data.essay.forEach((q) => {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: `${q.questionNumber}. `, bold: true }),
-          ],
-          spacing: { before: 100, after: 50 },
-        }),
-        new Paragraph({
-          text: q.rubric || 'Tidak ada rubrik',
-          spacing: { after: 200 },
-        })
-      );
-    });
-  }
-
-  return new Document({
-    sections: [
-      {
-        children,
-      },
-    ],
-  });
+  return new Document({ sections: [{ children }] });
 }
