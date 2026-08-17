@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Fragment,
   ReactNode,
   useEffect,
   useState,
@@ -886,11 +885,13 @@ export default function DashboardLayout({
                   }
                   className="ml-2 mt-1 space-y-1 border-l border-slate-200 pl-3"
                 >
-                  {group.items.map((item) => (
-                    <Fragment key={item.href}>
-                      {renderNavItem(item, mobile)}
-                    </Fragment>
-                  ))}
+                  {group.items.map(
+                    (item) =>
+                      renderNavItem(
+                        item,
+                        mobile
+                      )
+                  )}
                 </motion.div>
               </motion.div>
             )}
@@ -1074,11 +1075,10 @@ export default function DashboardLayout({
           })}
         </div>
 
-        {menuGroups.map((group) => (
-          <Fragment key={group.id}>
-            {renderNavGroup(group)}
-          </Fragment>
-        ))}
+        {menuGroups.map(
+          (group) =>
+            renderNavGroup(group)
+        )}
       </motion.nav>
 
       {/* BOTTOM */}

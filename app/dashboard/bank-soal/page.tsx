@@ -66,12 +66,13 @@ interface BankSoalItem {
 
 const ITEMS_PER_PAGE = 10;
 
+// PERBAIKAN 1: Menambahkan 'as const' pada array easing untuk mencegah error build TypeScript
 const sectionVariants = {
   hidden: { opacity: 0, y: 18 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
   },
 };
 
@@ -80,7 +81,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
   },
 };
 
@@ -140,17 +141,18 @@ export default function BankSoalPage() {
       filtered = filtered.filter((item) => {
         const tpText = (item.tp_texts || []).map((tp) => tp.tp).join(' ').toLowerCase();
         const questionsText = [
-          ...(item.questions.multipleChoice || []),
-          ...(item.questions.essay || []),
+          ...(item.questions?.multipleChoice || []),
+          ...(item.questions?.essay || []),
         ]
           .map((q: any) => `${q.question || ''} ${q.relatedTP || q.tp || q.tp_text || ''}`)
           .join(' ')
           .toLowerCase();
 
+        // PERBAIKAN 2: Memberikan fallback `|| ''` untuk mencegah crash jika data di database null
         return (
-          item.examTitle.toLowerCase().includes(normalized) ||
-          item.subject.toLowerCase().includes(normalized) ||
-          String(item.kelas).toLowerCase().includes(normalized) ||
+          (item.examTitle || '').toLowerCase().includes(normalized) ||
+          (item.subject || '').toLowerCase().includes(normalized) ||
+          String(item.kelas || '').toLowerCase().includes(normalized) ||
           tpText.includes(normalized) ||
           questionsText.includes(normalized)
         );
@@ -248,16 +250,16 @@ export default function BankSoalPage() {
 
     const filteredBank = bankSoal.filter(
       (s) =>
-        s.subject.toLowerCase() === activeSubject.toLowerCase() &&
+        (s.subject || '').toLowerCase() === activeSubject.toLowerCase() &&
         String(s.kelas) === String(activeKelas)
     );
 
     filteredBank.forEach((soal) => {
       const soalBab = extractBab(soal.examTitle || '');
-      const mcTps = (soal.questions.multipleChoice || []).map(
+      const mcTps = (soal.questions?.multipleChoice || []).map(
         (q: any) => q.relatedTP || q.tp || q.tp_text
       );
-      const essayTps = (soal.questions.essay || []).map(
+      const essayTps = (soal.questions?.essay || []).map(
         (q: any) => q.relatedTP || q.tp || q.tp_text
       );
       const allSoalTps = [...mcTps, ...essayTps].filter(Boolean) as string[];
@@ -278,8 +280,8 @@ export default function BankSoalPage() {
     const totalQuestions = filteredSoal.reduce(
       (sum, item) =>
         sum +
-        (item.questions.multipleChoice?.length || 0) +
-        (item.questions.essay?.length || 0),
+        (item.questions?.multipleChoice?.length || 0) +
+        (item.questions?.essay?.length || 0),
       0
     );
 
@@ -310,8 +312,8 @@ export default function BankSoalPage() {
 
   const startEdit = (soal: BankSoalItem) => {
     setEditSoal(soal);
-    setEditMC(soal.questions.multipleChoice ? JSON.parse(JSON.stringify(soal.questions.multipleChoice)) : []);
-    setEditEssay(soal.questions.essay ? JSON.parse(JSON.stringify(soal.questions.essay)) : []);
+    setEditMC(soal.questions?.multipleChoice ? JSON.parse(JSON.stringify(soal.questions.multipleChoice)) : []);
+    setEditEssay(soal.questions?.essay ? JSON.parse(JSON.stringify(soal.questions.essay)) : []);
     setEditModalOpen(true);
   };
 
@@ -334,10 +336,10 @@ export default function BankSoalPage() {
       if (!res.ok) throw new Error(result.error);
 
       if (uploadDefaultTP.trim() !== '') {
-        if (result.questions.multipleChoice) {
+        if (result.questions?.multipleChoice) {
           result.questions.multipleChoice.forEach((q: any) => (q.relatedTP = uploadDefaultTP));
         }
-        if (result.questions.essay) {
+        if (result.questions?.essay) {
           result.questions.essay.forEach((q: any) => (q.relatedTP = uploadDefaultTP));
         }
       }
@@ -349,10 +351,10 @@ export default function BankSoalPage() {
         examTitle: metaTitle,
         duration: Number(metaDuration),
         difficulty: 'sedang',
-        optionsCount: result.questions.multipleChoice?.[0]
-          ? Object.keys(result.questions.multipleChoice[0].options).length
+        optionsCount: result.questions?.multipleChoice?.[0]
+          ? Object.keys(result.questions.multipleChoice[0].options || {}).length
           : 3,
-        questions: result.questions,
+        questions: result.questions || {},
         includeTP: false,
         created_at: new Date().toISOString(),
       };
@@ -430,7 +432,7 @@ export default function BankSoalPage() {
     if (!selectedSoal) return;
 
     try {
-      const doc = includeAnswerKey
+      const docData = includeAnswerKey
         ? generateAnswerKeyDocument(selectedSoal.questions)
         : generateQuestionDocument(selectedSoal.questions, {
             subject: selectedSoal.subject,
@@ -439,7 +441,7 @@ export default function BankSoalPage() {
             includeTP: showTPInDownload,
           });
 
-      const blob = await Packer.toBlob(doc);
+      const blob = await Packer.toBlob(docData);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -531,16 +533,16 @@ export default function BankSoalPage() {
 
           <div className="grid grid-cols-1 gap-4 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-3">
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm">
-              <p className="text-2xl font-black text-blue-600">{selectedSoal.questions.multipleChoice?.length || 0}</p>
+              <p className="text-2xl font-black text-blue-600">{selectedSoal.questions?.multipleChoice?.length || 0}</p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Pilihan Ganda</p>
             </div>
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm">
-              <p className="text-2xl font-black text-violet-600">{selectedSoal.questions.essay?.length || 0}</p>
+              <p className="text-2xl font-black text-violet-600">{selectedSoal.questions?.essay?.length || 0}</p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Essay / Isian</p>
             </div>
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm">
               <p className="text-2xl font-black text-emerald-600">
-                {(selectedSoal.questions.multipleChoice?.length || 0) + (selectedSoal.questions.essay?.length || 0)}
+                {(selectedSoal.questions?.multipleChoice?.length || 0) + (selectedSoal.questions?.essay?.length || 0)}
               </p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Total Soal</p>
             </div>
@@ -548,7 +550,7 @@ export default function BankSoalPage() {
 
           <div className="p-6 sm:p-8">
             <div className="space-y-8">
-              {!!selectedSoal.questions.multipleChoice?.length && (
+              {!!selectedSoal.questions?.multipleChoice?.length && (
                 <section>
                   <div className="mb-4 flex items-center justify-between rounded-2xl bg-blue-50 px-4 py-3 text-blue-700">
                     <div className="flex items-center gap-2">
@@ -607,7 +609,7 @@ export default function BankSoalPage() {
                 </section>
               )}
 
-              {!!selectedSoal.questions.essay?.length && (
+              {!!selectedSoal.questions?.essay?.length && (
                 <section>
                   <div className="mb-4 flex items-center justify-between rounded-2xl bg-violet-50 px-4 py-3 text-violet-700">
                     <div className="flex items-center gap-2">
@@ -675,18 +677,21 @@ export default function BankSoalPage() {
           </div>
         </section>
 
-        {editModalOpen && renderEditModal({
-          editSoal,
-          setEditSoal,
-          editMC,
-          setEditMC,
-          editEssay,
-          setEditEssay,
-          dynamicTPs,
-          onClose: () => setEditModalOpen(false),
-          onSave: handleSaveEditSoal,
-          loading,
-        })}
+        {/* PERBAIKAN 3: Membungkus editModal dengan AnimatePresence agar animasinya tidak putus */}
+        <AnimatePresence>
+          {editModalOpen && renderEditModal({
+            editSoal,
+            setEditSoal,
+            editMC,
+            setEditMC,
+            editEssay,
+            setEditEssay,
+            dynamicTPs,
+            onClose: () => setEditModalOpen(false),
+            onSave: handleSaveEditSoal,
+            loading,
+          })}
+        </AnimatePresence>
       </motion.div>
     );
   }
@@ -862,8 +867,8 @@ export default function BankSoalPage() {
             className="space-y-3"
           >
             {paginatedSoal.map((soal) => {
-              const mcCount = soal.questions.multipleChoice?.length || 0;
-              const essayCount = soal.questions.essay?.length || 0;
+              const mcCount = soal.questions?.multipleChoice?.length || 0;
+              const essayCount = soal.questions?.essay?.length || 0;
 
               return (
                 <motion.div
