@@ -430,7 +430,7 @@ export default function BankSoalPage() {
     if (!selectedSoal) return;
 
     try {
-      const document = includeAnswerKey
+      const doc = includeAnswerKey
         ? generateAnswerKeyDocument(selectedSoal.questions)
         : generateQuestionDocument(selectedSoal.questions, {
             subject: selectedSoal.subject,
@@ -439,7 +439,7 @@ export default function BankSoalPage() {
             includeTP: showTPInDownload,
           });
 
-      const blob = await Packer.toBlob(document);
+      const blob = await Packer.toBlob(doc);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
