@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Trash2, Edit2, Check, X, Filter, Search, ArrowRightLeft, Download, FileSpreadsheet, Zap, Split, BookOpen, Settings, Upload, Plus, FileUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { compressTP, type CompressionResult, formatCompressionResult } from '@/lib/tp-compressor';
 
@@ -894,157 +895,201 @@ export default function MyTPPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-600">Silakan login terlebih dahulu</p>
+      <div className="container mx-auto py-8 px-4">
+        <Card className="rounded-3xl border-slate-200">
+          <CardContent className="p-10 text-center">
+            <p className="text-slate-600">Silakan login terlebih dahulu</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const totalCount = savedTPs.length;
+  const originalCount = savedTPs.filter(tp => !tp.isRaporFormat).length;
+  const compressedCount = savedTPs.filter(tp => tp.isRaporFormat).length;
+  const selectedFilterCount = filteredTPs.length;
+
+  const clearFilters = () => {
+    setFilterGrade('');
+    setFilterSemester('');
+    setFilterSubject('');
+    setSearchQuery('');
+  };
+
+  const hasFilters = !!(filterGrade || filterSemester || filterSubject || searchQuery);
+
   return (
-    <div className="w-full py-8 px-4 space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">TP Tersimpan</h1>
-        <p className="mt-2 text-gray-600">Kelola semua Tujuan Pembelajaran yang telah Anda simpan</p>
-      </div>
+    <div className="w-full space-y-7 py-4 px-1 sm:px-2">
+      {/* HERO */}
+      <motion.section
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8"
+      >
+        <motion.div
+          animate={{ x: [0, 18, 0], y: [0, -10, 0], scale: [1, 1.05, 1] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl"
+        />
+        <motion.div
+          animate={{ x: [0, -16, 0], y: [0, 12, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-violet-100/40 blur-3xl"
+        />
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 bg-white rounded-t-lg">
-        <div className="flex gap-2 px-4 pt-4">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-4 py-2 font-medium rounded-t-lg border-b-2 transition-all ${
-              activeTab === 'all'
-                ? 'border-blue-600 text-blue-600 bg-blue-50'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-            title="Tampilkan semua TP"
-          >
-            📋 Semua TP ({savedTPs.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('original')}
-            className={`px-4 py-2 font-medium rounded-t-lg border-b-2 transition-all ${
-              activeTab === 'original'
-                ? 'border-blue-600 text-blue-600 bg-blue-50'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-            title="Tampilkan TP format lengkap dengan ABCD"
-          >
-            📚 Format Lengkap ({savedTPs.filter(tp => !tp.isRaporFormat).length})
-          </button>
-          <button
-            onClick={() => setActiveTab('compressed')}
-            className={`px-4 py-2 font-medium rounded-t-lg border-b-2 transition-all ${
-              activeTab === 'compressed'
-                ? 'border-blue-600 text-blue-600 bg-blue-50'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-            title="Tampilkan TP versi 100 karakter untuk rapor"
-          >
-            ✅ Format Rapor 100-char ({savedTPs.filter(tp => tp.isRaporFormat).length})
-          </button>
-        </div>
-      </div>
-
-      {/* Tab Description Cards */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          {activeTab === 'all' && (
-            <p className="text-sm text-blue-900">
-              Menampilkan <strong>{filteredTPs.length}</strong> TP dari total <strong>{savedTPs.length}</strong> yang tersimpan. Gunakan filter untuk mempersempit hasil pencarian.
-            </p>
-          )}
-          {activeTab === 'original' && (
-            <p className="text-sm text-blue-900">
-              Menampilkan <strong>{filteredTPs.length}</strong> TP dalam format lengkap dengan elemen ABCD. Format ini cocok untuk perencanaan pembelajaran detail.
-            </p>
-          )}
-          {activeTab === 'compressed' && (
-            <p className="text-sm text-blue-900">
-              Menampilkan <strong>{filteredTPs.length}</strong> TP dalam format kompres 100 karakter. Format ini optimal untuk kebutuhan rapor dan dokumentasi.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Filter & Pencarian</CardTitle>
-              <CardDescription>
-                {filteredTPs.length} dari {savedTPs.length} TP ditampilkan
-              </CardDescription>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+              <BookOpen className="h-3.5 w-3.5" />
+              Learning Goals Workspace
             </div>
-            <div className="flex gap-2">
+            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              TP Tersimpan
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              Kelola semua Tujuan Pembelajaran yang telah Anda simpan,
+              rapikan metadata, kompres ke format rapor, atau lanjutkan ke pembuatan soal.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ['Semua', totalCount, 'bg-blue-50 text-blue-700'],
+              ['Lengkap', originalCount, 'bg-violet-50 text-violet-700'],
+              ['Rapor', compressedCount, 'bg-emerald-50 text-emerald-700'],
+              ['Ditampilkan', selectedFilterCount, 'bg-slate-100 text-slate-700'],
+            ].map(([label, value, classes], index) => (
+              <motion.div
+                key={String(label)}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 + index * 0.05, duration: 0.3 }}
+                className="min-w-[96px] rounded-2xl border border-slate-100 bg-white/85 p-3.5 text-center shadow-sm backdrop-blur"
+              >
+                <p className="text-xl font-black text-slate-900">{value}</p>
+                <p className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${classes}`}>
+                  {label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* TABS */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.4 }}
+        className="rounded-[28px] border border-slate-200/80 bg-white p-2 shadow-[0_8px_28px_rgba(15,23,42,0.04)]"
+      >
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {([
+            ['all', 'Semua TP', totalCount],
+            ['original', 'Format Lengkap', originalCount],
+            ['compressed', 'Format Rapor 100-char', compressedCount],
+          ] as const).map(([tab, label, count]) => {
+            const active = activeTab === tab;
+            return (
+              <motion.button
+                key={tab}
+                type="button"
+                whileTap={{ scale: 0.985 }}
+                onClick={() => setActiveTab(tab)}
+                className={`relative flex items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-bold transition-colors ${
+                  active ? 'text-blue-700' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="mytp-tab-indicator"
+                    className="absolute inset-0 rounded-2xl bg-blue-50"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  />
+                )}
+                <span className="relative">{label}</span>
+                <span className={`relative rounded-full px-2 py-0.5 text-[10px] ${active ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {count}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.section>
+
+      {/* INFO */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.14, duration: 0.35 }}
+        className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3.5 text-sm text-blue-900 shadow-sm"
+      >
+        Menampilkan <strong>{filteredTPs.length}</strong> TP dari total <strong>{savedTPs.length}</strong> yang tersimpan. Gunakan filter untuk mempersempit hasil pencarian.
+      </motion.div>
+
+      {/* FILTER TOOLBAR */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] sm:p-6"
+      >
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Workspace</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900">Filter & Pencarian</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {filteredTPs.length} dari {savedTPs.length} TP ditampilkan
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
               <Button
-                variant="default"
                 size="sm"
                 onClick={() => setManualInputOpen(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                title="Tambah TP secara manual"
+                className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Input Manual
               </Button>
               <Button
-                variant="default"
                 size="sm"
                 onClick={() => setImportModalOpen(true)}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                title="Import TP dari file Excel"
+                className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600"
               >
-                <FileUp className="w-4 h-4 mr-2" />
+                <FileUp className="mr-2 h-4 w-4" />
                 Import XLSX
               </Button>
               {filteredTPs.length > 0 && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportToXLSX}
-                    title="Export ke Excel dengan formatting"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  <Button size="sm" variant="outline" onClick={exportToXLSX} className="rounded-xl">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Export Excel
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportToExcel}
-                    title="Export ke CSV"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
+                  <Button size="sm" variant="outline" onClick={exportToExcel} className="rounded-xl">
+                    <Download className="mr-2 h-4 w-4" />
                     Export CSV
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    title="Hapus semua TP yang ditampilkan"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
+                  <Button size="sm" variant="destructive" onClick={handleBulkDelete} className="rounded-xl">
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Hapus Semua
                   </Button>
                 </>
               )}
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Kelas</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-400">Kelas</label>
               <select
                 aria-label="Filter berdasarkan kelas"
-                className="w-full px-3 py-2 border rounded-md text-sm"
                 value={filterGrade}
                 onChange={(e) => setFilterGrade(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
               >
                 <option value="">Semua Kelas</option>
                 {uniqueGrades.map(grade => (
@@ -1052,28 +1097,28 @@ export default function MyTPPage() {
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">Semester</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-400">Semester</label>
               <select
                 aria-label="Filter berdasarkan semester"
-                className="w-full px-3 py-2 border rounded-md text-sm"
                 value={filterSemester}
                 onChange={(e) => setFilterSemester(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
               >
                 <option value="">Semua Semester</option>
                 <option value="1">Semester 1</option>
                 <option value="2">Semester 2</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">Mata Pelajaran</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-400">Mata Pelajaran</label>
               <select
                 aria-label="Filter berdasarkan mata pelajaran"
-                className="w-full px-3 py-2 border rounded-md text-sm"
                 value={filterSubject}
                 onChange={(e) => setFilterSubject(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
               >
                 <option value="">Semua Mapel</option>
                 {uniqueSubjects.map(subject => (
@@ -1081,225 +1126,250 @@ export default function MyTPPage() {
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">Cari TP</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-slate-400">Cari TP</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  type="text"
-                  placeholder="Cari..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  placeholder="Cari TP, bab, atau CP..."
+                  className="h-[46px] rounded-2xl border-slate-200 bg-slate-50 pl-10 focus:bg-white"
                 />
               </div>
             </div>
           </div>
-          
-          {(filterGrade || filterSemester || filterSubject || searchQuery) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setFilterGrade('');
-                setFilterSemester('');
-                setFilterSubject('');
-                setSearchQuery('');
-              }}
-            >
-              <X className="w-4 h-4 mr-2" />
-              Reset Filter
-            </Button>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Content */}
-      {loading ? (
-        <Card>
-          <CardContent className="p-8 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            <p>Memuat TP tersimpan...</p>
-          </CardContent>
-        </Card>
-      ) : error ? (
-        <Card>
-          <CardContent className="p-8 text-center text-red-600">
-            {error}
-          </CardContent>
-        </Card>
-      ) : filteredTPs.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-gray-500">
-            {savedTPs.length === 0 
-              ? 'Belum ada TP tersimpan. Generate TP baru di menu Generate TP.'
-              : 'Tidak ada TP yang sesuai dengan filter'}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Object.entries(groupedTPs)
-            .sort(([, dataA], [, dataB]) => dataA.semester - dataB.semester)
-            .map(([key, data]) => (
-            <Card key={key}>
-              <CardHeader>
-                <CardTitle>
-                  Kelas {data.grade} - Semester {data.semester}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {Object.entries(data.chapters).map(([chapter, tps]: [string, any]) => (
-                  <div key={chapter} className="border rounded-lg p-4">
-                    <h4 className="font-semibold text-lg mb-3">{chapter}</h4>
-                    <div className="space-y-2">
-                      {tps.map((tp: SavedTP) => (
-                        <div key={tp.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded border">
-                          {editingId === tp.id ? (
-                            <>
-                              <textarea
-                                value={editText}
-                                onChange={(e) => setEditText(e.target.value)}
-                                placeholder="Masukkan teks TP yang diubah"
-                                aria-label="Edit teks TP"
-                                className="flex-1 p-2 border rounded text-sm"
-                                rows={3}
-                              />
-                              <div className="flex gap-1">
-                                <Button size="sm" onClick={() => saveEdit(tp.id)}>
-                                  <Check className="w-4 h-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={cancelEdit}>
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="flex-1">
-                                <p className="text-sm">{tp.tp}</p>
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  {tp.subject && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                      {tp.subject}
-                                    </span>
-                                  )}
-                                  {tp.isRaporFormat ? (
-                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
-                                      📋 Format Rapor (100 char)
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium">
-                                      📚 Format Lengkap ABCD
-                                    </span>
-                                  )}
-                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
-                                    {tp.tp.length} karakter
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Dibuat: {new Date(tp.created_at).toLocaleDateString('id-ID', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openEditMetadata(tp)}
-                                    title="Edit kelas, mapel, semester, bab"
-                                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                                  >
-                                    <Settings className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)}
-                                    title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`}
-                                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  >
-                                    <ArrowRightLeft className="w-4 h-4" />
-                                    <span className="ml-1 text-xs">S{tp.semester === 1 ? 2 : 1}</span>
-                                  </Button>
-                                </div>
-                                <div className="flex gap-1">{tp.isRaporFormat && (
-                                  tp.tpOriginal ? (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setSelectedTPForView(tp);
-                                        setViewFullFormatOpen(true);
-                                      }}
-                                      title="Lihat format lengkap ABCD"
-                                      className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                    >
-                                      <BookOpen className="w-4 h-4" />
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setSelectedTPForRestore(tp);
-                                        setRestoreOriginalOpen(true);
-                                        setRestoreOriginalText('');
-                                      }}
-                                      title="Pulihkan format ABCD original"
-                                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                    >
-                                      <BookOpen className="w-4 h-4" />
-                                      <span className="text-xs ml-1">+</span>
-                                    </Button>
-                                  )
-                                )}
-                                {!tp.isRaporFormat && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openCompressModal(tp)}
-                                    title="Kompresi ke format rapor 100 karakter"
-                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                  >
-                                    <Zap className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => startEdit(tp)}
-                                  title="Edit teks TP"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDelete(tp.id, tp.tp)}
-                                  title="Hapus TP"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                              </div>
-                            </>
-                          )}
+          {hasFilters && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">Filter aktif</span>
+              {filterGrade && <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">Kelas {filterGrade}</span>}
+              {filterSemester && <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700">Semester {filterSemester}</span>}
+              {filterSubject && <span className="max-w-[220px] truncate rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">{filterSubject}</span>}
+              {searchQuery && <span className="max-w-[220px] truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">"{searchQuery}"</span>}
+              <Button size="sm" variant="ghost" onClick={clearFilters} className="ml-auto rounded-xl text-slate-500">
+                <X className="mr-1.5 h-3.5 w-3.5" />
+                Reset Filter
+              </Button>
+            </div>
+          )}
+        </div>
+      </motion.section>
+
+      {/* DATA */}
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.section
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="rounded-[30px] border border-slate-200 bg-white p-10 shadow-sm"
+          >
+            <div className="flex flex-col items-center justify-center gap-4 text-center">
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800">Memuat TP tersimpan...</p>
+                <p className="mt-1 text-xs text-slate-400">Mengambil data Tujuan Pembelajaran dari database.</p>
+              </div>
+            </div>
+          </motion.section>
+        ) : error ? (
+          <motion.section
+            key="error"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[30px] border border-red-200 bg-red-50 p-8 text-center shadow-sm"
+          >
+            <p className="font-bold text-red-700">Gagal memuat TP</p>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-red-600">{error}</p>
+            <Button variant="outline" className="mt-4 rounded-xl" onClick={loadSavedTPs}>Coba Lagi</Button>
+          </motion.section>
+        ) : filteredTPs.length === 0 ? (
+          <motion.section
+            key="empty"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[30px] border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+              <BookOpen className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-lg font-black text-slate-900">
+              {savedTPs.length === 0 ? 'Belum ada TP tersimpan' : 'Tidak ada TP yang sesuai'}
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              {savedTPs.length === 0
+                ? 'Generate TP baru di menu Generate TP atau tambahkan TP secara manual.'
+                : 'Coba ubah filter atau kata pencarian untuk melihat hasil lainnya.'}
+            </p>
+            {savedTPs.length === 0 ? (
+              <Button className="mt-5 rounded-xl" onClick={() => window.location.href = '/dashboard/generate-tp'}>
+                <Plus className="mr-2 h-4 w-4" />
+                Generate TP Baru
+              </Button>
+            ) : hasFilters ? (
+              <Button variant="outline" className="mt-5 rounded-xl" onClick={clearFilters}>
+                Reset Filter
+              </Button>
+            ) : null}
+          </motion.section>
+        ) : (
+          <motion.div
+            key="content"
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+            className="grid grid-cols-1 gap-5 2xl:grid-cols-2"
+          >
+            {Object.entries(groupedTPs)
+              .sort(([, a], [, b]) => {
+                const dataA = a as any;
+                const dataB = b as any;
+                return dataA.semester - dataB.semester || String(dataA.grade).localeCompare(String(dataB.grade), undefined, { numeric: true });
+              })
+              .map(([key, data]) => {
+                const group = data as any;
+                const chapterEntries = Object.entries(group.chapters) as [string, SavedTP[]][];
+                const groupCount = chapterEntries.reduce((sum, [, tps]) => sum + tps.length, 0);
+
+                return (
+                  <motion.section
+                    key={key}
+                    variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}
+                    className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
+                  >
+                    <div className="border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                            <BookOpen className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Learning Goals</p>
+                            <h2 className="mt-1 text-lg font-black text-slate-900">Kelas {group.grade} · Semester {group.semester}</h2>
+                          </div>
                         </div>
+                        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-bold text-blue-700">{groupCount} TP</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-5">
+                      {chapterEntries.map(([chapter, tps]) => (
+                        <motion.div
+                          key={chapter}
+                          whileHover={{ y: -2 }}
+                          transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                          className="overflow-hidden rounded-[24px] border border-slate-200"
+                        >
+                          <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3.5">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-500 shadow-sm">{tps.length}</div>
+                              <div className="min-w-0">
+                                <h3 className="truncate text-sm font-bold text-slate-800">{chapter}</h3>
+                                <p className="mt-0.5 text-[10px] text-slate-400">Tujuan Pembelajaran</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="divide-y divide-slate-100">
+                            {tps.map((tp, tpIndex) => (
+                              <motion.div
+                                key={tp.id}
+                                whileHover={{ backgroundColor: 'rgba(248,250,252,0.85)' }}
+                                className="group p-4"
+                              >
+                                {editingId === tp.id ? (
+                                  <div className="space-y-3">
+                                    <textarea
+                                      value={editText}
+                                      onChange={(e) => setEditText(e.target.value)}
+                                      placeholder="Masukkan teks TP yang diubah"
+                                      aria-label="Edit teks TP"
+                                      className="min-h-[120px] w-full resize-y rounded-2xl border border-slate-200 bg-white p-3 text-sm leading-6 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                                    />
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button size="sm" onClick={() => saveEdit(tp.id)} className="rounded-xl">
+                                        <Check className="mr-1.5 h-4 w-4" /> Simpan
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={cancelEdit} className="rounded-xl">
+                                        <X className="mr-1.5 h-4 w-4" /> Batal
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-4">
+                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[10px] font-black text-slate-500">{String(tpIndex + 1).padStart(2, '0')}</div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm leading-6 text-slate-700">{tp.tp}</p>
+                                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                                        {tp.subject && (
+                                          <span className="max-w-[220px] truncate rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">{tp.subject}</span>
+                                        )}
+                                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${tp.isRaporFormat ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>
+                                          {tp.isRaporFormat ? 'Format Rapor 100-char' : 'Format Lengkap ABCD'}
+                                        </span>
+                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">{tp.tp.length} karakter</span>
+                                      </div>
+                                      <p className="mt-2 text-[10px] text-slate-400">
+                                        Dibuat: {new Date(tp.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                      </p>
+                                    </div>
+
+                                    <div className="flex shrink-0 flex-wrap justify-end gap-1 opacity-100 sm:opacity-70 sm:transition-opacity sm:group-hover:opacity-100">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => window.location.href = `/dashboard/generate-soal?tpId=${encodeURIComponent(tp.id)}`}
+                                        title="Buat soal dari TP"
+                                        className="rounded-xl text-blue-600 hover:bg-blue-50"
+                                      >
+                                        <span className="text-base">🧠</span>
+                                      </Button>
+                                      <Button size="icon" variant="ghost" onClick={() => openEditMetadata(tp)} title="Edit metadata" className="rounded-xl text-indigo-600 hover:bg-indigo-50">
+                                        <Settings className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="icon" variant="ghost" onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)} title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`} className="rounded-xl text-cyan-600 hover:bg-cyan-50">
+                                        <ArrowRightLeft className="h-4 w-4" />
+                                      </Button>
+                                      {tp.isRaporFormat && (tp.tpOriginal ? (
+                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForView(tp); setViewFullFormatOpen(true); }} title="Lihat format lengkap ABCD" className="rounded-xl text-violet-600 hover:bg-violet-50">
+                                          <BookOpen className="h-4 w-4" />
+                                        </Button>
+                                      ) : (
+                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForRestore(tp); setRestoreOriginalOpen(true); setRestoreOriginalText(''); }} title="Tambahkan format ABCD original" className="rounded-xl text-amber-600 hover:bg-amber-50">
+                                          <BookOpen className="h-4 w-4" />
+                                        </Button>
+                                      ))}
+                                      {!tp.isRaporFormat && (
+                                        <Button size="icon" variant="ghost" onClick={() => openCompressModal(tp)} title="Kompres ke format rapor" className="rounded-xl text-orange-600 hover:bg-orange-50">
+                                          <Zap className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      <Button size="icon" variant="ghost" onClick={() => startEdit(tp)} title="Edit teks TP" className="rounded-xl text-slate-500 hover:bg-slate-100">
+                                        <Edit2 className="h-4 w-4" />
+                                      </Button>
+                                      <Button size="icon" variant="ghost" onClick={() => handleDelete(tp.id, tp.tp)} title="Hapus TP" className="rounded-xl text-red-500 hover:bg-red-50">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </motion.div>
+                            ))}
+                          </div>
+                        </motion.div>
                       ))}
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </motion.section>
+                );
+              })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Compress Modal */}
       {compressModalOpen && selectedTPForCompress && (

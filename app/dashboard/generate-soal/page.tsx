@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Download, FileText, Save } from 'lucide-react';
 import { generateQuestionsAction } from './actions';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Packer } from 'docx';
 import { generateQuestionDocument, generateAnswerKeyDocument, QuestionData } from '@/lib/docx-utils';
 import AIModelSelector from '@/components/AIModelSelector';
@@ -345,814 +346,1274 @@ export default function GenerateSoalPage() {
     }
   };
 
-  const groupedByChapter = filteredLearningGoals.reduce((acc, lg) => {
-    if (!acc[lg.chapter]) {
-      acc[lg.chapter] = [];
-    }
-    acc[lg.chapter].push(lg);
-    return acc;
-  }, {} as Record<string, LearningGoal[]>);
 
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Generate Soal</h1>
-        <p className="mt-2 text-gray-600">Buat soal otomatis dari Tujuan Pembelajaran</p>
-      </div>
+  /* =========================================================
+     REDESIGNED UI HELPERS
+  ========================================================= */
 
-      {!generatedQuestions ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6">
-          {/* TP Selection */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Pilih Tujuan Pembelajaran</CardTitle>
-                <CardDescription>Pilih TP yang akan dijadikan dasar pembuatan soal</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!subject || !kelas ? (
-                  <p className="text-center text-gray-500 py-8">
-                    Pilih Mata Pelajaran dan Kelas terlebih dahulu untuk melihat TP yang tersedia.
-                  </p>
-                ) : filteredLearningGoals.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">
-                    Tidak ada Tujuan Pembelajaran untuk {subject} Kelas {kelas}. Silakan generate TP terlebih dahulu.
-                  </p>
-                ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {Object.entries(groupedByChapter).map(([chapter, goals]) => (
-                      <div key={chapter} className="border rounded-lg p-4">
-                        <h4 className="font-semibold mb-3">{chapter}</h4>
-                        <div className="space-y-2">
-                          {goals.map((goal) => (
-                            <div key={goal.id} className="flex items-start gap-3">
-                              <input
-                                type="checkbox"
-                                checked={selectedTPs.includes(goal.id)}
-                                onChange={() => toggleTP(goal.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1">
-                                <p className="text-sm">{goal.tp}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Semester {goal.semester} - Kelas {goal.grade}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+  const reduceMotion = useReducedMotion();
+
+  const groupedByChapter = useMemo(() => {
+    return filteredLearningGoals.reduce((acc, lg) => {
+      if (!acc[lg.chapter]) {
+        acc[lg.chapter] = [];
+      }
+      acc[lg.chapter].push(lg);
+      return acc;
+    }, {} as Record<string, LearningGoal[]>);
+  }, [filteredLearningGoals]);
+
+  const selectedGoalObjects = useMemo(() => {
+    return filteredLearningGoals.filter((lg) =>
+      selectedTPs.includes(lg.id)
+    );
+  }, [filteredLearningGoals, selectedTPs]);
+
+  const totalQuestionCount =
+    (mcCount || 0) +
+    (essayCount || 0) +
+    (uraianCount || 0);
+
+  const totalConfiguredWeight =
+    (mcCount || 0) * (mcWeight || 0) +
+    (essayCount || 0) * (essayWeight || 0) +
+    (uraianCount || 0) * (uraianWeight || 0);
+
+  const distributionPGTotal =
+    mudahCount + sedangCount + sulitCount;
+
+  const distributionIsianTotal =
+    mudahIsianCount + sedangIsianCount + sulitIsianCount;
+
+  const distributionUraianTotal =
+    mudahUraianCount + sedangUraianCount + sulitUraianCount;
+
+  const distributionValid =
+    !useDistribution ||
+    (
+      distributionPGTotal === mcCount &&
+      distributionIsianTotal === essayCount &&
+      distributionUraianTotal === uraianCount
+    );
+
+  const canGenerate =
+    Boolean(subject) &&
+    Boolean(kelas) &&
+    Boolean(examTitle.trim()) &&
+    selectedTPs.length > 0 &&
+    totalQuestionCount > 0 &&
+    distributionValid;
+
+  const panelVariants = {
+    hidden: {
+      opacity: 0,
+      y: 18,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.45,
+        ease: [0.16, 1, 0.3, 1],
+      },
+    },
+  };
+
+  const staggerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.045,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: {
+      opacity: 0,
+      y: 10,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: [0.16, 1, 0.3, 1],
+      },
+    },
+  };
+
+  const renderConfigNumber = (
+    label: string,
+    value: number,
+    setter: (value: number) => void,
+    min = 0,
+    help?: string
+  ) => (
+    <div className="space-y-2">
+      <label className="text-xs font-semibold text-slate-600">
+        {label}
+      </label>
+      <Input
+        type="number"
+        min={min}
+        value={value}
+        onChange={(e) => setter(Number(e.target.value))}
+        className="h-11 rounded-xl border-slate-200 bg-slate-50/80 focus:bg-white"
+      />
+      {help && (
+        <p className="text-[10px] leading-4 text-slate-400">
+          {help}
+        </p>
+      )}
+    </div>
+  );
+
+  const renderDistributionField = (
+    label: string,
+    value: number,
+    setter: (value: number) => void,
+    max: number
+  ) => (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-semibold text-slate-600">
+        {label}
+      </label>
+      <Input
+        type="number"
+        min={0}
+        max={max}
+        value={value}
+        onChange={(e) => setter(Number(e.target.value))}
+        className="h-10 rounded-xl border-slate-200 bg-white"
+      />
+    </div>
+  );
+
+  const renderQuestionCard = (q: any, type: 'PG' | 'Essay', index: number) => {
+    const wordCount = q.question?.split?.(' ').length || 0;
+    const hasImageDesc =
+      q.imageDescription &&
+      q.imageDescription.trim() !== '';
+
+    const isPG = type === 'PG';
+
+    return (
+      <motion.div
+        key={`${type}-${q.questionNumber ?? index}`}
+        variants={reduceMotion ? undefined : itemVariants}
+        whileHover={
+          reduceMotion
+            ? undefined
+            : {
+                y: -2,
+              }
+        }
+        className={`rounded-2xl border bg-white p-5 shadow-sm ${
+          isPG
+            ? 'border-blue-100'
+            : 'border-violet-100'
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-xl ${
+                isPG
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'bg-violet-50 text-violet-600'
+              }`}
+            >
+              {isPG ? 'A' : 'B'}
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                {isPG ? 'Pilihan Ganda' : 'Essay / Isian'}
+              </p>
+              <p className="text-sm font-bold text-slate-800">
+                Soal {q.questionNumber}
+              </p>
+            </div>
           </div>
 
-          {/* Configuration */}
+          <div className="flex flex-wrap gap-2">
+            {hasImageDesc && (
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                🖼️ Gambar
+              </span>
+            )}
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                wordCount <= (isPG ? 10 : 15)
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : wordCount <= (isPG ? 15 : 20)
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-red-50 text-red-700'
+              }`}
+            >
+              {wordCount} kata
+            </span>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-7 text-slate-700">
+          {q.question}
+        </p>
+
+        {hasImageDesc && (
+          <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              Tempat gambar / ilustrasi
+            </p>
+            <p className="mt-2 text-sm italic leading-6 text-slate-600">
+              {q.imageDescription}
+            </p>
+          </div>
+        )}
+
+        {isPG ? (
+          <div className="mt-4 space-y-2">
+            {Object.entries(q.options || {}).map(([key, value]) => {
+              const isCorrect = key === q.correctAnswer;
+
+              return (
+                <div
+                  key={key}
+                  className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 ${
+                    isCorrect
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : 'border-slate-200 bg-slate-50/70'
+                  }`}
+                >
+                  <span
+                    className={`min-w-[24px] font-bold ${
+                      isCorrect
+                        ? 'text-emerald-700'
+                        : 'text-slate-500'
+                    }`}
+                  >
+                    {key}.
+                  </span>
+                  <span
+                    className={`text-sm leading-6 ${
+                      isCorrect
+                        ? 'text-emerald-800'
+                        : 'text-slate-700'
+                    }`}
+                  >
+                    {String(value)}
+                  </span>
+                  {isCorrect && (
+                    <span className="ml-auto font-bold text-emerald-600">
+                      ✓
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            {q.rubric && (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-700">
+                  Rubrik penilaian
+                </p>
+                <p className="mt-2 text-sm leading-6 text-amber-900">
+                  {q.rubric}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-400">
+          <span>
+            🎯 {q.relatedTP ? `TP: ${q.relatedTP}` : 'TP terkait tersedia'}
+          </span>
+          <span className="font-semibold text-slate-500">
+            Bobot {q.weight}
+          </span>
+          {isPG && (
+            <span className="font-semibold text-emerald-600">
+              Kunci: {q.correctAnswer}
+            </span>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  if (!user) {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center">
+        <p className="text-sm text-slate-500">
+          Silakan login terlebih dahulu.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={reduceMotion ? undefined : { opacity: 1 }}
+      className="space-y-7"
+    >
+      <motion.section
+        variants={reduceMotion ? undefined : panelVariants}
+        initial={reduceMotion ? false : 'hidden'}
+        animate={reduceMotion ? undefined : 'visible'}
+        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8"
+      >
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl" />
+        <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-violet-100/40 blur-3xl" />
+
+        <div className="relative grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr] xl:items-end">
           <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Konfigurasi Soal</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* AI Model Selector */}
-                <div className="relative z-10">
-                  <AIModelSelector
-                    onModelChange={(model) => setSelectedModel(model)}
-                    defaultModel={selectedModel}
-                  />
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+              <span>✨</span>
+              AI Assessment Workspace
+            </div>
+
+            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              Generate Soal
+              <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+                dari Tujuan Pembelajaran
+              </span>
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
+              Pilih TP, atur karakteristik soal, lalu biarkan AI menyusun
+              assessment yang siap direview dan disimpan ke Bank Soal.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <p className="text-2xl font-black text-slate-950">
+                {selectedTPs.length}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                TP dipilih
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <p className="text-2xl font-black text-blue-600">
+                {totalQuestionCount}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Total soal
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+              <p className="text-2xl font-black text-violet-600">
+                {duration}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Menit
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {!generatedQuestions ? (
+        <>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <motion.section
+              variants={reduceMotion ? undefined : panelVariants}
+              initial={reduceMotion ? false : 'hidden'}
+              animate={reduceMotion ? undefined : 'visible'}
+              className="rounded-[30px] border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)]"
+            >
+              <div className="border-b border-slate-100 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                      Step 01
+                    </p>
+                    <h2 className="mt-1 text-xl font-black text-slate-900">
+                      Pilih Tujuan Pembelajaran
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Pilih satu atau beberapa TP sebagai sumber soal.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
+                    {selectedTPs.length} dipilih
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Mata Pelajaran
+                    </label>
+                    <select
+                      aria-label="Mata Pelajaran"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                    >
+                      <option value="">Pilih Mata Pelajaran</option>
+                      {availableSubjects.map((subj) => (
+                        <option key={subj} value={subj}>
+                          {subj}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Kelas
+                    </label>
+                    <select
+                      aria-label="Kelas"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                      value={kelas}
+                      onChange={(e) => setKelas(e.target.value)}
+                    >
+                      <option value="">Pilih Kelas</option>
+                      {availableGrades.map((grade) => (
+                        <option key={grade} value={grade}>
+                          Kelas {grade}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Mata Pelajaran *</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                  >
-                    <option value="">Pilih Mata Pelajaran</option>
-                    {availableSubjects.map((subj) => (
-                      <option key={subj} value={subj}>
-                        {subj}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Kelas *</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={kelas}
-                    onChange={(e) => setKelas(e.target.value)}
-                  >
-                    <option value="">Pilih Kelas</option>
-                    {availableGrades.map((grade) => (
-                      <option key={grade} value={grade}>
-                        Kelas {grade}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Judul Ujian *</label>
-                  <Input
-                    placeholder="Contoh: Ulangan Harian Bab 1"
-                    value={examTitle}
-                    onChange={(e) => setExamTitle(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tingkat Kesulitan</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as 'mudah' | 'sedang' | 'sulit')}
-                    disabled={useDistribution}
-                  >
-                    <option value="mudah">Mudah</option>
-                    <option value="sedang">Sedang</option>
-                    <option value="sulit">Sulit</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {useDistribution ? 'Nonaktif saat menggunakan distribusi tingkat kesukaran' : 'Semua soal akan menggunakan tingkat kesukaran ini'}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Waktu Pengerjaan (menit)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                  />
-                </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Pilihan Ganda</h4>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-sm mb-1">Jumlah Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={mcCount}
-                        onChange={(e) => setMcCount(Number(e.target.value))}
-                      />
+                {!subject || !kelas ? (
+                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
+                      📚
                     </div>
+                    <p className="mt-4 text-sm font-bold text-slate-700">
+                      Pilih mapel dan kelas terlebih dahulu
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Setelah itu daftar TP yang sesuai akan tampil di sini.
+                    </p>
+                  </div>
+                ) : filteredLearningGoals.length === 0 ? (
+                  <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-8 text-center">
+                    <p className="text-sm font-bold text-amber-900">
+                      Belum ada TP untuk {subject} · Kelas {kelas}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-800/70">
+                      Generate TP terlebih dahulu pada menu Generate TP.
+                    </p>
+                  </div>
+                ) : (
+                  <motion.div
+                    variants={reduceMotion ? undefined : staggerVariants}
+                    initial={reduceMotion ? false : 'hidden'}
+                    animate={reduceMotion ? undefined : 'visible'}
+                    className="max-h-[620px] space-y-4 overflow-y-auto pr-1"
+                  >
+                    {Object.entries(groupedByChapter).map(
+                      ([chapter, goals]) => (
+                        <motion.div
+                          key={chapter}
+                          variants={reduceMotion ? undefined : itemVariants}
+                          className="overflow-hidden rounded-[24px] border border-slate-200"
+                        >
+                          <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3">
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">
+                                {chapter}
+                              </p>
+                              <p className="mt-0.5 text-[10px] text-slate-400">
+                                {goals.length} TP
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const ids = goals.map((g) => g.id);
+                                const allSelected = ids.every((id) =>
+                                  selectedTPs.includes(id)
+                                );
+
+                                setSelectedTPs((prev) =>
+                                  allSelected
+                                    ? prev.filter((id) => !ids.includes(id))
+                                    : Array.from(new Set([...prev, ...ids]))
+                                );
+                              }}
+                              className="rounded-xl bg-white px-3 py-2 text-[10px] font-bold text-blue-600 shadow-sm transition hover:bg-blue-50"
+                            >
+                              {goals.every((g) =>
+                                selectedTPs.includes(g.id)
+                              )
+                                ? 'Batalkan Bab'
+                                : 'Pilih Bab'}
+                            </button>
+                          </div>
+
+                          <div className="divide-y divide-slate-100 bg-white">
+                            {goals.map((goal) => {
+                              const checked = selectedTPs.includes(goal.id);
+
+                              return (
+                                <motion.label
+                                  key={goal.id}
+                                  whileHover={
+                                    reduceMotion
+                                      ? undefined
+                                      : { backgroundColor: '#F8FAFC' }
+                                  }
+                                  className="flex cursor-pointer items-start gap-3 p-4"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleTP(goal.id)}
+                                    className="mt-1 h-4 w-4 accent-blue-600"
+                                  />
+
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm leading-6 text-slate-700">
+                                      {goal.tp}
+                                    </p>
+
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-500">
+                                        Semester {goal.semester}
+                                      </span>
+
+                                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
+                                        Kelas {goal.grade}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {checked && (
+                                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                                      ✓ Dipilih
+                                    </span>
+                                  )}
+                                </motion.label>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )
+                    )}
+                  </motion.div>
+                )}
+              </div>
+            </motion.section>
+
+            <motion.section
+              variants={reduceMotion ? undefined : panelVariants}
+              initial={reduceMotion ? false : 'hidden'}
+              animate={reduceMotion ? undefined : 'visible'}
+              transition={{ delay: 0.08 }}
+              className="space-y-6"
+            >
+              <div className="rounded-[30px] border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+                <div className="border-b border-slate-100 p-6">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <label className="block text-sm mb-1">Bobot per Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={mcWeight}
-                        onChange={(e) => setMcWeight(Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Jumlah Opsi Jawaban</label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={optionsCount}
-                        onChange={(e) => setOptionsCount(Number(e.target.value) as 3 | 4 | 5)}
-                      >
-                        <option value={3}>3 Opsi (A, B, C)</option>
-                        <option value={4}>4 Opsi (A, B, C, D)</option>
-                        <option value={5}>5 Opsi (A, B, C, D, E)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Kualitas Pengecoh (Distractor)</label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={distractorQuality}
-                        onChange={(e) => setDistractorQuality(e.target.value as 'low' | 'medium' | 'high')}
-                      >
-                        <option value="low">Rendah - Pengecoh cukup berbeda</option>
-                        <option value="medium">Sedang - Pengecoh mirip strukturnya</option>
-                        <option value="high">Tinggi - Pengecoh sangat plausible (HOTS)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Kualitas tinggi cocok untuk soal sulit, membuat pengecoh lebih menantang
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                        Step 02
+                      </p>
+                      <h2 className="mt-1 text-xl font-black text-slate-900">
+                        Konfigurasi Soal
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Atur model AI, format, tingkat kesulitan, dan bobot.
                       </p>
                     </div>
-                    
-                    <div className="border-t pt-3 mt-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <input
-                          type="checkbox"
-                          checked={useDistribution}
-                          onChange={(e) => setUseDistribution(e.target.checked)}
-                          id="useDistribution"
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor="useDistribution" className="text-sm font-medium">
-                          Gunakan Distribusi Tingkat Kesukaran
-                        </label>
+
+                    <div className="rounded-2xl bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">
+                      {totalQuestionCount} soal
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 p-6">
+                  <div className="rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
+                    <div className="mb-3 text-xs font-bold uppercase tracking-[0.1em] text-violet-700">
+                      AI Model
+                    </div>
+                    <div className="relative z-10">
+                      <AIModelSelector
+                        onModelChange={(model) => setSelectedModel(model)}
+                        defaultModel={selectedModel}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
+                      Judul Ujian *
+                    </label>
+                    <Input
+                      placeholder="Contoh: Ulangan Harian Bab 1"
+                      value={examTitle}
+                      onChange={(e) => setExamTitle(e.target.value)}
+                      className="h-11 rounded-xl border-slate-200 bg-slate-50/80 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
+                        Tingkat Kesulitan
+                      </label>
+                      <select
+                        value={difficulty}
+                        onChange={(e) =>
+                          setDifficulty(
+                            e.target.value as 'mudah' | 'sedang' | 'sulit'
+                          )
+                        }
+                        disabled={useDistribution}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
+                      >
+                        <option value="mudah">Mudah</option>
+                        <option value="sedang">Sedang</option>
+                        <option value="sulit">Sulit</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-400">
+                        Durasi
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={duration}
+                        onChange={(e) => setDuration(Number(e.target.value))}
+                        className="h-11 rounded-xl border-slate-200 bg-slate-50/80 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          Pilihan Ganda
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          Soal objektif dengan opsi jawaban
+                        </p>
                       </div>
-                      
-                      {useDistribution && (
-                        <div className="space-y-3 bg-blue-50 p-3 rounded-md">
-                          <p className="text-xs text-blue-700 mb-2">
-                            Atur distribusi tingkat kesukaran untuk Pilihan Ganda dan Isian
-                          </p>
-                          
-                          {/* PG Distribution */}
-                          <div className="bg-white p-3 rounded border">
-                            <h5 className="font-medium text-sm mb-2">📝 Distribusi Pilihan Ganda</h5>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Mudah (C1-C2: Hafalan/Faktual)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={mcCount}
-                                  value={mudahCount}
-                                  onChange={(e) => setMudahCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sedang (C3: Aplikasi Prosedural)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={mcCount}
-                                  value={sedangCount}
-                                  onChange={(e) => setSedangCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sulit (C4-C6: HOTS/Analisis)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={mcCount}
-                                  value={sulitCount}
-                                  onChange={(e) => setSulitCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs pt-2 border-t">
-                                <span className="font-medium">Total PG:</span>
-                                <span className={
-                                  mudahCount + sedangCount + sulitCount === mcCount
-                                    ? "text-green-600 font-bold"
-                                    : "text-red-600 font-bold"
-                                }>
-                                  {mudahCount + sedangCount + sulitCount} / {mcCount}
-                                </span>
-                              </div>
-                              
-                              {mudahCount + sedangCount + sulitCount !== mcCount && (
-                                <p className="text-xs text-red-600">
-                                  ⚠️ Total harus sama dengan jumlah soal PG ({mcCount})
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Isian Distribution */}
-                          <div className="bg-white p-3 rounded border">
-                            <h5 className="font-medium text-sm mb-2">✏️ Distribusi Isian Singkat</h5>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Mudah (C1-C2: Hafalan/Faktual)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={essayCount}
-                                  value={mudahIsianCount}
-                                  onChange={(e) => setMudahIsianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sedang (C3: Aplikasi Prosedural)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={essayCount}
-                                  value={sedangIsianCount}
-                                  onChange={(e) => setSedangIsianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sulit (C4-C6: HOTS/Analisis)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={essayCount}
-                                  value={sulitIsianCount}
-                                  onChange={(e) => setSulitIsianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs pt-2 border-t">
-                                <span className="font-medium">Total Isian:</span>
-                                <span className={
-                                  mudahIsianCount + sedangIsianCount + sulitIsianCount === essayCount
-                                    ? "text-green-600 font-bold"
-                                    : "text-red-600 font-bold"
-                                }>
-                                  {mudahIsianCount + sedangIsianCount + sulitIsianCount} / {essayCount}
-                                </span>
-                              </div>
-                              
-                              {mudahIsianCount + sedangIsianCount + sulitIsianCount !== essayCount && (
-                                <p className="text-xs text-red-600">
-                                  ⚠️ Total harus sama dengan jumlah soal Isian ({essayCount})
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Uraian Distribution */}
-                          <div className="bg-white p-3 rounded border">
-                            <h5 className="font-medium text-sm mb-2">📝 Distribusi Uraian/Essay</h5>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Mudah (C1-C2: Hafalan/Faktual)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={uraianCount}
-                                  value={mudahUraianCount}
-                                  onChange={(e) => setMudahUraianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sedang (C3: Aplikasi Prosedural)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={uraianCount}
-                                  value={sedangUraianCount}
-                                  onChange={(e) => setSedangUraianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-xs mb-1">
-                                  Sulit (C4-C6: HOTS/Analisis)
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={uraianCount}
-                                  value={sulitUraianCount}
-                                  onChange={(e) => setSulitUraianCount(Number(e.target.value))}
-                                  className="bg-white"
-                                />
-                              </div>
-                              
-                              <div className="flex items-center justify-between text-xs pt-2 border-t">
-                                <span className="font-medium">Total Uraian:</span>
-                                <span className={
-                                  mudahUraianCount + sedangUraianCount + sulitUraianCount === uraianCount
-                                    ? "text-green-600 font-bold"
-                                    : "text-red-600 font-bold"
-                                }>
-                                  {mudahUraianCount + sedangUraianCount + sulitUraianCount} / {uraianCount}
-                                </span>
-                              </div>
-                              
-                              {mudahUraianCount + sedangUraianCount + sulitUraianCount !== uraianCount && (
-                                <p className="text-xs text-red-600">
-                                  ⚠️ Total harus sama dengan jumlah soal Uraian ({uraianCount})
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Grand Total */}
-                          <div className="bg-green-50 p-2 rounded text-center">
-                            <p className="text-sm font-bold text-green-800">
-                              Total Keseluruhan: {mudahCount + sedangCount + sulitCount + mudahIsianCount + sedangIsianCount + sulitIsianCount + mudahUraianCount + sedangUraianCount + sulitUraianCount} soal
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              PG: {mudahCount + sedangCount + sulitCount} | Isian: {mudahIsianCount + sedangIsianCount + sulitIsianCount} | Uraian: {mudahUraianCount + sedangUraianCount + sulitUraianCount}
-                            </p>
-                          </div>
-                        </div>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">
+                        {mcCount} soal
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      {renderConfigNumber(
+                        'Jumlah',
+                        mcCount,
+                        setMcCount,
+                        0
+                      )}
+                      {renderConfigNumber(
+                        'Bobot / soal',
+                        mcWeight,
+                        setMcWeight,
+                        0
+                      )}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Opsi jawaban
+                        </label>
+                        <select
+                          value={optionsCount}
+                          onChange={(e) =>
+                            setOptionsCount(
+                              Number(e.target.value) as 3 | 4 | 5
+                            )
+                          }
+                          className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm"
+                        >
+                          <option value={3}>3 opsi</option>
+                          <option value={4}>4 opsi</option>
+                          <option value={5}>5 opsi</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Kualitas pengecoh
+                      </label>
+                      <select
+                        value={distractorQuality}
+                        onChange={(e) =>
+                          setDistractorQuality(
+                            e.target.value as 'low' | 'medium' | 'high'
+                          )
+                        }
+                        className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm"
+                      >
+                        <option value="low">
+                          Rendah — pengecoh cukup berbeda
+                        </option>
+                        <option value="medium">
+                          Sedang — pengecoh mirip strukturnya
+                        </option>
+                        <option value="high">
+                          Tinggi — pengecoh sangat plausible
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          Isian Singkat
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          Jawaban pendek 1–3 kata
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                        {essayCount} soal
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {renderConfigNumber(
+                        'Jumlah',
+                        essayCount,
+                        setEssayCount,
+                        0
+                      )}
+                      {renderConfigNumber(
+                        'Bobot / soal',
+                        essayWeight,
+                        setEssayWeight,
+                        0
                       )}
                     </div>
                   </div>
-                </div>
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">Isian Singkat</h4>
-                  <p className="text-xs text-gray-600 mb-2">
-                    Soal jawaban singkat (1-3 kata), bukan uraian panjang. Contoh: "Berapa hasil 5 + 3?" → "8"
-                  </p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-sm mb-1">Jumlah Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={essayCount}
-                        onChange={(e) => setEssayCount(Number(e.target.value))}
-                      />
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          Uraian / Essay
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          Jawaban panjang dan mendalam
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700">
+                        {uraianCount} soal
+                      </span>
                     </div>
-                    <div>
-                      <label className="block text-sm mb-1">Bobot per Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={essayWeight}
-                        onChange={(e) => setEssayWeight(Number(e.target.value))}
-                      />
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {renderConfigNumber(
+                        'Jumlah',
+                        uraianCount,
+                        setUraianCount,
+                        0
+                      )}
+                      {renderConfigNumber(
+                        'Bobot / soal',
+                        uraianWeight,
+                        setUraianWeight,
+                        0
+                      )}
                     </div>
                   </div>
-                </div>
 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-3">📝 Soal Uraian/Essay</h4>
-                  <p className="text-xs text-gray-600 mb-3">
-                    Soal yang membutuhkan jawaban panjang dan mendalam. 
-                    <br />
-                    <span className="text-blue-600 font-medium">
-                      • Kelas 1-2: Uraian sangat sederhana (1 kalimat)
-                      <br />
-                      • Kelas 3-6: Uraian bebas dengan analisis
-                    </span>
-                  </p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="block text-sm mb-1">Jumlah Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={uraianCount}
-                        onChange={(e) => setUraianCount(Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Bobot per Soal</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={uraianWeight}
-                        onChange={(e) => setUraianWeight(Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
                     <input
                       type="checkbox"
                       checked={includeImage}
                       onChange={(e) => setIncludeImage(e.target.checked)}
-                      id="includeImage"
+                      className="mt-1 h-4 w-4 accent-blue-600"
                     />
-                    <label htmlFor="includeImage" className="text-sm">
-                      Sertakan deskripsi gambar pada soal (AI akan generate deskripsi gambar yang relevan)
-                    </label>
+                    <div>
+                      <p className="text-sm font-bold text-blue-900">
+                        Sertakan deskripsi gambar
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-blue-800/70">
+                        AI akan menghasilkan deskripsi ilustrasi yang relevan
+                        bila dibutuhkan.
+                      </p>
+                    </div>
+                  </label>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          Distribusi tingkat kesukaran
+                        </p>
+                        <p className="mt-1 text-[10px] text-slate-400">
+                          Atur jumlah mudah, sedang, dan sulit.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={useDistribution}
+                        onChange={(e) =>
+                          setUseDistribution(e.target.checked)
+                        }
+                        className="h-5 w-5 accent-blue-600"
+                      />
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {useDistribution && (
+                        <motion.div
+                          initial={
+                            reduceMotion
+                              ? false
+                              : { opacity: 0, height: 0 }
+                          }
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={
+                            reduceMotion
+                              ? undefined
+                              : { opacity: 0, height: 0 }
+                          }
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-4 space-y-4 rounded-2xl bg-slate-50 p-4">
+                            <div>
+                              <div className="mb-3 flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-700">
+                                  Pilihan Ganda
+                                </p>
+                                <span
+                                  className={`text-[10px] font-bold ${
+                                    distributionPGTotal === mcCount
+                                      ? 'text-emerald-600'
+                                      : 'text-red-600'
+                                  }`}
+                                >
+                                  {distributionPGTotal} / {mcCount}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-3">
+                                {renderDistributionField(
+                                  'Mudah',
+                                  mudahCount,
+                                  setMudahCount,
+                                  mcCount
+                                )}
+                                {renderDistributionField(
+                                  'Sedang',
+                                  sedangCount,
+                                  setSedangCount,
+                                  mcCount
+                                )}
+                                {renderDistributionField(
+                                  'Sulit',
+                                  sulitCount,
+                                  setSulitCount,
+                                  mcCount
+                                )}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="mb-3 flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-700">
+                                  Isian
+                                </p>
+                                <span
+                                  className={`text-[10px] font-bold ${
+                                    distributionIsianTotal === essayCount
+                                      ? 'text-emerald-600'
+                                      : 'text-red-600'
+                                  }`}
+                                >
+                                  {distributionIsianTotal} / {essayCount}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-3">
+                                {renderDistributionField(
+                                  'Mudah',
+                                  mudahIsianCount,
+                                  setMudahIsianCount,
+                                  essayCount
+                                )}
+                                {renderDistributionField(
+                                  'Sedang',
+                                  sedangIsianCount,
+                                  setSedangIsianCount,
+                                  essayCount
+                                )}
+                                {renderDistributionField(
+                                  'Sulit',
+                                  sulitIsianCount,
+                                  setSulitIsianCount,
+                                  essayCount
+                                )}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="mb-3 flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-700">
+                                  Uraian
+                                </p>
+                                <span
+                                  className={`text-[10px] font-bold ${
+                                    distributionUraianTotal === uraianCount
+                                      ? 'text-emerald-600'
+                                      : 'text-red-600'
+                                  }`}
+                                >
+                                  {distributionUraianTotal} / {uraianCount}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-3">
+                                {renderDistributionField(
+                                  'Mudah',
+                                  mudahUraianCount,
+                                  setMudahUraianCount,
+                                  uraianCount
+                                )}
+                                {renderDistributionField(
+                                  'Sedang',
+                                  sedangUraianCount,
+                                  setSedangUraianCount,
+                                  uraianCount
+                                )}
+                                {renderDistributionField(
+                                  'Sulit',
+                                  sulitUraianCount,
+                                  setSulitUraianCount,
+                                  uraianCount
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {error && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">
+                      {error}
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-700">
+                      {success}
+                    </div>
+                  )}
+
+                  <div className="sticky bottom-4 z-20">
+                    <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-2xl backdrop-blur-xl">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-2">
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">
+                            {selectedTPs.length} TP · {totalQuestionCount} soal
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Total bobot: {totalConfiguredWeight}
+                          </p>
+                        </div>
+
+                        {!distributionValid && (
+                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-600">
+                            Distribusi belum sesuai
+                          </span>
+                        )}
+                      </div>
+
+                      <motion.div whileTap={reduceMotion ? undefined : { scale: 0.985 }}>
+                        <Button
+                          onClick={handleGenerate}
+                          disabled={loading || !canGenerate}
+                          className="w-full rounded-2xl bg-slate-950 py-6 text-sm font-black hover:bg-slate-800 disabled:opacity-50"
+                          size="lg"
+                        >
+                          {loading ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              AI sedang menyusun soal...
+                            </>
+                          ) : (
+                            <>
+                              ✨ Generate Soal dengan AI
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    </div>
                   </div>
                 </div>
-
-                {error && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                    {error}
-                  </div>
-                )}
-
-                {success && (
-                  <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
-                    {success}
-                  </div>
-                )}
-
-                <Button onClick={handleGenerate} disabled={loading || !subject || !kelas} className="w-full">
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    'Generate Soal'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.section>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="space-y-6">
+        <motion.div
+          variants={reduceMotion ? undefined : panelVariants}
+          initial={reduceMotion ? false : 'hidden'}
+          animate={reduceMotion ? undefined : 'visible'}
+          className="space-y-6"
+        >
           {success && (
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="pt-6">
-                <p className="text-sm font-medium text-green-900">{success}</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-700">
+              {success}
+            </div>
           )}
 
           {error && (
-            <Card className="bg-red-50 border-red-200">
-              <CardContent className="pt-6">
-                <p className="text-sm font-medium text-red-900">{error}</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">
+              {error}
+            </div>
           )}
 
-          {/* Summary Card */}
-          <Card className="bg-gradient-to-r from-green-500 to-emerald-300 text-white">
-            <CardContent className="pt-6">
-              <div className="flex justify-around text-center">
-                <div>
-                  <div className="text-4xl font-bold">{generatedQuestions.multipleChoice?.length || 0}</div>
-                  <div className="text-sm opacity-90">Soal PG</div>
+          <section className="rounded-[30px] bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 p-6 text-white shadow-2xl sm:p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-cyan-200 backdrop-blur">
+                  <span>✓</span>
+                  Generate selesai
                 </div>
-                <div className="w-px bg-white/30"></div>
-                <div>
-                  <div className="text-4xl font-bold">{generatedQuestions.essay?.length || 0}</div>
-                  <div className="text-sm opacity-90">Soal Essay</div>
-                </div>
-                <div className="w-px bg-white/30"></div>
-                <div>
-                  <div className="text-4xl font-bold">
-                    {(generatedQuestions.multipleChoice?.length || 0) + (generatedQuestions.essay?.length || 0)}
-                  </div>
-                  <div className="text-sm opacity-90">Total Soal</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Preview Questions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Preview Soal</CardTitle>
-              <CardDescription>Scroll ke bawah untuk melihat semua soal yang telah dibuat</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 max-h-[600px] overflow-y-auto">
-              {/* Multiple Choice */}
-              {generatedQuestions.multipleChoice && generatedQuestions.multipleChoice.length > 0 && (
-                <div>
-                  <div className="bg-blue-500 text-white px-4 py-3 rounded-t-lg flex items-center gap-2">
-                    <span className="text-lg">📝</span>
-                    <h3 className="font-bold text-lg">A. PILIHAN GANDA</h3>
-                    <span className="ml-auto bg-white/20 px-3 py-1 rounded-full text-sm">
-                      {generatedQuestions.multipleChoice.length} soal
-                    </span>
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-b-lg space-y-4">
-                    {generatedQuestions.multipleChoice.map((q, idx) => {
-                      const wordCount = q.question.split(' ').length;
-                      const wordBadgeColor = wordCount <= 10 ? 'bg-green-500' : wordCount <= 15 ? 'bg-yellow-500' : 'bg-red-500';
-                      const hasImageDesc = q.imageDescription && q.imageDescription.trim() !== '';
-                      
-                      return (
-                        <div key={idx} className="bg-white rounded-lg shadow-sm border-l-4 border-blue-500 p-4">
-                          {/* Question Header */}
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="font-bold text-blue-900 flex items-center gap-2">
-                              <span className="text-blue-600">❓</span>
-                              Soal {q.questionNumber}
-                            </div>
-                            <div className="flex gap-2">
-                              {hasImageDesc && (
-                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                  <span>🖼️</span> Gambar
-                                </span>
-                              )}
-                              <span className={`${wordBadgeColor} text-white px-2 py-1 rounded text-xs font-bold`}>
-                                {wordCount} kata
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Question Text */}
-                          <p className="text-gray-800 mb-3 leading-relaxed">{q.question}</p>
-                          
-                          {/* Image Placeholder Box */}
-                          {hasImageDesc && (
-                            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 mb-3">
-                              <div className="flex items-start gap-3">
-                                <div className="bg-yellow-100 p-2 rounded">
-                                  <span className="text-2xl">🖼️</span>
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-xs font-bold text-gray-600 mb-1">TEMPAT GAMBAR/ILUSTRASI:</div>
-                                  <p className="text-sm text-gray-700 italic">{q.imageDescription}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Options */}
-                          <div className="space-y-2 mb-3">
-                            {Object.entries(q.options).map(([key, value]) => {
-                              const isCorrect = key === q.correctAnswer;
-                              return (
-                                <div
-                                  key={key}
-                                  className={`flex items-start gap-3 p-2 rounded-lg border-l-3 ${
-                                    isCorrect
-                                      ? 'bg-green-50 border-green-500 border-l-4'
-                                      : 'bg-gray-50 border-gray-200 border-l-2'
-                                  }`}
-                                >
-                                  <span className={`font-bold min-w-[24px] ${
-                                    isCorrect ? 'text-green-700' : 'text-gray-600'
-                                  }`}>
-                                    {key}.
-                                  </span>
-                                  <span className={isCorrect ? 'text-green-700' : 'text-gray-700'}>
-                                    {value}
-                                  </span>
-                                  {isCorrect && <span className="ml-auto text-green-500">✓</span>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          
-                          {/* Footer */}
-                          <div className="flex justify-between items-center pt-3 border-t text-xs text-gray-500">
-                            <div>
-                              <span className="font-bold">🎯 Kunci:</span>{' '}
-                              <span className="text-green-600 font-bold text-sm">{q.correctAnswer}</span>
-                            </div>
-                            <div>
-                              <span className="font-bold">⚖️ Bobot:</span> {q.weight}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                <h2 className="mt-4 text-2xl font-black sm:text-3xl">
+                  {examTitle}
+                </h2>
 
-              {/* Essay */}
-              {generatedQuestions.essay && generatedQuestions.essay.length > 0 && (
-                <div>
-                  <div className="bg-purple-500 text-white px-4 py-3 rounded-t-lg flex items-center gap-2">
-                    <span className="text-lg">✍️</span>
-                    <h3 className="font-bold text-lg">B. ESSAY/ISIAN</h3>
-                    <span className="ml-auto bg-white/20 px-3 py-1 rounded-full text-sm">
-                      {generatedQuestions.essay.length} soal
-                    </span>
-                  </div>
-                  <div className="bg-purple-50 p-4 rounded-b-lg space-y-4">
-                    {generatedQuestions.essay.map((q, idx) => {
-                      const wordCount = q.question.split(' ').length;
-                      const wordBadgeColor = wordCount <= 15 ? 'bg-green-500' : wordCount <= 20 ? 'bg-yellow-500' : 'bg-red-500';
-                      const hasImageDesc = q.imageDescription && q.imageDescription.trim() !== '';
-                      
-                      return (
-                        <div key={idx} className="bg-white rounded-lg shadow-sm border-l-4 border-purple-500 p-4">
-                          {/* Question Header */}
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="font-bold text-purple-900 flex items-center gap-2">
-                              <span className="text-purple-600">✏️</span>
-                              Soal {q.questionNumber}
-                            </div>
-                            <div className="flex gap-2">
-                              {hasImageDesc && (
-                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
-                                  <span>🖼️</span> Gambar
-                                </span>
-                              )}
-                              <span className={`${wordBadgeColor} text-white px-2 py-1 rounded text-xs font-bold`}>
-                                {wordCount} kata
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Question Text */}
-                          <p className="text-gray-800 mb-3 leading-relaxed">{q.question}</p>
-                          
-                          {/* Image Placeholder Box */}
-                          {hasImageDesc && (
-                            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 mb-3">
-                              <div className="flex items-start gap-3">
-                                <div className="bg-yellow-100 p-2 rounded">
-                                  <span className="text-2xl">🖼️</span>
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-xs font-bold text-gray-600 mb-1">TEMPAT GAMBAR/ILUSTRASI:</div>
-                                  <p className="text-sm text-gray-700 italic">{q.imageDescription}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Rubric */}
-                          {q.rubric && (
-                            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mt-3">
-                              <div className="text-xs font-bold text-yellow-800 mb-1">💡 RUBRIK PENILAIAN:</div>
-                              <p className="text-sm text-yellow-900">{q.rubric}</p>
-                            </div>
-                          )}
-                          
-                          {/* Footer */}
-                          <div className="flex justify-between items-center pt-3 border-t text-xs text-gray-500 mt-3">
-                            <div>
-                              <span className="font-bold">⚖️ Bobot:</span> {q.weight}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Export Options */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Export & Download</CardTitle>
-              <CardDescription>Simpan atau download soal yang telah dibuat</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Checkbox for includeTP - only affects Word export */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={includeTP}
-                    onChange={(e) => setIncludeTP(e.target.checked)}
-                    id="includeTPExport"
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <label htmlFor="includeTPExport" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Sertakan Tujuan Pembelajaran (TP) di dokumen Word
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      ✓ Jika dicentang, teks TP akan ditampilkan di bawah setiap soal saat download ke Word
-                    </p>
-                  </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                    {subject}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                    Kelas {kelas}
+                  </span>
+                  <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                    {duration} menit
+                  </span>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handleSaveToBankSoal} disabled={saving} size="lg" variant="default">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur">
+                  <p className="text-3xl font-black">
+                    {generatedQuestions.multipleChoice?.length || 0}
+                  </p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+                    PG
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur">
+                  <p className="text-3xl font-black">
+                    {generatedQuestions.essay?.length || 0}
+                  </p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+                    Isian
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur">
+                  <p className="text-3xl font-black">
+                    {(generatedQuestions.multipleChoice?.length || 0) +
+                      (generatedQuestions.essay?.length || 0)}
+                  </p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+                    Total
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[30px] border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+            <div className="border-b border-slate-100 p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                    Review
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-slate-900">
+                    Preview Soal
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Tinjau kualitas soal sebelum disimpan ke Bank Soal.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                  {selectedTPs.length} TP sumber
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-7 p-6">
+              {generatedQuestions.multipleChoice &&
+                generatedQuestions.multipleChoice.length > 0 && (
+                  <div>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900">
+                          A. Pilihan Ganda
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {generatedQuestions.multipleChoice.length} soal
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
+                        PG
+                      </span>
+                    </div>
+
+                    <motion.div
+                      variants={reduceMotion ? undefined : staggerVariants}
+                      initial={reduceMotion ? false : 'hidden'}
+                      animate={reduceMotion ? undefined : 'visible'}
+                      className="space-y-4"
+                    >
+                      {generatedQuestions.multipleChoice.map((q, idx) =>
+                        renderQuestionCard(q, 'PG', idx)
+                      )}
+                    </motion.div>
+                  </div>
+                )}
+
+              {generatedQuestions.essay &&
+                generatedQuestions.essay.length > 0 && (
+                  <div>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-black text-slate-900">
+                          B. Essay / Isian
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {generatedQuestions.essay.length} soal
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700">
+                        Isian
+                      </span>
+                    </div>
+
+                    <motion.div
+                      variants={reduceMotion ? undefined : staggerVariants}
+                      initial={reduceMotion ? false : 'hidden'}
+                      animate={reduceMotion ? undefined : 'visible'}
+                      className="space-y-4"
+                    >
+                      {generatedQuestions.essay.map((q, idx) =>
+                        renderQuestionCard(q, 'Essay', idx)
+                      )}
+                    </motion.div>
+                  </div>
+                )}
+            </div>
+          </section>
+
+          <section className="rounded-[30px] border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
+            <div className="border-b border-slate-100 p-6">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                Finalize
+              </p>
+              <h2 className="mt-1 text-xl font-black text-slate-900">
+                Simpan & Export
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Simpan ke Bank Soal atau download dokumen Word.
+              </p>
+            </div>
+
+            <div className="space-y-5 p-6">
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <input
+                  type="checkbox"
+                  checked={includeTP}
+                  onChange={(e) => setIncludeTP(e.target.checked)}
+                  id="includeTPExport"
+                  className="mt-1 h-4 w-4 accent-blue-600"
+                />
+                <div>
+                  <p className="text-sm font-bold text-blue-900">
+                    Sertakan TP di dokumen Word
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-blue-800/70">
+                    TP sumber akan ditampilkan di bawah soal saat export.
+                  </p>
+                </div>
+              </label>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Button
+                  onClick={handleSaveToBankSoal}
+                  disabled={saving}
+                  size="lg"
+                  className="rounded-xl bg-slate-950 hover:bg-slate-800"
+                >
                   {saving ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Menyimpan...
                     </>
                   ) : (
                     <>
-                      <Save className="w-4 h-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                       Simpan ke Bank Soal
                     </>
                   )}
                 </Button>
-                <Button onClick={() => handleExportWord(false)} size="lg" variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
+
+                <Button
+                  onClick={() => handleExportWord(false)}
+                  size="lg"
+                  variant="outline"
+                  className="rounded-xl"
+                >
+                  <Download className="mr-2 h-4 w-4" />
                   Download Soal (.docx)
                 </Button>
-                <Button onClick={() => handleExportWord(true)} size="lg" variant="outline">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Download Kunci Jawaban (.docx)
+
+                <Button
+                  onClick={() => handleExportWord(true)}
+                  size="lg"
+                  variant="outline"
+                  className="rounded-xl"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Download Kunci (.docx)
                 </Button>
-                <Button variant="ghost" onClick={() => { setGeneratedQuestions(null); setError(''); setSuccess(''); }} size="lg">
+
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setGeneratedQuestions(null);
+                    setError('');
+                    setSuccess('');
+                  }}
+                  size="lg"
+                  className="rounded-xl"
+                >
                   🔄 Buat Soal Baru
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </section>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
