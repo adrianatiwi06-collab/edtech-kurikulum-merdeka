@@ -404,6 +404,7 @@ export default function GenerateSoalPage() {
     totalQuestionCount > 0 &&
     distributionValid;
 
+  // PERBAIKAN: Menambahkan 'as const'
   const panelVariants = {
     hidden: {
       opacity: 0,
@@ -414,7 +415,7 @@ export default function GenerateSoalPage() {
       y: 0,
       transition: {
         duration: 0.45,
-        ease: [0.16, 1, 0.3, 1],
+        ease: [0.16, 1, 0.3, 1] as const,
       },
     },
   };
@@ -428,6 +429,7 @@ export default function GenerateSoalPage() {
     },
   };
 
+  // PERBAIKAN: Menambahkan 'as const'
   const itemVariants = {
     hidden: {
       opacity: 0,
@@ -438,7 +440,7 @@ export default function GenerateSoalPage() {
       y: 0,
       transition: {
         duration: 0.3,
-        ease: [0.16, 1, 0.3, 1],
+        ease: [0.16, 1, 0.3, 1] as const,
       },
     },
   };
