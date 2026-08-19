@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   BarChart2,
@@ -9,6 +10,7 @@ import {
   BookOpen,
   BrainCircuit,
   CheckCircle2,
+  CalendarCheck,
   ChevronRight,
   ClipboardCheck,
   Clock3,
@@ -17,6 +19,7 @@ import {
   FolderOpen,
   Lightbulb,
   LineChart,
+  PenLine,
   Plus,
   RefreshCw,
   Sparkles,
@@ -29,9 +32,11 @@ import {
 
 import {
   motion,
-  AnimatePresence,
   useReducedMotion,
 } from 'framer-motion';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 /* =========================================================
    TYPES
@@ -79,8 +84,23 @@ type Activity = {
   title: string;
   description: string;
   time: string;
+  href: string;
   icon: React.ElementType;
   tone: Tone;
+};
+
+type TodayState = {
+  attendanceDone: boolean;
+  attendanceCount: number;
+  journalDone: boolean;
+  journalCount: number;
+  loading: boolean;
+  error: boolean;
+};
+
+const getLocalDateKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
 /* =========================================================
@@ -143,11 +163,68 @@ const containerVariants = {
 };
 
 /* =========================================================
-   COMPONENT
+   COMPONENT — V2.3
+   Vertical rhythm: 24px between major dashboard sections.
 ========================================================= */
 
 export default function DashboardPage() {
   const reduceMotion = useReducedMotion();
+  const { user } = useAuth();
+
+  const [todayState, setTodayState] = useState<TodayState>({
+    attendanceDone: false,
+    attendanceCount: 0,
+    journalDone: false,
+    journalCount: 0,
+    loading: true,
+    error: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTodayState = async () => {
+      if (!user) {
+        if (!cancelled) setTodayState((prev) => ({ ...prev, loading: false }));
+        return;
+      }
+
+      try {
+        const today = getLocalDateKey();
+        const [attendanceSnapshot, journalSnapshot] = await Promise.all([
+          getDocs(query(collection(db, 'absensi'), where('user_id', '==', user.uid))),
+          getDocs(query(collection(db, 'jurnal_mengajar'), where('user_id', '==', user.uid))),
+        ]);
+
+        let attendanceCount = 0;
+        attendanceSnapshot.forEach((docSnap) => {
+          if (String(docSnap.data().tanggal ?? '') === today) attendanceCount += 1;
+        });
+
+        let journalCount = 0;
+        journalSnapshot.forEach((docSnap) => {
+          if (String(docSnap.data().tanggal ?? '') === today) journalCount += 1;
+        });
+
+        if (!cancelled) {
+          setTodayState({
+            attendanceDone: attendanceCount > 0,
+            attendanceCount,
+            journalDone: journalCount > 0,
+            journalCount,
+            loading: false,
+            error: false,
+          });
+        }
+      } catch (error) {
+        console.error('Gagal memuat status dashboard hari ini:', error);
+        if (!cancelled) setTodayState((prev) => ({ ...prev, loading: false, error: true }));
+      }
+    };
+
+    loadTodayState();
+    return () => { cancelled = true; };
+  }, [user]);
 
   /* =======================================================
      DATA
@@ -266,11 +343,18 @@ export default function DashboardPage() {
       tone: 'indigo',
     },
     {
-      title: 'Jurnal & Absensi',
-      description: 'Kelola jurnal pembelajaran',
+      title: 'Jurnal Mengajar',
+      description: 'Catat kegiatan pembelajaran',
       href: '/dashboard/jurnal',
       icon: Clock3,
       tone: 'cyan',
+    },
+    {
+      title: 'Absensi Siswa',
+      description: 'Catat kehadiran harian siswa',
+      href: '/dashboard/absensi',
+      icon: CalendarCheck,
+      tone: 'emerald',
     },
     {
       title: 'Riwayat Jurnal',
@@ -293,6 +377,7 @@ export default function DashboardPage() {
       title: 'Generate TP Matematika',
       description: '8 tujuan pembelajaran dibuat',
       time: '10 menit lalu',
+      href: '/dashboard/generate-tp',
       icon: Target,
       tone: 'blue',
     },
@@ -300,6 +385,7 @@ export default function DashboardPage() {
       title: 'Bank Soal diperbarui',
       description: '5 soal baru ditambahkan',
       time: '1 jam lalu',
+      href: '/dashboard/bank-soal',
       icon: FileText,
       tone: 'emerald',
     },
@@ -308,6 +394,7 @@ export default function DashboardPage() {
       description:
         'Data penilaian kelas tersimpan',
       time: 'Kemarin',
+      href: '/dashboard/rekap-nilai',
       icon: BarChart2,
       tone: 'violet',
     },
@@ -316,6 +403,7 @@ export default function DashboardPage() {
       description:
         'Template Sumatif Bahasa Indonesia',
       time: '2 hari lalu',
+      href: '/dashboard/template-ujian',
       icon: FileCheck2,
       tone: 'orange',
     },
@@ -325,83 +413,99 @@ export default function DashboardPage() {
      TONE SYSTEM
   ======================================================= */
 
-  const getToneClasses = (tone: Tone) => {
-    const tones: Record<
-      Tone,
-      {
-        icon: string;
-        soft: string;
-        hover: string;
-        text: string;
-        dot: string;
-      }
-    > = {
-      blue: {
-        icon: 'bg-blue-600 text-white',
-        soft: 'bg-blue-50',
-        hover: 'group-hover:bg-blue-100',
-        text: 'text-blue-700',
-        dot: 'bg-blue-500',
-      },
-      emerald: {
-        icon: 'bg-emerald-500 text-white',
-        soft: 'bg-emerald-50',
-        hover: 'group-hover:bg-emerald-100',
-        text: 'text-emerald-700',
-        dot: 'bg-emerald-500',
-      },
-      violet: {
-        icon: 'bg-violet-600 text-white',
-        soft: 'bg-violet-50',
-        hover: 'group-hover:bg-violet-100',
-        text: 'text-violet-700',
-        dot: 'bg-violet-500',
-      },
-      orange: {
-        icon: 'bg-orange-500 text-white',
-        soft: 'bg-orange-50',
-        hover: 'group-hover:bg-orange-100',
-        text: 'text-orange-700',
-        dot: 'bg-orange-500',
-      },
-      rose: {
-        icon: 'bg-rose-500 text-white',
-        soft: 'bg-rose-50',
-        hover: 'group-hover:bg-rose-100',
-        text: 'text-rose-700',
-        dot: 'bg-rose-500',
-      },
-      indigo: {
-        icon: 'bg-indigo-500 text-white',
-        soft: 'bg-indigo-50',
-        hover: 'group-hover:bg-indigo-100',
-        text: 'text-indigo-700',
-        dot: 'bg-indigo-500',
-      },
-      cyan: {
-        icon: 'bg-cyan-500 text-white',
-        soft: 'bg-cyan-50',
-        hover: 'group-hover:bg-cyan-100',
-        text: 'text-cyan-700',
-        dot: 'bg-cyan-500',
-      },
-      amber: {
-        icon: 'bg-amber-500 text-white',
-        soft: 'bg-amber-50',
-        hover: 'group-hover:bg-amber-100',
-        text: 'text-amber-700',
-        dot: 'bg-amber-500',
-      },
-      sky: {
-        icon: 'bg-sky-500 text-white',
-        soft: 'bg-sky-50',
-        hover: 'group-hover:bg-sky-100',
-        text: 'text-sky-700',
-        dot: 'bg-sky-500',
-      },
-    };
-
-    return tones[tone];
+  const tones: Record<
+    Tone,
+    {
+      icon: string;
+      soft: string;
+      hover: string;
+      text: string;
+      dot: string;
+      border: string;
+      blob: string;
+    }
+  > = {
+    blue: {
+      icon: 'bg-blue-600 text-white',
+      soft: 'bg-blue-50',
+      hover: 'group-hover:bg-blue-100',
+      text: 'text-blue-700',
+      dot: 'bg-blue-500',
+      border: 'border-blue-100',
+      blob: 'bg-blue-100/70',
+    },
+    emerald: {
+      icon: 'bg-emerald-500 text-white',
+      soft: 'bg-emerald-50',
+      hover: 'group-hover:bg-emerald-100',
+      text: 'text-emerald-700',
+      dot: 'bg-emerald-500',
+      border: 'border-emerald-100',
+      blob: 'bg-emerald-100/70',
+    },
+    violet: {
+      icon: 'bg-violet-600 text-white',
+      soft: 'bg-violet-50',
+      hover: 'group-hover:bg-violet-100',
+      text: 'text-violet-700',
+      dot: 'bg-violet-500',
+      border: 'border-violet-100',
+      blob: 'bg-violet-100/70',
+    },
+    orange: {
+      icon: 'bg-orange-500 text-white',
+      soft: 'bg-orange-50',
+      hover: 'group-hover:bg-orange-100',
+      text: 'text-orange-700',
+      dot: 'bg-orange-500',
+      border: 'border-orange-100',
+      blob: 'bg-orange-100/70',
+    },
+    rose: {
+      icon: 'bg-rose-500 text-white',
+      soft: 'bg-rose-50',
+      hover: 'group-hover:bg-rose-100',
+      text: 'text-rose-700',
+      dot: 'bg-rose-500',
+      border: 'border-rose-100',
+      blob: 'bg-rose-100/70',
+    },
+    indigo: {
+      icon: 'bg-indigo-500 text-white',
+      soft: 'bg-indigo-50',
+      hover: 'group-hover:bg-indigo-100',
+      text: 'text-indigo-700',
+      dot: 'bg-indigo-500',
+      border: 'border-indigo-100',
+      blob: 'bg-indigo-100/70',
+    },
+    cyan: {
+      icon: 'bg-cyan-500 text-white',
+      soft: 'bg-cyan-50',
+      hover: 'group-hover:bg-cyan-100',
+      text: 'text-cyan-700',
+      dot: 'bg-cyan-500',
+      border: 'border-cyan-100',
+      blob: 'bg-cyan-100/70',
+    },
+    amber: {
+      icon: 'bg-amber-500 text-white',
+      soft: 'bg-amber-50',
+      hover: 'group-hover:bg-amber-100',
+      text: 'text-amber-700',
+      dot: 'bg-amber-500',
+      border: 'border-amber-100',
+      blob: 'bg-amber-100/70',
+    },
+    sky: {
+      icon: 'bg-sky-500 text-white',
+      soft: 'bg-sky-50',
+      hover: 'group-hover:bg-sky-100',
+      text: 'text-sky-700',
+      dot: 'bg-sky-500',
+      border: 'border-sky-100',
+      blob: 'bg-sky-100/70',
+    },
   };
 
   /* =======================================================
@@ -429,1526 +533,682 @@ export default function DashboardPage() {
 
   return (
     <motion.div
-      variants={pageVariants}
-      initial={reduceMotion ? false : 'hidden'}
-      animate={reduceMotion ? undefined : 'visible'}
-      className="space-y-8"
+      className="relative min-h-full w-full min-w-0 overflow-hidden bg-[#f5f7fc] pb-12 pt-6 sm:pt-8 lg:pt-10"
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={reduceMotion ? undefined : { opacity: 1 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
     >
-
       {/* =====================================================
-          HERO
+          V2 BACKGROUND
       ===================================================== */}
-
-      <motion.section
-        {...motionSectionProps}
-        variants={sectionVariants}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.05)]"
-      >
-
-        {/* Background decoration */}
-        <motion.div
-          animate={
-            reduceMotion
-              ? undefined
-              : {
-                  x: [0, 18, 0],
-                  y: [0, -12, 0],
-                  scale: [1, 1.08, 1],
-                }
-          }
-          transition={
-            reduceMotion
-              ? undefined
-              : {
-                  duration: 10,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }
-          }
-          className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-100/60 blur-3xl"
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-blue-200/20 blur-3xl" />
+        <div className="absolute right-[-12rem] top-24 h-[30rem] w-[30rem] rounded-full bg-violet-200/18 blur-3xl" />
+        <div className="absolute left-[34%] top-[48rem] h-72 w-72 rounded-full bg-cyan-200/15 blur-3xl" />
+        <div className="absolute left-[18%] top-[86rem] h-64 w-64 rounded-full bg-amber-100/18 blur-3xl" />
+        <div
+          className="absolute inset-x-0 top-0 h-[680px] opacity-[0.22]"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(99,102,241,0.22) 1px, transparent 0)',
+            backgroundSize: '26px 26px',
+            maskImage: 'linear-gradient(to bottom, black, transparent)',
+          }}
         />
+      </div>
 
-        <motion.div
-          animate={
-            reduceMotion
-              ? undefined
-              : {
-                  x: [0, -20, 0],
-                  y: [0, 10, 0],
-                  scale: [1, 1.06, 1],
-                }
-          }
-          transition={
-            reduceMotion
-              ? undefined
-              : {
-                  duration: 12,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }
-          }
-          className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-violet-100/50 blur-3xl"
-        />
+      <div className="relative space-y-6">
+          {/* =====================================================
+              HERO / COMMAND CENTER
+          ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
+          initial={reduceMotion ? false : 'hidden'}
+          animate="visible"
+          className="relative overflow-hidden rounded-[38px] border border-white/90 bg-gradient-to-br from-[#edf4ff] via-white to-[#f2efff] shadow-[0_26px_72px_rgba(37,99,235,0.085)]"
+        >
+          <div className="absolute -right-20 -top-28 h-80 w-80 rounded-[42%] bg-indigo-300/20 blur-2xl" />
+          <div className="absolute -bottom-36 left-[35%] h-96 w-96 rounded-[46%] bg-violet-300/12 blur-3xl" />
+          <div className="absolute right-[45%] top-10 h-3 w-3 rounded-full bg-cyan-400/70 shadow-[0_0_0_8px_rgba(34,211,238,0.08)]" />
+          <div className="absolute right-[41%] top-20 h-2 w-2 rounded-full bg-indigo-400/60" />
 
-        <div className="relative grid grid-cols-1 xl:grid-cols-[1.35fr_0.65fr] gap-8 p-6 sm:p-8 lg:p-10">
-
-          {/* LEFT */}
-          <div className="flex flex-col justify-between">
-
-            <div>
-
-              <motion.div
-                initial={
-                  reduceMotion
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: 10,
-                      }
-                }
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        opacity: 1,
-                        y: 0,
-                      }
-                }
-                transition={{
-                  delay: 0.15,
-                  duration: 0.45,
-                }}
-                className="mb-5 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                AI Teaching Workspace
-              </motion.div>
-
-              <motion.h2
-                initial={
-                  reduceMotion
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: 16,
-                      }
-                }
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        opacity: 1,
-                        y: 0,
-                      }
-                }
-                transition={{
-                  delay: 0.22,
-                  duration: 0.55,
-                  ease: [0.16, 1, 0.3, 1] as const,
-                }}
-                className="max-w-3xl text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-950"
-              >
-                Selamat datang kembali,
-
-                <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
-                  Mas Wowo 👋
-                </span>
-              </motion.h2>
-
-              <motion.p
-                initial={
-                  reduceMotion
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: 12,
-                      }
-                }
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        opacity: 1,
-                        y: 0,
-                      }
-                }
-                transition={{
-                  delay: 0.3,
-                  duration: 0.5,
-                }}
-                className="mt-4 max-w-2xl text-sm sm:text-base leading-7 text-slate-500"
-              >
-                Kelola Tujuan Pembelajaran, buat soal,
-                analisis nilai, dan selesaikan administrasi
-                pembelajaran dari satu tempat.
-              </motion.p>
-            </div>
-
-            {/* CTA */}
-            <motion.div
-              initial={
-                reduceMotion
-                  ? false
-                  : {
-                      opacity: 0,
-                      y: 12,
-                    }
-              }
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      opacity: 1,
-                      y: 0,
-                    }
-              }
-              transition={{
-                delay: 0.38,
-                duration: 0.5,
-              }}
-              className="mt-8 flex flex-wrap gap-3"
-            >
-              <Link
-                href="/dashboard/generate-tp"
-                className="group"
-              >
-                <motion.div
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          y: -2,
-                          scale: 1.015,
-                        }
-                  }
-                  whileTap={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          scale: 0.98,
-                        }
-                  }
-                  transition={{
-                    type: 'spring',
-                    stiffness: 400,
-                    damping: 22,
-                  }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-200"
-                >
-                  <WandSparkles className="h-4 w-4" />
-                  Generate TP
-
-                  <motion.span
-                    whileHover={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            x: 4,
-                          }
-                    }
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </motion.span>
-                </motion.div>
-              </Link>
-
-              <Link
-                href="/dashboard/generate-soal"
-                className="group"
-              >
-                <motion.div
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          y: -2,
-                        }
-                  }
-                  whileTap={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          scale: 0.98,
-                        }
-                  }
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors duration-200 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-700"
-                >
-                  <BrainCircuit className="h-4 w-4" />
-                  Generate Soal AI
-                </motion.div>
-              </Link>
-            </motion.div>
+          <div className="pointer-events-none absolute left-[45%] top-24 hidden rotate-[-10deg] text-indigo-300/[0.07] lg:block">
+            <BookOpen className="h-28 w-28" strokeWidth={1.15} />
+          </div>
+          <div className="pointer-events-none absolute bottom-10 left-[56%] hidden rotate-[8deg] text-violet-400/[0.055] lg:block">
+            <PenLine className="h-24 w-24" strokeWidth={1.1} />
+          </div>
+          <div className="pointer-events-none absolute right-[37%] bottom-8 hidden text-cyan-400/[0.07] lg:block">
+            <Sparkles className="h-16 w-16" strokeWidth={1.2} />
           </div>
 
-          {/* AI CARD */}
-          <motion.div
-            initial={
-              reduceMotion
-                ? false
-                : {
-                    opacity: 0,
-                    x: 30,
-                    scale: 0.96,
-                  }
-            }
-            animate={
-              reduceMotion
-                ? undefined
-                : {
-                    opacity: 1,
-                    x: 0,
-                    scale: 1,
-                  }
-            }
-            transition={{
-              delay: 0.25,
-              duration: 0.7,
-              ease: [0.16, 1, 0.3, 1] as const,
-            }}
-            className="relative"
-          >
-            <motion.div
-              whileHover={
-                reduceMotion
-                  ? undefined
-                  : {
-                      y: -4,
-                    }
-              }
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 24,
-              }}
-              className="h-full min-h-[280px] rounded-[28px] bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 p-6 text-white shadow-2xl"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-200">
-                    <motion.div
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              rotate: [0, 5, -5, 0],
-                            }
-                      }
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              duration: 3,
-                              repeat: Infinity,
-                              repeatDelay: 2,
-                            }
-                      }
-                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur"
-                    >
-                      <Sparkles className="h-4 w-4 text-cyan-300" />
-                    </motion.div>
-
-                    AI Insight
-                  </div>
-
-                  <h3 className="text-xl font-bold">
-                    Ada beberapa hal yang bisa Anda
-                    selesaikan hari ini.
-                  </h3>
+          <div className="relative grid gap-6 p-5 sm:gap-7 sm:p-9 lg:grid-cols-[1fr_430px] lg:p-10">
+            <div className="flex min-h-0 flex-col justify-between sm:min-h-[360px]">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/85 px-3.5 py-2 text-[11px] font-black tracking-wide text-indigo-700 shadow-sm backdrop-blur">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </span>
+                  AI TEACHING WORKSPACE
                 </div>
 
-                <motion.div
-                  animate={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          y: [0, -5, 0],
-                        }
-                  }
-                  transition={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          duration: 2.8,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }
-                  }
-                  className="rounded-xl bg-white/10 p-2 backdrop-blur"
-                >
-                  <Lightbulb className="h-5 w-5 text-amber-300" />
-                </motion.div>
+                <h1 className="mt-5 max-w-4xl text-[clamp(2.25rem,10vw,3.1rem)] sm:mt-6 sm:text-[clamp(2.7rem,5.3vw,5rem)] font-black leading-[0.93] tracking-[-0.055em] text-slate-950">
+                  Selamat datang kembali,
+                  <span className="mt-2 block bg-gradient-to-r from-[#315ef6] via-[#5b4af5] to-[#7047df] bg-clip-text text-transparent">
+                    Mas Wowo <span className="inline-block">👋</span>
+                  </span>
+                </h1>
+
+                <p className="mt-5 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:leading-7 sm:text-base">
+                  Kelola Tujuan Pembelajaran, buat soal, analisis nilai,
+                  dan selesaikan administrasi pembelajaran dari satu tempat.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2 sm:mt-7 sm:gap-2.5">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Workspace aktif
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
+                    <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                    AI siap membantu
+                  </span>
+                  <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold shadow-sm ${todayState.attendanceDone ? 'bg-emerald-50 text-emerald-700' : 'bg-white/80 text-slate-600'}`}>
+                    {todayState.attendanceDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CalendarCheck className="h-3.5 w-3.5 text-cyan-600" />}
+                    {todayState.loading ? 'Memeriksa absensi…' : todayState.attendanceDone ? 'Absensi hari ini selesai' : 'Absensi hari ini belum dicatat'}
+                  </span>
+                </div>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <motion.div
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          x: 4,
-                        }
-                  }
-                  className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur"
-                >
-                  <div className="flex gap-3">
-                    <motion.div
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              scale: [1, 1.3, 1],
-                            }
-                      }
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              duration: 2,
-                              repeat: Infinity,
-                            }
-                      }
-                      className="mt-0.5 h-2.5 w-2.5 rounded-full bg-cyan-300"
-                    />
+              <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+                <Link href="/dashboard/generate-tp">
+                  <motion.div
+                    whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
+                  >
+                    <WandSparkles className="h-4 w-4" />
+                    Generate TP
+                    <ArrowRight className="h-4 w-4" />
+                  </motion.div>
+                </Link>
 
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Buat soal dari TP yang tersimpan
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-300">
-                        12 TP terdeteksi belum memiliki
-                        bank soal terkait.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          x: 4,
-                        }
-                  }
-                  className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur"
-                >
-                  <div className="flex gap-3">
-                    <motion.div
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              scale: [1, 1.3, 1],
-                            }
-                      }
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              duration: 2.4,
-                              repeat: Infinity,
-                            }
-                      }
-                      className="mt-0.5 h-2.5 w-2.5 rounded-full bg-violet-300"
-                    />
-
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Periksa perkembangan penilaian
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-300">
-                        Ada data penilaian terbaru yang
-                        siap dianalisis.
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
+                <Link href="/dashboard/generate-soal">
+                  <motion.div
+                    whileHover={reduceMotion ? undefined : { y: -3 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white bg-white/90 px-5 py-3.5 text-sm font-black text-slate-700 shadow-sm hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                  >
+                    <BrainCircuit className="h-4 w-4" />
+                    Generate Soal AI
+                  </motion.div>
+                </Link>
               </div>
+            </div>
 
-              <Link
-                href="/dashboard/analisis-tp"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-cyan-200"
-              >
-                Lihat analisis
-                <motion.span
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          x: 4,
-                        }
-                  }
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </motion.span>
-              </Link>
-            </motion.div>
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* =====================================================
-          KPI
-      ===================================================== */}
-
-      <motion.section
-        {...motionSectionProps}
-        variants={sectionVariants}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-              Ringkasan
-            </p>
-
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
-              Aktivitas pembelajaran
-            </h2>
-          </div>
-
-          <motion.button
-            whileHover={
-              reduceMotion
-                ? undefined
-                : {
-                    y: -1,
-                  }
-            }
-            whileTap={
-              reduceMotion
-                ? undefined
-                : {
-                    scale: 0.96,
-                  }
-            }
-            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
-          >
-            <motion.span
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      rotate: 360,
-                    }
-              }
-              transition={{
-                duration: 0.6,
-                ease: 'easeInOut',
-              }}
+            {/* AI Insight */}
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, x: 28, scale: 0.97 }}
+              animate={reduceMotion ? undefined : { opacity: 1, x: 0, scale: 1 }}
+              transition={{ delay: 0.18, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="relative flex items-center"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </motion.span>
+              <div className="relative w-full overflow-hidden rounded-[28px] bg-gradient-to-br from-[#101735] via-[#202653] to-[#3d277e] p-5 text-white sm:rounded-[32px] sm:p-6 shadow-[0_24px_55px_rgba(49,46,129,0.25)]">
+                <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-violet-400/12 blur-2xl" />
+                <div className="absolute -bottom-20 left-8 h-40 w-40 rounded-full bg-cyan-400/10 blur-2xl" />
 
-            Refresh
-          </motion.button>
-        </div>
+                <div className="relative">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-black text-indigo-100">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
+                        <Sparkles className="h-4 w-4 text-cyan-300" />
+                      </span>
+                      AI Insight
+                    </div>
+                    <span className="rounded-2xl bg-amber-300/15 p-2.5">
+                      <Lightbulb className="h-5 w-5 text-amber-300" />
+                    </span>
+                  </div>
 
-        <motion.div
-          variants={containerVariants}
+                  <h2 className="mt-5 text-2xl font-black leading-tight">
+                    Ada beberapa hal yang bisa Anda selesaikan hari ini.
+                  </h2>
+
+                  <div className="mt-6 space-y-3">
+                    <Link
+                      href="/dashboard/generate-soal"
+                      className="group block rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur transition hover:bg-white/[0.15]"
+                    >
+                      <div className="flex gap-3">
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_0_5px_rgba(103,232,249,0.08)]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black">
+                            Buat soal dari TP yang tersimpan
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-indigo-100/65">
+                            12 TP terdeteksi belum memiliki bank soal terkait.
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-indigo-200 transition group-hover:translate-x-1" />
+                      </div>
+                    </Link>
+
+                    <Link
+                      href="/dashboard/analisis-nilai"
+                      className="group block rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur transition hover:bg-white/[0.15]"
+                    >
+                      <div className="flex gap-3">
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-violet-300 shadow-[0_0_0_5px_rgba(196,181,253,0.08)]" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black">
+                            Periksa perkembangan penilaian
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-indigo-100/65">
+                            Ada data penilaian terbaru yang siap dianalisis.
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-indigo-200 transition group-hover:translate-x-1" />
+                      </div>
+                    </Link>
+                  </div>
+
+                  <Link
+                    href="/dashboard/analisis-tp"
+                    className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white hover:text-cyan-200"
+                  >
+                    Lihat analisis
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* =====================================================
+            KPI COMMAND STRIP
+        ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
           initial={reduceMotion ? false : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
-          viewport={{
-            once: true,
-            amount: 0.15,
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+          viewport={{ once: true, amount: 0.08 }}
         >
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-            const tone = getToneClasses(stat.tone);
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+                Ringkasan
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                Aktivitas pembelajaran
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-500 transition hover:bg-white hover:text-indigo-700"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </button>
+          </div>
 
-            return (
-              <motion.div
-                key={stat.title}
-                variants={cardVariants}
-              >
-                <Link href={stat.href}>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
+              const tone = tones[stat.tone];
+
+              return (
+                <Link key={stat.title} href={stat.href} className="group">
                   <motion.div
-                    whileHover={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            y: -6,
-                            scale: 1.01,
-                          }
-                    }
-                    whileTap={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            scale: 0.985,
-                          }
-                    }
+                    initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                    whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.12 }}
                     transition={{
-                      type: 'spring',
-                      stiffness: 350,
-                      damping: 24,
+                      delay: index * 0.06,
+                      duration: 0.45,
+                      ease: [0.16, 1, 0.3, 1],
                     }}
-                    className="group relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.04)] hover:shadow-[0_18px_45px_rgba(15,23,42,0.09)]"
+                    whileHover={reduceMotion ? undefined : { y: -7 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+                    className="relative min-h-[215px] overflow-hidden rounded-[30px] border border-white/90 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.045)] transition-all hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(37,99,235,0.11)]"
                   >
-                    <motion.div
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              scale: [1, 1.08, 1],
-                            }
-                      }
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              duration: 6,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                            }
-                      }
-                      className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-slate-50"
+                    <div
+                      className={`absolute -right-10 -top-10 h-36 w-36 rounded-[45%] ${tone.soft} opacity-80`}
                     />
+                    <div className="absolute right-5 top-5 h-2 w-2 rounded-full bg-white" />
 
-                    <div className="relative">
-                      <div className="flex items-start justify-between">
-                        <motion.div
-                          whileHover={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  rotate: -5,
-                                  scale: 1.08,
-                                }
-                          }
-                          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone.icon} shadow-lg`}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </motion.div>
-
-                        <motion.div
-                          whileHover={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  x: 4,
-                                }
-                          }
-                        >
-                          <ChevronRight className="h-5 w-5 text-slate-300 transition-colors group-hover:text-slate-500" />
-                        </motion.div>
+                    <div className="relative flex items-start justify-between">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone.icon} shadow-lg`}>
+                        <Icon className="h-5 w-5" />
                       </div>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition group-hover:bg-indigo-50 group-hover:text-indigo-500">
+                        <ArrowRight className="h-4 w-4 -rotate-45 transition group-hover:rotate-0" />
+                      </span>
+                    </div>
 
-                      <div className="mt-8">
-                        <p className="text-sm font-semibold text-slate-500">
-                          {stat.title}
+                    <div className="relative mt-8">
+                      <p className="text-sm font-bold text-slate-500">{stat.title}</p>
+                      <div className="mt-1 flex items-end justify-between gap-2">
+                        <p className="text-4xl font-black tracking-tight text-slate-950">
+                          {stat.value}
                         </p>
-
-                        <div className="mt-1 flex items-end justify-between gap-3">
-                          <motion.h3
-                            initial={
-                              reduceMotion
-                                ? false
-                                : {
-                                    opacity: 0,
-                                    y: 6,
-                                  }
-                            }
-                            whileInView={
-                              reduceMotion
-                                ? undefined
-                                : {
-                                    opacity: 1,
-                                    y: 0,
-                                  }
-                            }
-                            viewport={{
-                              once: true,
-                            }}
-                            transition={{
-                              duration: 0.4,
-                            }}
-                            className="text-4xl font-black tracking-tight text-slate-950"
-                          >
-                            {stat.value}
-                          </motion.h3>
-
-                          <span
-                            className={`rounded-full ${tone.soft} px-2.5 py-1 text-[10px] font-bold ${tone.text}`}
-                          >
-                            {stat.trend}
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                          {stat.description}
-                        </p>
+                        <span className={`rounded-full ${tone.soft} px-2.5 py-1 text-[10px] font-black ${tone.text}`}>
+                          {stat.trend}
+                        </span>
                       </div>
+                      <p className="mt-2 text-xs font-medium text-slate-400">
+                        {stat.description}
+                      </p>
                     </div>
                   </motion.div>
                 </Link>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </motion.section>
-
-      {/* =====================================================
-          BENTO MAIN
-      ===================================================== */}
-
-      <motion.section
-        {...motionSectionProps}
-        variants={sectionVariants}
-        className="grid grid-cols-1 xl:grid-cols-12 gap-5"
-      >
-
-        {/* QUICK CREATE */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={
-            reduceMotion
-              ? undefined
-              : {
-                  y: -3,
-                }
-          }
-          className="xl:col-span-7 rounded-[30px] border border-slate-200/80 bg-white p-6 sm:p-7 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-                Quick Create
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                Mulai pekerjaan baru
-              </h2>
-            </div>
-
-            <motion.div
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      rotate: [0, 90, 0],
-                    }
-              }
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                repeatDelay: 3,
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
-            >
-              <Plus className="h-5 w-5" />
-            </motion.div>
-          </div>
-
-          <motion.div
-            variants={containerVariants}
-            className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3"
-          >
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              const tone = getToneClasses(action.tone);
-
-              return (
-                <motion.div
-                  key={action.title}
-                  variants={cardVariants}
-                >
-                  <Link href={action.href}>
-                    <motion.div
-                      whileHover={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              y: -5,
-                              scale: 1.015,
-                            }
-                      }
-                      whileTap={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              scale: 0.98,
-                            }
-                      }
-                      transition={{
-                        type: 'spring',
-                        stiffness: 350,
-                        damping: 22,
-                      }}
-                      className={`group rounded-[24px] border border-slate-200 p-4 ${tone.soft}`}
-                    >
-                      <motion.div
-                        whileHover={
-                          reduceMotion
-                            ? undefined
-                            : {
-                                rotate: 6,
-                                scale: 1.08,
-                              }
-                        }
-                        className={`mb-5 flex h-11 w-11 items-center justify-center rounded-2xl ${tone.icon} shadow-md`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </motion.div>
-
-                      <h3 className="text-sm font-bold text-slate-900">
-                        {action.title}
-                      </h3>
-
-                      <p className="mt-2 min-h-[58px] text-xs leading-5 text-slate-500">
-                        {action.description}
-                      </p>
-
-                      <div
-                        className={`mt-4 flex items-center gap-1 text-xs font-bold ${tone.text}`}
-                      >
-                        {action.label}
-
-                        <motion.span
-                          whileHover={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  x: 4,
-                                }
-                          }
-                        >
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </motion.span>
-                      </div>
-                    </motion.div>
-                  </Link>
-                </motion.div>
               );
             })}
-          </motion.div>
-        </motion.div>
-
-        {/* PROGRESS */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={
-            reduceMotion
-              ? undefined
-              : {
-                  y: -3,
-                }
-          }
-          className="xl:col-span-5 rounded-[30px] border border-slate-200/80 bg-white p-6 sm:p-7 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-                Progress
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                Target semester
-              </h2>
-            </div>
-
-            <motion.div
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      y: [0, -4, 0],
-                    }
-              }
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600"
-            >
-              <TrendingUp className="h-5 w-5" />
-            </motion.div>
           </div>
+        </motion.section>
 
-          <div className="mt-7 flex items-center gap-6">
-            <div className="relative h-32 w-32 shrink-0">
-              <svg
-                viewBox="0 0 120 120"
-                className="h-full w-full -rotate-90"
-              >
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="10"
-                  className="text-slate-100"
-                />
-
-                <motion.circle
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray="301.59"
-                  className="text-blue-600"
-                  initial={{
-                    strokeDashoffset: 301.59,
-                  }}
-                  whileInView={{
-                    strokeDashoffset: reduceMotion
-                      ? 66.35
-                      : 66.35,
-                  }}
-                  viewport={{
-                    once: true,
-                  }}
-                  transition={{
-                    duration: 1.2,
-                    delay: 0.15,
-                    ease: [0.16, 1, 0.3, 1] as const,
-                  }}
-                />
-              </svg>
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <motion.span
-                  initial={
-                    reduceMotion
-                      ? false
-                      : {
-                          opacity: 0,
-                          scale: 0.7,
-                        }
-                  }
-                  whileInView={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          opacity: 1,
-                          scale: 1,
-                        }
-                  }
-                  viewport={{
-                    once: true,
-                  }}
-                  transition={{
-                    delay: 0.6,
-                    duration: 0.45,
-                  }}
-                  className="text-2xl font-black text-slate-950"
-                >
-                  78%
-                </motion.span>
-
-                <span className="text-[10px] font-semibold text-slate-400">
-                  selesai
-                </span>
-              </div>
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-700">
-                Target pembelajaran
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-slate-400">
-                Sebagian besar target semester sudah tercapai.
-              </p>
-
-              <motion.div
-                initial={
-                  reduceMotion
-                    ? false
-                    : {
-                        opacity: 0,
-                        x: -8,
-                      }
-                }
-                whileInView={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        opacity: 1,
-                        x: 0,
-                      }
-                }
-                viewport={{
-                  once: true,
-                }}
-                transition={{
-                  delay: 0.8,
-                }}
-                className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                On Track
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ACTIVITY */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={
-            reduceMotion
-              ? undefined
-              : {
-                  y: -3,
-                }
-          }
-          className="xl:col-span-7 rounded-[30px] border border-slate-200/80 bg-white p-6 sm:p-7 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-                Activity
-              </p>
-
-              <h2 className="mt-1 text-xl font-bold text-slate-900">
-                Aktivitas terbaru
-              </h2>
-            </div>
-
-            <Link
-              href="/dashboard"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700"
-            >
-              Lihat semua
-            </Link>
-          </div>
-
-          <motion.div
-            variants={containerVariants}
-            className="mt-6 space-y-2"
-          >
-            {activities.map((activity) => {
-              const Icon = activity.icon;
-              const tone = getToneClasses(
-                activity.tone
-              );
-
-              return (
-                <motion.div
-                  key={activity.title}
-                  variants={cardVariants}
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          x: 4,
-                          backgroundColor:
-                            'rgba(248,250,252,0.9)',
-                        }
-                  }
-                  className="group flex items-center gap-4 rounded-2xl p-3"
-                >
-                  <motion.div
-                    whileHover={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            scale: 1.08,
-                            rotate: -4,
-                          }
-                    }
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </motion.div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-slate-800">
-                      {activity.title}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-xs text-slate-400">
-                      {activity.description}
-                    </p>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="hidden sm:block text-[11px] font-medium text-slate-400">
-                      {activity.time}
-                    </span>
-
-                    <motion.div
-                      whileHover={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              x: 4,
-                            }
-                      }
-                    >
-                      <ChevronRight className="h-4 w-4 text-slate-300" />
-                    </motion.div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </motion.div>
-
-        {/* SMART REMINDER */}
-        <motion.div
-          variants={cardVariants}
-          whileHover={
-            reduceMotion
-              ? undefined
-              : {
-                  y: -3,
-                }
-          }
-          className="xl:col-span-5 overflow-hidden rounded-[30px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-6 sm:p-7 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-violet-700 shadow-sm">
-                <BellRing className="h-3.5 w-3.5" />
-                Smart Reminder
-              </div>
-
-              <h2 className="mt-4 text-xl font-bold text-slate-900">
-                Jangan lewatkan pekerjaan penting
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Beberapa aktivitas berikut bisa Anda
-                selesaikan lebih dulu.
-              </p>
-            </div>
-
-            <motion.div
-              animate={
-                reduceMotion
-                  ? undefined
-                  : {
-                      rotate: [0, 8, -8, 0],
-                    }
-              }
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                repeatDelay: 2,
-              }}
-              className="hidden sm:flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-lg shadow-violet-200"
-            >
-              <Zap className="h-5 w-5" />
-            </motion.div>
-          </div>
-
-          <div className="mt-6 space-y-3">
-
-            <motion.div
-              whileHover={
-                reduceMotion
-                  ? undefined
-                  : {
-                      x: 4,
-                    }
-              }
-              className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-white/80 p-3.5"
-            >
-              <motion.div
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        scale: [1, 1.25, 1],
-                      }
-                }
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                }}
-                className="h-2.5 w-2.5 rounded-full bg-violet-500"
-              />
-
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-700">
-                  12 TP belum memiliki soal
-                </p>
-
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Gunakan Generate Soal AI
-                </p>
-              </div>
-
-              <Link
-                href="/dashboard/generate-soal"
-                className="rounded-xl bg-violet-50 p-2 text-violet-600 hover:bg-violet-100"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
-
-            <motion.div
-              whileHover={
-                reduceMotion
-                  ? undefined
-                  : {
-                      x: 4,
-                    }
-              }
-              className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-white/80 p-3.5"
-            >
-              <motion.div
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        scale: [1, 1.25, 1],
-                      }
-                }
-                transition={{
-                  duration: 2.2,
-                  repeat: Infinity,
-                }}
-                className="h-2.5 w-2.5 rounded-full bg-blue-500"
-              />
-
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-700">
-                  Data nilai siap dianalisis
-                </p>
-
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Lihat perkembangan siswa
-                </p>
-              </div>
-
-              <Link
-                href="/dashboard/analisis-nilai"
-                className="rounded-xl bg-blue-50 p-2 text-blue-600 hover:bg-blue-100"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
-
-          </div>
-        </motion.div>
-      </motion.section>
-
-      {/* =====================================================
-          ALL FEATURES
-      ===================================================== */}
-
-      <motion.section
-        {...motionSectionProps}
-        variants={sectionVariants}
-      >
-        <div className="mb-5 flex items-end justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-              Workspace
-            </p>
-
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
-              Semua fitur
-            </h2>
-          </div>
-
-          <span className="text-xs text-slate-400">
-            {features.length} fitur tersedia
-          </span>
-        </div>
-
-        <motion.div
-          variants={containerVariants}
+        {/* =====================================================
+            TODAY / QUICK ACTIONS
+        ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
           initial={reduceMotion ? false : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
-          viewport={{
-            once: true,
-            amount: 0.1,
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
+          viewport={{ once: true, amount: 0.06 }}
+          className="grid gap-5 xl:grid-cols-12"
         >
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            const tone = getToneClasses(
-              feature.tone
-            );
+          {/* Quick Create */}
+          <div className="relative overflow-hidden rounded-[28px] border border-white/90 bg-white/95 p-5 shadow-[0_14px_38px_rgba(15,23,42,0.05)] sm:rounded-[32px] sm:p-7 xl:col-span-7">
+            <div className="absolute -right-20 -top-20 h-52 w-52 rounded-[45%] bg-indigo-100/55" />
+            <div className="absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-cyan-100/35 blur-2xl" />
 
-            const featured =
-              index === 0 || index === 3;
+            <div className="relative flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+                  Quick Create
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                  Mulai pekerjaan baru
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Pilih aktivitas yang ingin Anda kerjakan.
+                </p>
+              </div>
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <Plus className="h-5 w-5" />
+              </span>
+            </div>
 
-            return (
-              <motion.div
-                key={feature.title}
-                variants={cardVariants}
-              >
-                <Link href={feature.href}>
-                  <motion.div
-                    whileHover={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            y: -5,
-                            scale: 1.01,
-                          }
-                    }
-                    whileTap={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            scale: 0.985,
-                          }
-                    }
-                    transition={{
-                      type: 'spring',
-                      stiffness: 350,
-                      damping: 23,
-                    }}
-                    className={`
-                      group
-                      relative
-                      overflow-hidden
-                      rounded-[26px]
-                      border
-                      border-slate-200/80
-                      bg-white
-                      p-5
-                      shadow-[0_6px_24px_rgba(15,23,42,0.035)]
-                      hover:shadow-[0_16px_38px_rgba(15,23,42,0.08)]
-                      ${
-                        featured
-                          ? 'sm:min-h-[150px]'
-                          : 'min-h-[135px]'
-                      }
-                    `}
-                  >
+            <div className="relative mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  title: 'Generate TP',
+                  desc: 'Buat tujuan pembelajaran dengan AI',
+                  href: '/dashboard/generate-tp',
+                  icon: Target,
+                  tone: 'indigo' as Tone,
+                },
+                {
+                  title: 'Generate Soal',
+                  desc: 'Susun soal berdasarkan TP',
+                  href: '/dashboard/generate-soal',
+                  icon: BrainCircuit,
+                  tone: 'violet' as Tone,
+                },
+                {
+                  title: 'Absensi Hari Ini',
+                  desc: 'Catat kehadiran siswa',
+                  href: '/dashboard/absensi',
+                  icon: CalendarCheck,
+                  tone: 'cyan' as Tone,
+                },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                const tone = tones[item.tone];
+
+                return (
+                  <Link key={item.title} href={item.href}>
                     <motion.div
-                      animate={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              scale: [1, 1.05, 1],
-                            }
-                      }
-                      transition={
-                        reduceMotion
-                          ? undefined
-                          : {
-                              duration: 7,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                            }
-                      }
-                      className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-50"
-                    />
-
-                    <div className="relative flex h-full flex-col justify-between">
-
-                      <div className="flex items-start justify-between">
-                        <motion.div
-                          whileHover={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  rotate: 6,
-                                  scale: 1.08,
-                                }
-                          }
-                          className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </motion.div>
-
-                        <motion.div
-                          whileHover={
-                            reduceMotion
-                              ? undefined
-                              : {
-                                  x: 4,
-                                }
-                          }
-                        >
-                          <ChevronRight className="h-5 w-5 text-slate-300 transition-colors group-hover:text-slate-500" />
-                        </motion.div>
+                      whileHover={reduceMotion ? undefined : { y: -5 }}
+                      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                      className={`relative h-full overflow-hidden rounded-[24px] border ${tone.border} ${tone.soft} p-4 transition-shadow hover:shadow-lg`}
+                    >
+                      <div className={`absolute -right-6 -top-6 h-20 w-20 rounded-full ${tone.blob}`} />
+                      <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tone.icon} shadow-md`}>
+                        <Icon className="h-5 w-5" />
                       </div>
+                      <h3 className="relative mt-5 text-sm font-black text-slate-900">
+                        {item.title}
+                      </h3>
+                      <p className="relative mt-1.5 min-h-[40px] text-xs leading-5 text-slate-500">
+                        {item.desc}
+                      </p>
+                      <span className={`relative mt-4 inline-flex items-center gap-1 text-xs font-black ${tone.text}`}>
+                        Mulai
+                        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+                      </span>
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
-                      <div className="mt-5">
-                        <h3 className="text-sm font-bold text-slate-900">
+          {/* Today */}
+          <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0f1738] via-[#20285b] to-[#3d247e] p-5 text-white shadow-[0_20px_50px_rgba(30,41,100,0.20)] sm:rounded-[32px] sm:p-7 xl:col-span-5">
+            <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-400/10 blur-2xl" />
+            <div className="absolute -bottom-20 left-10 h-44 w-44 rounded-full bg-fuchsia-400/10 blur-2xl" />
+
+            <div className="relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300">
+                    Hari ini
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight">
+                    Apa yang perlu dikerjakan?
+                  </h2>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-2.5">
+                  <Zap className="h-5 w-5 text-amber-300" />
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <Link href="/dashboard/absensi" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.attendanceDone ? 'bg-emerald-400/15 text-emerald-300' : 'bg-cyan-400/15 text-cyan-300'}`}>
+                    {todayState.attendanceDone ? <CheckCircle2 className="h-4 w-4" /> : <CalendarCheck className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-black">Absensi siswa</p>
+                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${todayState.attendanceDone ? 'bg-emerald-300/15 text-emerald-200' : 'bg-amber-300/15 text-amber-200'}`}>{todayState.attendanceDone ? 'SELESAI' : 'PERLU'}</span>}
+                    </div>
+                    <p className="mt-0.5 text-xs text-indigo-100/60">
+                      {todayState.loading ? 'Memeriksa data hari ini…' : todayState.attendanceDone ? `${todayState.attendanceCount} catatan absensi hari ini` : 'Catat kehadiran siswa satu kali hari ini'}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                </Link>
+
+                <Link href="/dashboard/jurnal" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.journalDone ? 'bg-emerald-400/15 text-emerald-300' : 'bg-violet-400/15 text-violet-300'}`}>
+                    {todayState.journalDone ? <CheckCircle2 className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-black">Jurnal mengajar</p>
+                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${todayState.journalDone ? 'bg-emerald-300/15 text-emerald-200' : 'bg-amber-300/15 text-amber-200'}`}>{todayState.journalDone ? 'SELESAI' : 'PERLU'}</span>}
+                    </div>
+                    <p className="mt-0.5 text-xs text-indigo-100/60">
+                      {todayState.loading ? 'Memeriksa data hari ini…' : todayState.journalDone ? `${todayState.journalCount} jurnal dibuat hari ini` : 'Catat kegiatan pembelajaran hari ini'}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                </Link>
+
+                <Link href="/dashboard/analisis-nilai" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300"><TrendingUp className="h-4 w-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black">Analisis nilai</p>
+                    <p className="mt-0.5 text-xs text-indigo-100/60">Periksa data penilaian terbaru</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                </Link>
+
+                {todayState.error && <p className="px-1 text-[10px] font-semibold text-amber-200/80">Status administrasi belum dapat diperiksa. Anda tetap dapat membuka menu di atas.</p>}
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* =====================================================
+            PROGRESS + ACTIVITY
+        ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
+          initial={reduceMotion ? false : 'hidden'}
+          whileInView={reduceMotion ? undefined : 'visible'}
+          viewport={{ once: true, amount: 0.06 }}
+          className="grid gap-5 xl:grid-cols-12"
+        >
+          {/* Progress */}
+          <div className="relative overflow-hidden rounded-[32px] border border-white/90 bg-gradient-to-br from-white to-emerald-50/55 p-6 shadow-[0_12px_35px_rgba(15,23,42,0.055)] sm:p-7 xl:col-span-5">
+            <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-emerald-100/55" />
+
+            <div className="relative flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">
+                  Progress
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                  Target semester
+                </h2>
+              </div>
+              <span className="rounded-2xl bg-emerald-100 p-2.5 text-emerald-700">
+                <TrendingUp className="h-5 w-5" />
+              </span>
+            </div>
+
+            <div className="relative mt-7 flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+              <div className="relative h-32 w-32 shrink-0">
+                <svg viewBox="0 0 120 120" className="-rotate-90">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="48"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    className="text-emerald-100"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="48"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    strokeDasharray="301.59"
+                    strokeDashoffset="66.35"
+                    className="text-emerald-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-black text-slate-950">78%</span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    selesai
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-black text-slate-800">On Track</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  Sebagian besar target semester sudah tercapai.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-[11px] font-black text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  78% selesai
+                </span>
+
+                <div className="mt-5 space-y-2">
+                  {[['Tujuan Pembelajaran', '82%'], ['Penilaian', '68%'], ['Administrasi', '91%']].map(([label, value]) => (
+                    <div key={label}>
+                      <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-slate-400"><span>{label}</span><span>{value}</span></div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: value }} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity */}
+          <div className="rounded-[32px] border border-white/90 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.05)] sm:p-7 xl:col-span-7">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  Activity
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                  Aktivitas terbaru
+                </h2>
+              </div>
+              <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-[10px] font-black text-indigo-600">
+                Terbaru
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-2">
+              {activities.map((activity) => {
+                const Icon = activity.icon;
+                const tone = tones[activity.tone];
+
+                return (
+                  <Link
+                    key={activity.title}
+                    href={activity.href}
+                    className="group flex items-center gap-4 rounded-2xl p-3 transition hover:bg-slate-50"
+                  >
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-slate-800">
+                        {activity.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-400">
+                        {activity.description}
+                      </p>
+                    </div>
+                    <span className="hidden shrink-0 text-[11px] font-bold text-slate-400 sm:block">
+                      {activity.time}
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-slate-500" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* =====================================================
+            ALL FEATURES
+        ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
+          initial={reduceMotion ? false : 'hidden'}
+          whileInView={reduceMotion ? undefined : 'visible'}
+          viewport={{ once: true, amount: 0.05 }}
+        >
+          <div className="mb-5 flex items-end justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+                Workspace
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                Semua fitur
+              </h2>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-slate-400 shadow-sm">
+              {features.length} fitur
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              const tone = tones[feature.tone];
+
+              return (
+                <Link key={feature.title} href={feature.href} className="group">
+                  <motion.div
+                    initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                    whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.08 }}
+                    transition={{
+                      delay: Math.min(index * 0.025, 0.22),
+                      duration: 0.4,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    whileHover={reduceMotion ? undefined : { y: -5 }}
+                    className={`relative min-h-[150px] overflow-hidden rounded-[27px] border ${tone.border} bg-white p-5 shadow-[0_9px_28px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_42px_rgba(37,99,235,0.085)]`}
+                  >
+                    <div className={`absolute -right-9 -top-9 h-28 w-28 rounded-[45%] ${tone.soft}`} />
+                    <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="relative mt-5 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900">
                           {feature.title}
                         </h3>
-
                         <p className="mt-1 text-xs leading-5 text-slate-400">
                           {feature.description}
                         </p>
                       </div>
+                      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition group-hover:bg-indigo-50 group-hover:text-indigo-500">
+                        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </span>
                     </div>
                   </motion.div>
                 </Link>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </motion.section>
+              );
+            })}
+          </div>
+        </motion.section>
 
-      {/* =====================================================
-          BOTTOM CTA
-      ===================================================== */}
-
-      <motion.section
-        {...motionSectionProps}
-        variants={sectionVariants}
-        className="overflow-hidden rounded-[30px] bg-slate-950 shadow-[0_16px_50px_rgba(15,23,42,0.12)]"
-      >
-        <div className="relative p-6 sm:p-8">
-
-          <motion.div
-            animate={
-              reduceMotion
-                ? undefined
-                : {
-                    x: [0, 20, 0],
-                    y: [0, -10, 0],
-                  }
-            }
-            transition={
-              reduceMotion
-                ? undefined
-                : {
-                    duration: 10,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }
-            }
-            className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl"
-          />
-
-          <motion.div
-            animate={
-              reduceMotion
-                ? undefined
-                : {
-                    x: [0, -15, 0],
-                    y: [0, 12, 0],
-                  }
-            }
-            transition={
-              reduceMotion
-                ? undefined
-                : {
-                    duration: 12,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }
-            }
-            className="absolute -bottom-20 left-1/3 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl"
-          />
-
-          <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-
+        {/* =====================================================
+            FINAL CTA
+        ===================================================== */}
+        <motion.section
+          variants={sectionVariants}
+          initial={reduceMotion ? false : 'hidden'}
+          whileInView={reduceMotion ? undefined : 'visible'}
+          viewport={{ once: true, amount: 0.05 }}
+          className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-[#101735] via-[#20285d] to-[#3f287f] shadow-[0_22px_60px_rgba(49,46,129,0.20)]"
+        >
+          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-fuchsia-400/10 blur-3xl" />
+          <div className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
+          <div className="relative flex flex-col gap-6 p-7 sm:p-9 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 text-xs font-semibold text-cyan-300">
+              <div className="inline-flex items-center gap-2 text-xs font-black text-cyan-300">
                 <Sparkles className="h-3.5 w-3.5" />
-                EdTech AI Workspace
+                EDTECH AI WORKSPACE
               </div>
-
-              <h2 className="mt-2 max-w-2xl text-2xl font-black text-white">
-                Kurangi pekerjaan administratif,
-                fokus pada pembelajaran.
+              <h2 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Kurangi pekerjaan administratif, fokus pada pembelajaran.
               </h2>
-
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
-                Gunakan fitur AI untuk membantu menyusun TP,
-                membuat soal, dan membaca data pembelajaran Anda.
+              <p className="mt-2 max-w-xl text-sm leading-6 text-indigo-100/65">
+                Gunakan fitur AI untuk membantu menyusun TP, membuat soal,
+                dan membaca data pembelajaran Anda.
               </p>
             </div>
 
-            <Link
-              href="/dashboard/generate-tp"
-              className="group inline-flex shrink-0"
-            >
+            <Link href="/dashboard/generate-tp" className="shrink-0">
               <motion.div
-                whileHover={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        y: -3,
-                        scale: 1.02,
-                      }
-                }
-                whileTap={
-                  reduceMotion
-                    ? undefined
-                    : {
-                        scale: 0.97,
-                      }
-                }
-                transition={{
-                  type: 'spring',
-                  stiffness: 380,
-                  damping: 22,
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-bold text-slate-950 shadow-lg"
+                whileHover={reduceMotion ? undefined : { y: -3, scale: 1.02 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-slate-950 shadow-lg"
               >
                 <WandSparkles className="h-4 w-4" />
-
                 Mulai dengan AI
-
-                <motion.span
-                  whileHover={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          x: 4,
-                        }
-                  }
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </motion.span>
+                <ArrowRight className="h-4 w-4" />
               </motion.div>
             </Link>
-
           </div>
+        </motion.section>
+
         </div>
-      </motion.section>
 
-      {/* =====================================================
-          FLOATING STATUS
-      ===================================================== */}
-
-      <AnimatePresence>
-        {!reduceMotion && (
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 20,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              delay: 1.2,
-              duration: 0.5,
-            }}
-            className="pointer-events-none fixed bottom-6 right-6 hidden lg:block"
-          >
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-[10px] font-semibold text-slate-500 shadow-lg backdrop-blur-xl">
-              <motion.span
-                animate={{
-                  scale: [1, 1.25, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                }}
-                className="h-2 w-2 rounded-full bg-emerald-500"
-              />
-
-              Semua sistem berjalan normal
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="pointer-events-none fixed bottom-6 right-6 z-20 hidden lg:block">
+        <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-3.5 py-2 text-[10px] font-bold text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+          Semua sistem berjalan normal
+        </div>
+      </div>
     </motion.div>
   );
 }

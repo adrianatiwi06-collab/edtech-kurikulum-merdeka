@@ -22,6 +22,7 @@ import {
 import {
   BarChart2,
   BarChart3,
+  CalendarCheck,
   Bell,
   BookOpen,
   Brain,
@@ -381,7 +382,11 @@ export default function DashboardLayout({
       },
       {
         match: 'jurnal',
-        title: 'Jurnal & Absensi',
+        title: 'Jurnal Mengajar',
+      },
+      {
+        match: 'absensi',
+        title: 'Absensi Siswa',
       },
       {
         match: 'riwayat-jurnal',
@@ -478,9 +483,14 @@ export default function DashboardLayout({
       icon: ClipboardList,
       items: [
         {
-          label: 'Jurnal & Absensi',
+          label: 'Jurnal Mengajar',
           href: '/dashboard/jurnal',
           icon: BookOpen,
+        },
+        {
+          label: 'Absensi Siswa',
+          href: '/dashboard/absensi',
+          icon: CalendarCheck,
         },
         {
           label: 'Riwayat Jurnal',
@@ -984,7 +994,7 @@ export default function DashboardLayout({
       </div>
 
       {/* COLLAPSE */}
-      <div className="px-4 pb-4">
+      <div className="hidden px-4 pb-4 lg:block">
         <motion.button
           whileHover={
             reduceMotion
@@ -1277,7 +1287,7 @@ export default function DashboardLayout({
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed bottom-0 left-0 top-0 z-[60] flex w-[290px] flex-col overflow-hidden bg-white shadow-2xl lg:hidden"
+            className="fixed bottom-0 left-0 top-0 z-[60] flex w-[min(300px,calc(100vw-48px))] flex-col overflow-hidden bg-white shadow-2xl lg:hidden"
           >
             <div className="absolute right-3 top-3 z-10">
               <motion.button
@@ -1316,30 +1326,21 @@ export default function DashboardLayout({
       ==================================================== */}
 
       <motion.main
-        animate={
-          reduceMotion
-            ? undefined
-            : {
-                paddingLeft:
-                  sidebarCollapsed
-                    ? 116
-                    : 312,
-              }
-        }
-        transition={{
-          duration: 0.3,
-          ease: [0.16, 1, 0.3, 1] as const,
-        }}
-        className="relative min-h-screen lg:pl-[312px]"
+        style={{
+          '--dashboard-sidebar-offset': sidebarCollapsed
+            ? '116px'
+            : '312px',
+        } as React.CSSProperties}
+        className="relative min-h-screen w-full min-w-0 transition-[padding-left] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:pl-[var(--dashboard-sidebar-offset)]"
       >
 
         {/* =================================================
             TOP NAVBAR
         ================================================= */}
 
-        <header className="sticky top-0 z-30 px-4 pb-1 pt-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 px-3 pb-1 pt-3 sm:px-6 sm:pt-4 lg:px-8">
 
-          <div className="flex h-[72px] items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:px-5">
+          <div className="flex h-[64px] items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:h-[72px] sm:px-5">
 
             {/* LEFT */}
             <div className="flex min-w-0 items-center gap-3">
@@ -1353,9 +1354,10 @@ export default function DashboardLayout({
                         scale: 0.92,
                       }
                 }
-                onClick={() =>
-                  setMobileSidebarOpen(true)
-                }
+                onClick={() => {
+                  setSidebarCollapsed(false);
+                  setMobileSidebarOpen(true);
+                }}
                 className="rounded-xl p-2.5 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden"
               >
                 <Menu className="h-5 w-5" />
@@ -1532,7 +1534,7 @@ export default function DashboardLayout({
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className="absolute right-0 top-12 z-50 w-[340px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                      className="absolute right-0 top-12 z-50 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
                     >
                       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                         <div>
@@ -1785,7 +1787,7 @@ export default function DashboardLayout({
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                      className="absolute right-0 top-12 z-50 w-[min(256px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
                     >
                       <div className="border-b border-slate-100 p-4">
                         <div className="flex items-center gap-3">
@@ -2071,7 +2073,7 @@ export default function DashboardLayout({
 
         <motion.div
           layout
-          className="relative px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+          className="relative px-3 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
           <div className="mx-auto w-full max-w-[1700px]">
             {children}

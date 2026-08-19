@@ -1,42 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Save, CheckCircle } from 'lucide-react';
+import { BookOpen, CalendarDays, Clock3, FileText, Loader2, Save, Sparkles } from 'lucide-react';
 
 interface Class {
   id: string;
   name: string;
 }
 
-interface Student {
-  id: string;
-  name: string;
-  nisn: string;
-}
-
-interface AttendanceRecord {
-  studentId: string;
-  studentName: string;
-  status: 'Hadir' | 'Izin' | 'Sakit' | 'Alfa';
-}
-
-export default function JurnalAbsensiPage() {
+export default function JurnalPage() {
   const { user } = useAuth();
+
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Data Master
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-
-  // Form Jurnal
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
   const [mataPelajaran, setMataPelajaran] = useState('');
@@ -45,273 +29,209 @@ export default function JurnalAbsensiPage() {
   const [metode, setMetode] = useState('');
   const [catatan, setCatatan] = useState('');
 
-  // Data Absensi
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-
   useEffect(() => {
-    if (user) {
-      loadClasses();
-    }
+    if (user) loadClasses();
   }, [user]);
 
   const loadClasses = async () => {
-    try {
-      const q = query(collection(db, 'classes'), where('user_id', '==', user?.uid));
-      const querySnapshot = await getDocs(q);
-      const classesData: Class[] = [];
-      querySnapshot.forEach((doc) => classesData.push({ id: doc.id, ...doc.data() } as Class));
-      setClasses(classesData);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const loadStudents = async (classId: string) => {
+    if (!user) return;
     setLoading(true);
     try {
-      const studentsRef = collection(db, 'classes', classId, 'students');
-      const querySnapshot = await getDocs(studentsRef);
-      const studentsData: Student[] = [];
-      querySnapshot.forEach((doc) => studentsData.push({ id: doc.id, ...doc.data() } as Student));
-      
-      // Urutkan abjad
-      studentsData.sort((a, b) => a.name.localeCompare(b.name, 'id'));
-      setStudents(studentsData);
-
-      // Siapkan default absensi: Semua siswa dianggap "Hadir" pada awalnya
-      const defaultAttendance: AttendanceRecord[] = studentsData.map(student => ({
-        studentId: student.id,
-        studentName: student.name,
-        status: 'Hadir'
-      }));
-      setAttendance(defaultAttendance);
-
+      const q = query(collection(db, 'classes'), where('user_id', '==', user.uid));
+      const snapshot = await getDocs(q);
+      const data: Class[] = [];
+      snapshot.forEach((item) => data.push({ id: item.id, ...item.data() } as Class));
+      data.sort((a, b) => a.name.localeCompare(b.name, 'id'));
+      setClasses(data);
     } catch (error) {
-      console.error("Gagal memuat siswa", error);
+      console.error(error);
+      alert('Gagal memuat daftar kelas.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClassChange = (classId: string) => {
-    setSelectedClass(classId);
-    if (classId) {
-      loadStudents(classId);
-    } else {
-      setStudents([]);
-      setAttendance([]);
-    }
-  };
-
-  const updateAttendance = (studentId: string, status: 'Hadir' | 'Izin' | 'Sakit' | 'Alfa') => {
-    setAttendance(prev => 
-      prev.map(record => 
-        record.studentId === studentId ? { ...record, status } : record
-      )
-    );
-  };
-
   const handleSave = async () => {
-    if (!selectedClass || !mataPelajaran || !materi) {
-      alert("Mohon lengkapi Kelas, Mata Pelajaran, dan Materi Pembelajaran!");
+    if (!user) return alert('Sesi pengguna belum tersedia.');
+
+    if (!tanggal || !selectedClass || !mataPelajaran.trim() || !materi.trim()) {
+      alert('Mohon lengkapi Tanggal, Kelas, Mata Pelajaran, dan Materi Pembelajaran.');
       return;
     }
 
     setSaving(true);
     try {
-      // Rekap jumlah kehadiran
-      const rekap = {
-        hadir: attendance.filter(a => a.status === 'Hadir').length,
-        izin: attendance.filter(a => a.status === 'Izin').length,
-        sakit: attendance.filter(a => a.status === 'Sakit').length,
-        alfa: attendance.filter(a => a.status === 'Alfa').length,
-      };
+      const className = classes.find((item) => item.id === selectedClass)?.name || '';
 
-      const className = classes.find(c => c.id === selectedClass)?.name || '';
-
-      const dataToSave = {
-        user_id: user?.uid,
+      await addDoc(collection(db, 'jurnal_mengajar'), {
+        user_id: user.uid,
         tanggal,
         class_id: selectedClass,
         class_name: className,
-        mata_pelajaran: mataPelajaran,
-        jam_pelajaran: jamPelajaran,
-        materi,
-        metode,
-        catatan,
-        rekap_absensi: rekap,
-        detail_absensi: attendance, // Simpan siapa saja yang hadir/izin/dll
-        created_at: new Date().toISOString()
-      };
+        mata_pelajaran: mataPelajaran.trim(),
+        jam_pelajaran: jamPelajaran.trim(),
+        materi: materi.trim(),
+        metode: metode.trim(),
+        catatan: catatan.trim(),
+        created_at: new Date().toISOString(),
+      });
 
-      await addDoc(collection(db, 'jurnal_mengajar'), dataToSave);
-      
-      alert("✅ Jurnal Mengajar dan Absensi berhasil disimpan!");
-      
-      // Reset form secukupnya
+      alert('Jurnal Mengajar berhasil disimpan.');
       setMateri('');
+      setMetode('');
       setCatatan('');
       setJamPelajaran('');
-      // Kembalikan semua ke hadir
-      setAttendance(attendance.map(a => ({ ...a, status: 'Hadir' })));
-
     } catch (error) {
       console.error(error);
-      alert("Gagal menyimpan data.");
+      alert('Gagal menyimpan jurnal.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="container mx-auto pb-10 px-4 pt-6 animate-in fade-in duration-300">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Jurnal & Absensi</h1>
-        <p className="mt-2 text-gray-600">Catat aktivitas mengajar dan kehadiran siswa dalam satu langkah mudah.</p>
-      </div>
+    <div className="min-h-screen bg-[#f7f8fc] px-4 pb-12 pt-6 md:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 text-white shadow-[0_18px_50px_rgba(37,99,235,0.20)] md:p-8">
+          <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-300/10 blur-3xl" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* KOLOM KIRI: FORM JURNAL */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="border-blue-200 shadow-sm">
-            <CardHeader className="bg-blue-50/50 border-b border-blue-100">
-              <CardTitle className="text-blue-800">Buku Jurnal Mengajar</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 mt-4">
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Tanggal Pelaksanaan</label>
-                <Input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} />
+          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
+                Jurnal Pembelajaran
               </div>
-              
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Pilih Kelas</label>
-                <select 
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Jurnal Mengajar</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100 md:text-base">
+                Dokumentasikan kegiatan pembelajaran dengan rapi. Data jurnal tersimpan
+                terpisah dari data absensi siswa.
+              </p>
+            </div>
+
+            <div className="hidden rounded-[24px] bg-white/10 p-5 backdrop-blur md:block">
+              <BookOpen className="h-12 w-12" />
+            </div>
+          </div>
+        </section>
+
+        <Card className="overflow-hidden rounded-[28px] border-0 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.07)]">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/70 px-6 py-5 md:px-8">
+            <CardTitle className="flex items-center gap-3 text-xl text-slate-800">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                <FileText className="h-5 w-5" />
+              </span>
+              Buku Jurnal Mengajar
+            </CardTitle>
+            <CardDescription className="ml-13">
+              Hanya data aktivitas mengajar yang disimpan pada halaman ini.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-7 p-6 md:p-8">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Tanggal Pelaksanaan</label>
+                <div className="relative">
+                  <CalendarDays className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                  <Input
+                    type="date"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                    className="h-11 rounded-2xl border-slate-200 bg-slate-50 pl-10 focus-visible:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Kelas</label>
+                <select
                   value={selectedClass}
-                  onChange={(e) => handleClassChange(e.target.value)}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  disabled={loading}
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
                 >
-                  <option value="">-- Pilih Kelas --</option>
-                  {classes.map(c => (
-                    <option key={c.id} value={c.id}>Kelas {c.name}</option>
+                  <option value="">{loading ? 'Memuat kelas...' : '-- Pilih Kelas --'}</option>
+                  {classes.map((item) => (
+                    <option key={item.id} value={item.id}>Kelas {item.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Mata Pelajaran</label>
-                <Input placeholder="Contoh: Pendidikan Pancasila" value={mataPelajaran} onChange={e => setMataPelajaran(e.target.value)} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Jam Pelajaran Ke-</label>
-                <Input placeholder="Contoh: 1 - 3" value={jamPelajaran} onChange={e => setJamPelajaran(e.target.value)} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Materi Pembelajaran</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 min-h-[80px]" 
-                  placeholder="Tuliskan materi atau Tujuan Pembelajaran (TP) hari ini..."
-                  value={materi} onChange={e => setMateri(e.target.value)} 
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Mata Pelajaran</label>
+                <Input
+                  value={mataPelajaran}
+                  onChange={(e) => setMataPelajaran(e.target.value)}
+                  placeholder="Contoh: Pendidikan Pancasila"
+                  className="h-11 rounded-2xl border-slate-200 bg-slate-50 focus-visible:ring-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Metode Pembelajaran</label>
-                <Input placeholder="Contoh: Ceramah, Diskusi, PBL" value={metode} onChange={e => setMetode(e.target.value)} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold mb-1 text-gray-700">Catatan Khusus (Opsional)</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 min-h-[60px]" 
-                  placeholder="Catatan kejadian di kelas..."
-                  value={catatan} onChange={e => setCatatan(e.target.value)} 
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Clock3 className="h-4 w-4 text-slate-400" />
+                  Jam Pelajaran
+                </label>
+                <Input
+                  value={jamPelajaran}
+                  onChange={(e) => setJamPelajaran(e.target.value)}
+                  placeholder="Contoh: 1 - 3"
+                  className="h-11 rounded-2xl border-slate-200 bg-slate-50 focus-visible:ring-blue-500"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
 
-        {/* KOLOM KANAN: ABSENSI */}
-        <div className="lg:col-span-2">
-          <Card className="border-green-200 shadow-sm h-full">
-            <CardHeader className="bg-green-50/50 border-b border-green-100 flex flex-row items-center justify-between">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Materi Pembelajaran / TP</label>
+              <textarea
+                value={materi}
+                onChange={(e) => setMateri(e.target.value)}
+                placeholder="Tuliskan materi atau Tujuan Pembelajaran yang dilaksanakan..."
+                className="min-h-[130px] w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Metode Pembelajaran</label>
+                <Input
+                  value={metode}
+                  onChange={(e) => setMetode(e.target.value)}
+                  placeholder="Contoh: Diskusi, PBL, Demonstrasi"
+                  className="h-11 rounded-2xl border-slate-200 bg-slate-50 focus-visible:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Catatan / Refleksi</label>
+                <Input
+                  value={catatan}
+                  onChange={(e) => setCatatan(e.target.value)}
+                  placeholder="Catatan khusus pembelajaran..."
+                  className="h-11 rounded-2xl border-slate-200 bg-slate-50 focus-visible:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-[24px] bg-blue-50/70 p-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle className="text-green-800">Daftar Hadir Siswa</CardTitle>
-                <CardDescription>Pilih status selain "Hadir" jika ada siswa yang berhalangan.</CardDescription>
+                <p className="text-sm font-bold text-blue-900">Siap menyimpan jurnal?</p>
+                <p className="mt-1 text-xs text-blue-700">
+                  Absensi siswa tidak akan ikut tersimpan pada dokumen jurnal.
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="mt-4 p-0">
-              {!selectedClass ? (
-                <div className="p-10 text-center text-gray-500 italic">
-                  Silakan pilih kelas pada kolom Jurnal di sebelah kiri untuk memuat daftar siswa.
-                </div>
-              ) : loading ? (
-                <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div>
-              ) : students.length === 0 ? (
-                <div className="p-10 text-center text-gray-500">Belum ada data siswa di kelas ini.</div>
-              ) : (
-                <div className="max-h-[600px] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead className="w-12 text-center">No</TableHead>
-                        <TableHead>Nama Siswa</TableHead>
-                        <TableHead className="text-center">Kehadiran</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {students.map((student, idx) => {
-                        const currentStatus = attendance.find(a => a.studentId === student.id)?.status || 'Hadir';
-                        return (
-                          <TableRow key={student.id} className="hover:bg-gray-50">
-                            <TableCell className="text-center font-medium">{idx + 1}</TableCell>
-                            <TableCell className="font-semibold text-gray-700">{student.name}</TableCell>
-                            <TableCell>
-                              <div className="flex justify-center gap-2">
-                                {['Hadir', 'Izin', 'Sakit', 'Alfa'].map(status => (
-                                  <button
-                                    key={status}
-                                    onClick={() => updateAttendance(student.id, status as any)}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                                      currentStatus === status 
-                                      ? status === 'Hadir' ? 'bg-green-100 border-green-500 text-green-700'
-                                        : status === 'Izin' ? 'bg-blue-100 border-blue-500 text-blue-700'
-                                        : status === 'Sakit' ? 'bg-yellow-100 border-yellow-500 text-yellow-700'
-                                        : 'bg-red-100 border-red-500 text-red-700'
-                                      : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-100'
-                                    }`}
-                                  >
-                                    {status}
-                                  </button>
-                                ))}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-            
-            {/* FOOTER TOMBOL SIMPAN */}
-            {selectedClass && !loading && (
-              <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-4 rounded-b-lg">
-                <Button 
-                  onClick={handleSave} 
-                  disabled={saving} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white w-full md:w-auto px-8 py-6"
-                >
-                  {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-                  <span className="font-bold text-lg">Simpan Jurnal & Absensi</span>
-                </Button>
-              </div>
-            )}
-          </Card>
-        </div>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="h-12 rounded-2xl bg-blue-600 px-7 font-bold shadow-sm hover:bg-blue-700"
+              >
+                {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+                Simpan Jurnal
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
