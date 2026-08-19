@@ -95,7 +95,7 @@ const pageVariants = {
     opacity: 1,
     transition: {
       duration: 0.4,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
       staggerChildren: 0.06,
     },
   },
@@ -111,7 +111,7 @@ const sectionVariants = {
     y: 0,
     transition: {
       duration: 0.55,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
 };
@@ -128,7 +128,7 @@ const cardVariants = {
     scale: 1,
     transition: {
       duration: 0.45,
-      ease: [0.16, 1, 0.3, 1],
+      
     },
   },
 };
@@ -544,7 +544,7 @@ export default function DashboardPage() {
                 transition={{
                   delay: 0.22,
                   duration: 0.55,
-                  ease: [0.16, 1, 0.3, 1],
+                  ease: [0.16, 1, 0.3, 1] as const,
                 }}
                 className="max-w-3xl text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-950"
               >
@@ -703,7 +703,7 @@ export default function DashboardPage() {
             transition={{
               delay: 0.25,
               duration: 0.7,
-              ease: [0.16, 1, 0.3, 1],
+              ease: [0.16, 1, 0.3, 1] as const,
             }}
             className="relative"
           >
@@ -1309,7 +1309,7 @@ export default function DashboardPage() {
                   transition={{
                     duration: 1.2,
                     delay: 0.15,
-                    ease: [0.16, 1, 0.3, 1],
+                    ease: [0.16, 1, 0.3, 1] as const,
                   }}
                 />
               </svg>

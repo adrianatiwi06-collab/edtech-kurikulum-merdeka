@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Fragment,
   ReactNode,
   useEffect,
   useState,
@@ -79,14 +80,14 @@ const sidebarVariants = {
     width: 280,
     transition: {
       duration: 0.3,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
   collapsed: {
     width: 84,
     transition: {
       duration: 0.3,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
 };
@@ -96,14 +97,14 @@ const mobileSidebarVariants = {
     x: '-100%',
     transition: {
       duration: 0.28,
-      ease: [0.4, 0, 1, 1],
+      ease: [0.4, 0, 1, 1] as const,
     },
   },
   open: {
     x: 0,
     transition: {
       duration: 0.32,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
 };
@@ -127,7 +128,7 @@ const menuItemVariants = {
     x: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   },
 };
@@ -144,7 +145,7 @@ const dropdownVariants = {
     scale: 1,
     transition: {
       duration: 0.18,
-      ease: [0.16, 1, 0.3, 1],
+      ease: [0.16, 1, 0.3, 1] as const,
     },
   },
   exit: {
@@ -867,7 +868,7 @@ export default function DashboardLayout({
                 }
                 transition={{
                   duration: 0.22,
-                  ease: [0.16, 1, 0.3, 1],
+                  ease: [0.16, 1, 0.3, 1] as const,
                 }}
                 className="overflow-hidden"
               >
@@ -885,13 +886,11 @@ export default function DashboardLayout({
                   }
                   className="ml-2 mt-1 space-y-1 border-l border-slate-200 pl-3"
                 >
-                  {group.items.map(
-                    (item) =>
-                      renderNavItem(
-                        item,
-                        mobile
-                      )
-                  )}
+                  {group.items.map((item) => (
+                    <Fragment key={item.href}>
+                      {renderNavItem(item, mobile)}
+                    </Fragment>
+                  ))}
                 </motion.div>
               </motion.div>
             )}
@@ -1075,10 +1074,11 @@ export default function DashboardLayout({
           })}
         </div>
 
-        {menuGroups.map(
-          (group) =>
-            renderNavGroup(group)
-        )}
+        {menuGroups.map((group) => (
+          <Fragment key={group.id}>
+            {renderNavGroup(group)}
+          </Fragment>
+        ))}
       </motion.nav>
 
       {/* BOTTOM */}
@@ -1179,7 +1179,7 @@ export default function DashboardLayout({
               : {
                   duration: 14,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: 'easeInOut' as const,
                 }
           }
           className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-100/30 blur-3xl"
@@ -1200,7 +1200,7 @@ export default function DashboardLayout({
               : {
                   duration: 16,
                   repeat: Infinity,
-                  ease: 'easeInOut',
+                  ease: 'easeInOut' as const,
                 }
           }
           className="absolute -left-40 top-1/3 h-96 w-96 rounded-full bg-violet-100/25 blur-3xl"
@@ -1328,7 +1328,7 @@ export default function DashboardLayout({
         }
         transition={{
           duration: 0.3,
-          ease: [0.16, 1, 0.3, 1],
+          ease: [0.16, 1, 0.3, 1] as const,
         }}
         className="relative min-h-screen lg:pl-[312px]"
       >
@@ -1887,7 +1887,7 @@ export default function DashboardLayout({
               }}
               transition={{
                 duration: 0.7,
-                ease: 'easeOut',
+                ease: 'easeOut' as const,
               }}
               className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
             />

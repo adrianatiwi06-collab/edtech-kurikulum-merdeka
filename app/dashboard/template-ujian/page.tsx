@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion, type HTMLMotionProps } from 'framer-motion';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -423,12 +423,15 @@ export default function TemplateUjianPage() {
   const mappedEssay = Object.keys(essayTPMapping).length;
   const answeredPG = pgAnswerKeys.slice(0, pgCount).filter(Boolean).length;
 
-  const pageIn = reduceMotion
+  const pageIn: HTMLMotionProps<'div'> = reduceMotion
     ? {}
     : {
         initial: { opacity: 0, y: 18 },
         animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] },
+        transition: {
+          duration: 0.45,
+          ease: [0.16, 1, 0.3, 1] as const,
+        },
       };
 
   const stepItems = [
