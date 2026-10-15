@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { addDoc, collection, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, getDocs, query, updateDoc, where, doc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, Check, CheckCircle2, Loader2, Save, Users, UserCheck } from 'lucide-react';
+import { CalendarDays, Check, CheckCircle2, Loader2, Save, Users, UserCheck, Settings, Trash2, AlertTriangle, X } from 'lucide-react';
 
 interface Class { id: string; name: string; }
 interface Student { id: string; name: string; nisn?: string; nis?: string; }
@@ -17,6 +17,13 @@ interface AttendanceRecord {
   studentName: string;
   studentNisn: string;
   status: AttendanceStatus;
+}
+
+// Interface baru untuk Hari Libur
+interface Holiday {
+  id: string;
+  date: string;
+  description: string;
 }
 
 const statusStyles: Record<AttendanceStatus, string> = {
@@ -39,11 +46,23 @@ export default function AbsensiPage() {
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
+  
+  const [existingDocId, setExistingDocId] = useState<string | null>(null);
   const [alreadySaved, setAlreadySaved] = useState(false);
   const [savedAt, setSavedAt] = useState('');
 
+  // === STATE PENGATURAN HARI LIBUR ===
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newHolidayDate, setNewHolidayDate] = useState('');
+  const [newHolidayDesc, setNewHolidayDesc] = useState('');
+  const [loadingHolidays, setLoadingHolidays] = useState(false);
+
   useEffect(() => {
-    if (user) loadClasses();
+    if (user) {
+      loadClasses();
+      loadHolidays();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -54,9 +73,73 @@ export default function AbsensiPage() {
       setStudents([]);
       setAttendance([]);
       setAlreadySaved(false);
+      setExistingDocId(null);
       setSavedAt('');
     }
   }, [selectedClass, tanggal]);
+
+  // === FUNGSI LOAD & SAVE HARI LIBUR ===
+  const loadHolidays = async () => {
+    if (!user) return;
+    setLoadingHolidays(true);
+    try {
+      const q = query(collection(db, 'holidays'), where('user_id', '==', user.uid));
+      const snapshot = await getDocs(q);
+      const data: Holiday[] = [];
+      snapshot.forEach((item) => data.push({ id: item.id, ...item.data() } as Holiday));
+      // Urutkan berdasarkan tanggal
+      data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setHolidays(data);
+    } catch (error) {
+      console.error('Gagal memuat hari libur:', error);
+    } finally {
+      setLoadingHolidays(false);
+    }
+  };
+
+  const handleAddHoliday = async () => {
+    if (!user || !newHolidayDate || !newHolidayDesc) return;
+    try {
+      const docRef = await addDoc(collection(db, 'holidays'), {
+        user_id: user.uid,
+        date: newHolidayDate,
+        description: newHolidayDesc
+      });
+      setHolidays([...holidays, { id: docRef.id, date: newHolidayDate, description: newHolidayDesc }]);
+      setNewHolidayDate('');
+      setNewHolidayDesc('');
+    } catch (error) {
+      alert('Gagal menambahkan hari libur');
+    }
+  };
+
+  const handleDeleteHoliday = async (id: string) => {
+    if (!confirm('Hapus hari libur ini?')) return;
+    try {
+      await deleteDoc(doc(db, 'holidays', id));
+      setHolidays(holidays.filter(h => h.id !== id));
+    } catch (error) {
+      alert('Gagal menghapus hari libur');
+    }
+  };
+
+  // === LOGIKA PENGECEKAN HARI LIBUR / WEEKEND ===
+  const holidayStatus = useMemo(() => {
+    if (!tanggal) return { isHoliday: false, reason: '' };
+    
+    const dateObj = new Date(tanggal);
+    const day = dateObj.getDay();
+    
+    // 0 = Minggu, 6 = Sabtu
+    if (day === 0) return { isHoliday: true, reason: 'Hari Minggu (Libur Akhir Pekan)' };
+    if (day === 6) return { isHoliday: true, reason: 'Hari Sabtu (Libur Akhir Pekan)' };
+
+    // Cek apakah tanggal ada di database libur nasional
+    const foundHoliday = holidays.find(h => h.date === tanggal);
+    if (foundHoliday) return { isHoliday: true, reason: `Libur: ${foundHoliday.description}` };
+
+    return { isHoliday: false, reason: '' };
+  }, [tanggal, holidays]);
 
   const loadClasses = async () => {
     if (!user) return;
@@ -84,6 +167,7 @@ export default function AbsensiPage() {
       snapshot.forEach((item) => data.push({ id: item.id, ...item.data() } as Student));
       data.sort((a, b) => a.name.localeCompare(b.name, 'id'));
       setStudents(data);
+      
       setAttendance(data.map((student) => ({
         studentId: student.id,
         studentName: student.name,
@@ -103,8 +187,6 @@ export default function AbsensiPage() {
 
     setCheckingExisting(true);
     try {
-      // Satu dokumen absensi = satu kelas + satu tanggal.
-      // Tidak ada lagi pembeda berdasarkan mata pelajaran/jam.
       const q = query(
         collection(db, 'absensi'),
         where('user_id', '==', user.uid),
@@ -115,16 +197,19 @@ export default function AbsensiPage() {
       const snapshot = await getDocs(q);
 
       if (!snapshot.empty) {
-        const existing = snapshot.docs[0].data();
+        const docSnap = snapshot.docs[0];
+        const existing = docSnap.data();
         const details = Array.isArray(existing.detail_absensi)
           ? existing.detail_absensi as AttendanceRecord[]
           : [];
 
         setAttendance(details);
         setAlreadySaved(true);
+        setExistingDocId(docSnap.id);
         setSavedAt(existing.updated_at || existing.created_at || '');
       } else {
         setAlreadySaved(false);
+        setExistingDocId(null);
         setSavedAt('');
       }
     } catch (error) {
@@ -136,8 +221,6 @@ export default function AbsensiPage() {
   };
 
   const updateAttendance = (studentId: string, status: AttendanceStatus) => {
-    if (alreadySaved) return;
-
     setAttendance((prev) =>
       prev.map((record) =>
         record.studentId === studentId ? { ...record, status } : record
@@ -146,7 +229,6 @@ export default function AbsensiPage() {
   };
 
   const setAllStatus = (status: AttendanceStatus) => {
-    if (alreadySaved) return;
     setAttendance((prev) => prev.map((record) => ({ ...record, status })));
   };
 
@@ -167,46 +249,59 @@ export default function AbsensiPage() {
       alert('Belum ada siswa untuk dicatat.');
       return;
     }
-    if (alreadySaved) {
-      alert('Absensi kelas ini sudah dicatat untuk tanggal tersebut. Absensi hanya dapat dilakukan 1 kali sehari.');
+    if (holidayStatus.isHoliday) {
+      alert('Tidak dapat menyimpan absensi pada hari libur.');
       return;
     }
 
     setSaving(true);
     try {
       const className = classes.find((item) => item.id === selectedClass)?.name || '';
-
-      // Cek ulang sebelum menyimpan agar double-submit tidak membuat dua dokumen.
-      const existingQuery = query(
-        collection(db, 'absensi'),
-        where('user_id', '==', user.uid),
-        where('tanggal', '==', tanggal),
-        where('class_id', '==', selectedClass)
-      );
-      const existing = await getDocs(existingQuery);
-
-      if (!existing.empty) {
-        setAlreadySaved(true);
-        alert('Absensi untuk kelas ini pada tanggal tersebut sudah ada. Tidak dibuat duplikat.');
-        return;
-      }
-
       const now = new Date().toISOString();
 
-      await addDoc(collection(db, 'absensi'), {
-        user_id: user.uid,
-        tanggal,
-        class_id: selectedClass,
-        class_name: className,
-        detail_absensi: attendance,
-        rekap_absensi: summary,
-        created_at: now,
-        updated_at: now,
-      });
+      if (existingDocId) {
+        const docRef = doc(db, 'absensi', existingDocId);
+        await updateDoc(docRef, {
+          detail_absensi: attendance,
+          rekap_absensi: summary,
+          updated_at: now,
+        });
+        
+        setSavedAt(now);
+        alert('Absensi berhasil diperbarui.');
+      } else {
+        const existingQuery = query(
+          collection(db, 'absensi'),
+          where('user_id', '==', user.uid),
+          where('tanggal', '==', tanggal),
+          where('class_id', '==', selectedClass)
+        );
+        const existing = await getDocs(existingQuery);
 
-      setAlreadySaved(true);
-      setSavedAt(now);
-      alert('Absensi berhasil disimpan. Absensi untuk kelas ini sudah terkunci untuk tanggal tersebut.');
+        if (!existing.empty) {
+          setExistingDocId(existing.docs[0].id);
+          setAlreadySaved(true);
+          alert('Absensi untuk kelas ini sudah ada. Data telah disinkronkan. Silakan klik Perbarui jika ada perubahan.');
+          setSaving(false);
+          return;
+        }
+
+        const newDoc = await addDoc(collection(db, 'absensi'), {
+          user_id: user.uid,
+          tanggal,
+          class_id: selectedClass,
+          class_name: className,
+          detail_absensi: attendance,
+          rekap_absensi: summary,
+          created_at: now,
+          updated_at: now,
+        });
+
+        setAlreadySaved(true);
+        setExistingDocId(newDoc.id);
+        setSavedAt(now);
+        alert('Absensi berhasil disimpan pertama kali.');
+      }
     } catch (error) {
       console.error(error);
       alert('Gagal menyimpan absensi.');
@@ -220,6 +315,71 @@ export default function AbsensiPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fc] px-4 pb-12 pt-6 md:px-6 lg:px-8">
+      
+      {/* MODAL PENGATURAN LIBUR */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-800">Pengaturan Hari Libur</h2>
+              <button onClick={() => setShowSettings(false)} className="rounded-full p-2 hover:bg-slate-100 text-slate-500">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-6 space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <p className="text-xs text-slate-500 font-medium">Tambah Libur Nasional / Cuti Bersama</p>
+              <div className="space-y-2">
+                <Input 
+                  type="date" 
+                  value={newHolidayDate} 
+                  onChange={(e) => setNewHolidayDate(e.target.value)} 
+                  className="bg-white"
+                />
+                <Input 
+                  type="text" 
+                  placeholder="Keterangan (Contoh: Idul Fitri)" 
+                  value={newHolidayDesc} 
+                  onChange={(e) => setNewHolidayDesc(e.target.value)} 
+                  className="bg-white"
+                />
+                <Button 
+                  onClick={handleAddHoliday} 
+                  disabled={!newHolidayDate || !newHolidayDesc}
+                  className="w-full bg-slate-800 hover:bg-slate-900"
+                >
+                  Tambahkan Libur
+                </Button>
+              </div>
+            </div>
+
+            <div className="max-h-[250px] overflow-y-auto space-y-2 pr-2">
+              <p className="text-sm font-bold text-slate-700 mb-2">Daftar Libur Tersimpan:</p>
+              {loadingHolidays ? (
+                <div className="text-center text-sm text-slate-400 py-4">Memuat...</div>
+              ) : holidays.length === 0 ? (
+                <div className="text-center text-sm text-slate-400 py-4">Belum ada hari libur.</div>
+              ) : (
+                holidays.map(holiday => (
+                  <div key={holiday.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white">
+                    <div>
+                      <div className="text-sm font-bold text-slate-800">{new Date(holiday.date).toLocaleDateString('id-ID', { dateStyle: 'medium'})}</div>
+                      <div className="text-xs text-slate-500">{holiday.description}</div>
+                    </div>
+                    <button onClick={() => handleDeleteHoliday(holiday.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+              <div className="text-[10px] text-slate-400 mt-4 text-center">
+                *Hari Sabtu & Minggu otomatis terhitung sebagai hari libur.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-700 via-teal-600 to-cyan-600 p-6 text-white shadow-[0_18px_50px_rgba(13,148,136,0.20)] md:p-8">
           <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
@@ -235,8 +395,20 @@ export default function AbsensiPage() {
                 pelajaran tidak diperlukan.
               </p>
             </div>
-            <div className="hidden rounded-[24px] bg-white/10 p-5 backdrop-blur md:block">
-              <Users className="h-12 w-12" />
+            
+            {/* TOMBOL PENGATURAN LIBUR */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Button 
+                onClick={() => setShowSettings(true)}
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur"
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Pengaturan Libur
+              </Button>
+              <div className="hidden rounded-[24px] bg-white/10 p-5 backdrop-blur md:block">
+                <Users className="h-12 w-12" />
+              </div>
             </div>
           </div>
         </section>
@@ -256,31 +428,47 @@ export default function AbsensiPage() {
                 <Input
                   type="date"
                   value={tanggal}
-                  onChange={(e) => setTanggal(e.target.value)}
+                  onChange={(e) => {
+                    setTanggal(e.target.value);
+                    setSelectedClass(''); // Reset kelas jika tanggal ganti
+                  }}
                   className="h-11 rounded-2xl border-slate-200 bg-slate-50"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Kelas</label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  disabled={loadingClasses}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
-                >
-                  <option value="">
-                    {loadingClasses ? 'Memuat kelas...' : '-- Pilih Kelas --'}
-                  </option>
-                  {classes.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      Kelas {item.name}
+              {/* PERINGATAN JIKA HARI LIBUR */}
+              {holidayStatus.isHoliday ? (
+                <div className="rounded-[22px] border border-rose-200 bg-rose-50 p-4">
+                  <div className="flex items-center gap-2 font-bold text-rose-800 mb-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Hari Libur
+                  </div>
+                  <p className="text-xs leading-5 text-rose-700">
+                    Absensi tidak dapat diisi karena hari ini adalah <b>{holidayStatus.reason}</b>.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Kelas</label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    disabled={loadingClasses}
+                    className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+                  >
+                    <option value="">
+                      {loadingClasses ? 'Memuat kelas...' : '-- Pilih Kelas --'}
                     </option>
-                  ))}
-                </select>
-              </div>
+                    {classes.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        Kelas {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {selectedClass && (
+              {!holidayStatus.isHoliday && selectedClass && (
                 <div className={`rounded-[22px] border p-4 ${
                   alreadySaved
                     ? 'border-emerald-200 bg-emerald-50'
@@ -293,37 +481,37 @@ export default function AbsensiPage() {
                         Sudah Diabsen
                       </div>
                       <p className="mt-2 text-xs leading-5 text-emerald-700">
-                        Kelas {selectedClassName} sudah memiliki absensi pada tanggal ini.
-                        Data dikunci dan tidak dapat disimpan ulang.
+                        Kelas {selectedClassName} sudah diabsen. Anda tetap dapat <b>mengubah dan memperbarui</b> data absensi di bawah jika ada kesalahan.
                       </p>
                     </>
                   ) : (
                     <>
                       <div className="font-bold text-blue-900">Aturan Presensi</div>
                       <p className="mt-2 text-xs leading-5 text-blue-700">
-                        Absensi hanya boleh dibuat <b>1 kali sehari untuk kelas ini</b>.
-                        Setelah disimpan, data akan dikunci.
+                        Absensi dibuat <b>1 kali sehari untuk kelas ini</b>. Jika terdapat perubahan sewaktu-waktu, Anda tetap bisa memperbaruinya.
                       </p>
                     </>
                   )}
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                {[
-                  ['Hadir', summary.hadir, 'bg-emerald-50 text-emerald-700 border-emerald-100'],
-                  ['Izin', summary.izin, 'bg-blue-50 text-blue-700 border-blue-100'],
-                  ['Sakit', summary.sakit, 'bg-amber-50 text-amber-700 border-amber-100'],
-                  ['Alfa', summary.alfa, 'bg-rose-50 text-rose-700 border-rose-100'],
-                ].map(([label, value, cls]) => (
-                  <div key={String(label)} className={`rounded-[20px] border p-4 ${cls}`}>
-                    <div className="text-2xl font-bold">{value}</div>
-                    <div className="mt-1 text-[11px] font-bold uppercase tracking-wider">
-                      {label}
+              {!holidayStatus.isHoliday && (
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  {[
+                    ['Hadir', summary.hadir, 'bg-emerald-50 text-emerald-700 border-emerald-100'],
+                    ['Izin', summary.izin, 'bg-blue-50 text-blue-700 border-blue-100'],
+                    ['Sakit', summary.sakit, 'bg-amber-50 text-amber-700 border-amber-100'],
+                    ['Alfa', summary.alfa, 'bg-rose-50 text-rose-700 border-rose-100'],
+                  ].map(([label, value, cls]) => (
+                    <div key={String(label)} className={`rounded-[20px] border p-4 ${cls}`}>
+                      <div className="text-2xl font-bold">{value}</div>
+                      <div className="mt-1 text-[11px] font-bold uppercase tracking-wider">
+                        {label}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -332,19 +520,21 @@ export default function AbsensiPage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-3 text-lg text-slate-800">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${holidayStatus.isHoliday ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                       <Users className="h-5 w-5" />
                     </span>
                     Daftar Kehadiran
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    {selectedClass
-                      ? `Kelas ${selectedClassName} · ${tanggal}`
-                      : 'Pilih kelas untuk menampilkan siswa.'}
+                    {holidayStatus.isHoliday 
+                      ? 'Fitur absensi dinonaktifkan.'
+                      : selectedClass
+                        ? `Kelas ${selectedClassName} · ${tanggal}`
+                        : 'Pilih kelas untuk menampilkan siswa.'}
                   </CardDescription>
                 </div>
 
-                {students.length > 0 && !alreadySaved && (
+                {!holidayStatus.isHoliday && students.length > 0 && (
                   <Button
                     variant="outline"
                     onClick={() => setAllStatus('Hadir')}
@@ -358,7 +548,13 @@ export default function AbsensiPage() {
             </CardHeader>
 
             <CardContent className="p-0">
-              {!selectedClass ? (
+              {holidayStatus.isHoliday ? (
+                <div className="flex min-h-[360px] flex-col items-center justify-center p-8 text-center text-slate-400">
+                  <AlertTriangle className="mb-4 h-12 w-12 text-rose-200" />
+                  <p className="font-semibold text-rose-600">Hari Libur</p>
+                  <p className="mt-1 text-sm">Siswa diliburkan pada tanggal ini.</p>
+                </div>
+              ) : !selectedClass ? (
                 <div className="flex min-h-[360px] flex-col items-center justify-center p-8 text-center text-slate-400">
                   <Users className="mb-4 h-12 w-12 text-slate-200" />
                   <p className="font-semibold text-slate-600">Pilih kelas terlebih dahulu</p>
@@ -415,9 +611,8 @@ export default function AbsensiPage() {
                                     <button
                                       key={status}
                                       type="button"
-                                      disabled={alreadySaved}
                                       onClick={() => updateAttendance(student.id, status)}
-                                      className={`rounded-full border px-4 py-2 text-xs font-bold transition disabled:cursor-not-allowed ${
+                                      className={`rounded-full border px-4 py-2 text-xs font-bold transition ${
                                         current === status
                                           ? statusStyles[status]
                                           : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
@@ -439,7 +634,7 @@ export default function AbsensiPage() {
               )}
             </CardContent>
 
-            {students.length > 0 && !alreadySaved && (
+            {!holidayStatus.isHoliday && students.length > 0 && (
               <div className="border-t border-slate-100 bg-slate-50/70 p-5">
                 <Button
                   onClick={handleSave}
@@ -451,7 +646,7 @@ export default function AbsensiPage() {
                   ) : (
                     <Save className="mr-2 h-5 w-5" />
                   )}
-                  Simpan Absensi Hari Ini
+                  {alreadySaved ? 'Perbarui Absensi' : 'Simpan Absensi Hari Ini'}
                 </Button>
               </div>
             )}

@@ -1,7 +1,7 @@
 'use client';
 import "./koreksi-scrollbar.css";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -41,7 +41,7 @@ interface StudentGrade {
   totalScore: number;
   finalGrade: number;
   isCalculated: boolean;
-  semester?: number; // Terinjeksi otomatis
+  semester?: number;
 }
 
 interface SavedGrade {
@@ -86,6 +86,12 @@ export default function KoreksiPage() {
   const [savedGradeId, setSavedGradeId] = useState<string | null>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
 
+  // REVISI: Tambahkan ref untuk sinkronisasi scrollbar
+  const contentWrapperRef = useRef<HTMLDivElement>(null);
+  const customScrollbarRef = useRef<HTMLDivElement>(null);
+  const isSyncingLeft = useRef(false);
+  const isSyncingRight = useRef(false);
+
   useEffect(() => {
     if (user) {
       loadQuestionBanks();
@@ -108,14 +114,43 @@ export default function KoreksiPage() {
   useEffect(() => {
     if (step === 3) {
       const updateWidth = () => {
-        const contentWrapper = document.getElementById('content-wrapper');
-        if (contentWrapper) setTableScrollWidth(contentWrapper.scrollWidth);
+        // Ambil elemen tabel aslinya, bukan pembungkusnya
+        const tableElement = contentWrapperRef.current?.querySelector('table');
+        if (tableElement) {
+            setTableScrollWidth(tableElement.scrollWidth);
+        }
       };
-      setTimeout(updateWidth, 500);
+      
+      // Delay sedikit agar tabel dirender utuh
+      setTimeout(updateWidth, 300);
       window.addEventListener('resize', updateWidth);
       return () => window.removeEventListener('resize', updateWidth);
     }
   }, [step, grades.length]);
+
+  // REVISI: Fungsi sinkronisasi scroll dari tabel utama ke scrollbar bawah
+  const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncingLeft.current) {
+        isSyncingLeft.current = false;
+        return;
+    }
+    if (customScrollbarRef.current) {
+        isSyncingRight.current = true;
+        customScrollbarRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
+  // REVISI: Fungsi sinkronisasi scroll dari scrollbar bawah ke tabel utama
+  const handleCustomScrollbarScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncingRight.current) {
+        isSyncingRight.current = false;
+        return;
+    }
+    if (contentWrapperRef.current) {
+        isSyncingLeft.current = true;
+        contentWrapperRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
 
   const loadExamTemplates = async () => {
     if (!user) return;
@@ -538,7 +573,14 @@ export default function KoreksiPage() {
 
       {/* STEP 3: Tabel Grading */}
       {!showSavedGrades && step === 3 && (selectedQB || selectedTemplate) && (
-        <div id="content-wrapper" className="overflow-x-auto overflow-y-visible animate-in fade-in duration-300" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        // REVISI: Tambahkan ref dan onScroll pada container tabel
+        <div 
+            id="content-wrapper" 
+            ref={contentWrapperRef}
+            onScroll={handleContentScroll}
+            className="overflow-x-auto overflow-y-visible animate-in fade-in duration-300" 
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <div className="space-y-6" style={{ minWidth: 'max-content', paddingRight: '300px', paddingBottom: '80px' }}>
             <Card>
               <CardHeader>
@@ -621,10 +663,15 @@ export default function KoreksiPage() {
         </div>
       )}
 
-      {/* Horizontal Scrollbar Ekstra Bawah */}
+      {/* REVISI: Tambahkan ref dan onScroll pada custom scrollbar */}
       {!showSavedGrades && step === 3 && (
         <div className="sticky bottom-0 left-0 right-0 bg-gray-100 border-t-2 border-gray-300 z-50 py-2 mt-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-          <div id="custom-scrollbar" className="overflow-x-auto overflow-y-hidden px-2">
+          <div 
+              id="custom-scrollbar" 
+              ref={customScrollbarRef}
+              onScroll={handleCustomScrollbarScroll}
+              className="overflow-x-auto overflow-y-hidden px-2"
+          >
             <div style={{ width: `${tableScrollWidth || 2000}px`, height: '1px' }} />
           </div>
         </div>
