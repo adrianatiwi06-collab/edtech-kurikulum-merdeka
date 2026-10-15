@@ -2,18 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, XCircle, TrendingUp } from "lucide-react";
-
-interface Student {
-  id: string;
-  name: string;
-  nis?: string;
-}
 
 interface ExamResult {
   id: string;
@@ -41,7 +35,7 @@ interface ClassTPAnalysis {
   tpId: string;
   tpText: string;
   totalStudents: number;
-  studentsWhoPassed: number; // Students who mastered (>=75%)
+  studentsWhoPassed: number;
   percentage: number;
   status: "sangat-baik" | "baik" | "cukup" | "perlu-perbaikan";
   averageScore: number;
@@ -50,14 +44,19 @@ interface ClassTPAnalysis {
 export default function AnalisisNilaiPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  
   // Data
   const [subjects, setSubjects] = useState<string[]>([]);
-  const [exams, setExams] = useState<Map<string, string[]>>(new Map()); // subject -> exam titles
+  const [exams, setExams] = useState<Map<string, string[]>>(new Map());
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [classAnalysis, setClassAnalysis] = useState<ClassTPAnalysis[]>([]);
+  
   // Filters
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedExam, setSelectedExam] = useState<string>("");
   const [selectedSemester, setSelectedSemester] = useState<number|''>('');
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  
   // Stats
   const [className, setClassName] = useState<string>("");
   const [totalStudents, setTotalStudents] = useState<number>(0);
@@ -69,26 +68,39 @@ export default function AnalisisNilaiPage() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedSubject && selectedExam && selectedSemester) {
+    if (selectedSubject && selectedExam && selectedSemester && selectedClass) {
       analyzeClassTP();
     } else {
       setClassAnalysis([]);
     }
-  }, [selectedSubject, selectedExam, selectedSemester]);
+  }, [selectedSubject, selectedExam, selectedSemester, selectedClass]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-
       if (!user) return;
 
-      // Fetch grades from Firestore
+      const uniqueClasses = new Set<string>();
+
+      // 1. Ambil daftar kelas resmi dari collection 'classes'
+      const classesQuery = query(
+        collection(db, "classes"),
+        where("user_id", "==", user.uid)
+      );
+      const classesSnapshot = await getDocs(classesQuery);
+      classesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        const classNameStr = data.name || data.nama;
+        if (classNameStr) uniqueClasses.add(String(classNameStr));
+      });
+
+      // 2. Ambil data nilai, mata pelajaran, dan ulangan dari collection 'grades'
       const gradesQuery = query(
         collection(db, "grades"),
         where("user_id", "==", user.uid)
       );
-      
       const gradesSnapshot = await getDocs(gradesQuery);
+      
       const uniqueSubjects = new Set<string>();
       const examsBySubject = new Map<string, Set<string>>();
 
@@ -96,8 +108,10 @@ export default function AnalisisNilaiPage() {
         const data = doc.data();
         const subject = data.subject || "Unknown";
         const examTitle = data.exam_title || data.exam_name || "Unknown";
+        const classNameStr = data.class_name;
         
         uniqueSubjects.add(subject);
+        if (classNameStr) uniqueClasses.add(classNameStr);
         
         if (!examsBySubject.has(subject)) {
           examsBySubject.set(subject, new Set());
@@ -105,14 +119,18 @@ export default function AnalisisNilaiPage() {
         examsBySubject.get(subject)!.add(examTitle);
       });
 
-      // Convert to arrays
       const subjectsArray = Array.from(uniqueSubjects).sort();
+      const classesArray = Array.from(uniqueClasses).sort((a, b) =>
+        a.localeCompare(b, 'id', { numeric: true })
+      );
       const examsMap = new Map<string, string[]>();
+      
       examsBySubject.forEach((exams, subject) => {
         examsMap.set(subject, Array.from(exams).sort());
       });
 
       setSubjects(subjectsArray);
+      setAvailableClasses(classesArray);
       setExams(examsMap);
 
     } catch (error) {
@@ -124,16 +142,17 @@ export default function AnalisisNilaiPage() {
   };
 
   const analyzeClassTP = async () => {
-    if (!user || !selectedSubject || !selectedExam || !selectedSemester) return;
+    if (!user || !selectedSubject || !selectedExam || !selectedSemester || !selectedClass) return;
     try {
       setLoading(true);
-      // Fetch all grades for this subject, exam, and semester
+      
       const gradesQuery = query(
         collection(db, "grades"),
         where("user_id", "==", user.uid),
         where("subject", "==", selectedSubject),
         where("exam_title", "==", selectedExam),
-        where("semester", "==", selectedSemester)
+        where("semester", "==", selectedSemester),
+        where("class_name", "==", selectedClass)
       );
 
       const gradesSnapshot = await getDocs(gradesQuery);
@@ -144,7 +163,6 @@ export default function AnalisisNilaiPage() {
         return;
       }
 
-      // Get the first document to extract TP mapping and class info
       const firstDoc = gradesSnapshot.docs[0];
       const firstData = firstDoc.data();
       const tpMapping = firstData.tp_mapping || [];
@@ -156,14 +174,12 @@ export default function AnalisisNilaiPage() {
         return;
       }
 
-      // Collect all student results
       const allStudentResults: Map<string, ExamResult> = new Map();
 
       for (const docSnapshot of gradesSnapshot.docs) {
         const data = docSnapshot.data();
         const gradesList = data.grades || [];
 
-        // Get correct answers
         let correctAnswers: string[] = [];
         if (data.question_bank_id) {
           const qbDoc = await getDoc(doc(db, "question_banks", data.question_bank_id));
@@ -177,17 +193,17 @@ export default function AnalisisNilaiPage() {
           const templateDoc = await getDoc(doc(db, "exam_templates", data.exam_template_id));
           if (templateDoc.exists()) {
             const templateData = templateDoc.data();
-            if (templateData.multiple_choice?.answer_key) {
+            if (templateData.multiple_choice?.answer_keys) {
+              correctAnswers = templateData.multiple_choice.answer_keys;
+            } else if (templateData.multiple_choice?.answer_key) {
               correctAnswers = templateData.multiple_choice.answer_key;
             }
           }
         }
 
-        // Process each student
         gradesList.forEach((studentGrade: any) => {
           const studentId = studentGrade.studentId;
           
-          // Calculate TP breakdown for this student
           const tpGroups = new Map<string, {
             tpText: string;
             correctCount: number;
@@ -211,13 +227,12 @@ export default function AnalisisNilaiPage() {
             const tpGroup = tpGroups.get(tpId)!;
             tpGroup.totalCount++;
 
-            // Check if student answered correctly
             let isCorrect = false;
             if (questionType === 'PG' && studentGrade.mcAnswers) {
               const answerIndex = questionNum - 1;
               const studentAnswer = studentGrade.mcAnswers[answerIndex];
               const correctAnswer = correctAnswers[answerIndex];
-              isCorrect = studentAnswer === correctAnswer;
+              isCorrect = studentAnswer && correctAnswer && studentAnswer.toUpperCase() === correctAnswer.toUpperCase();
             } else if (questionType === 'Essay' && studentGrade.essayScores) {
               const mcCount = correctAnswers.length;
               const essayIndex = questionNum - mcCount - 1;
@@ -230,7 +245,6 @@ export default function AnalisisNilaiPage() {
             }
           });
 
-          // Convert to TPScore array
           const tpBreakdown: TPScore[] = Array.from(tpGroups.entries()).map(([tpId, tpData]) => {
             const percentage = tpData.totalCount > 0 
               ? (tpData.correctCount / tpData.totalCount) * 100 
@@ -267,7 +281,6 @@ export default function AnalisisNilaiPage() {
         });
       }
 
-      // Calculate class-level TP analysis
       const tpAnalysisMap = new Map<string, {
         tpText: string;
         totalStudents: number;
@@ -290,14 +303,12 @@ export default function AnalisisNilaiPage() {
           analysis.totalStudents++;
           analysis.totalScoreSum += tpScore.percentage;
           
-          // Consider passed if percentage >= 75%
           if (tpScore.percentage >= 75) {
             analysis.studentsWhoPassed++;
           }
         });
       });
 
-      // Convert to ClassTPAnalysis array
       const classAnalysisArray: ClassTPAnalysis[] = Array.from(tpAnalysisMap.entries()).map(([tpId, data]) => {
         const percentage = data.totalStudents > 0 
           ? (data.studentsWhoPassed / data.totalStudents) * 100 
@@ -367,18 +378,13 @@ export default function AnalisisNilaiPage() {
     }
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 75) return "bg-green-500";
-    if (percentage >= 60) return "bg-yellow-500";
-    return "bg-red-500";
-  };
-
-  if (loading) {
+  if (loading && subjects.length === 0) {
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-6">
           <div className="h-12 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="h-24 bg-gray-200 rounded"></div>
             <div className="h-24 bg-gray-200 rounded"></div>
             <div className="h-24 bg-gray-200 rounded"></div>
             <div className="h-24 bg-gray-200 rounded"></div>
@@ -403,46 +409,55 @@ export default function AnalisisNilaiPage() {
         <CardHeader>
           <CardTitle>Filter Data</CardTitle>
           <CardDescription>
-            Pilih mata pelajaran, semester, dan ujian untuk melihat analisis penguasaan TP di kelas
+            Pilih mata pelajaran, semester, kelas, dan ujian untuk melihat analisis penguasaan TP
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Filter Mapel */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Mata Pelajaran</label>
               <select 
                 value={selectedSubject} 
                 onChange={(e) => {
                   setSelectedSubject(e.target.value);
-                  setSelectedExam(""); // Reset exam when subject changes
+                  setSelectedExam("");
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                title="Pilih Mata Pelajaran"
               >
                 <option value="">Pilih mata pelajaran...</option>
                 {subjects.map(subject => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
+                  <option key={subject} value={subject}>{subject}</option>
                 ))}
               </select>
             </div>
-            {/* Filter Semester */}
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Semester</label>
               <select
                 value={selectedSemester}
                 onChange={e => setSelectedSemester(e.target.value ? Number(e.target.value) : '')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                title="Pilih Semester"
               >
                 <option value="">Pilih semester...</option>
                 <option value="1">Semester 1</option>
                 <option value="2">Semester 2</option>
               </select>
             </div>
-            {/* Filter Ulangan */}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kelas</label>
+              <select
+                value={selectedClass}
+                onChange={e => setSelectedClass(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Pilih kelas...</option>
+                {availableClasses.map(cls => (
+                  <option key={cls} value={cls}>{cls}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Ulangan</label>
               <select 
@@ -450,13 +465,10 @@ export default function AnalisisNilaiPage() {
                 onChange={(e) => setSelectedExam(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={!selectedSubject}
-                title="Pilih Ulangan"
               >
                 <option value="">Pilih ulangan...</option>
                 {selectedSubject && exams.get(selectedSubject)?.map(exam => (
-                  <option key={exam} value={exam}>
-                    {exam}
-                  </option>
+                  <option key={exam} value={exam}>{exam}</option>
                 ))}
               </select>
             </div>
@@ -464,19 +476,17 @@ export default function AnalisisNilaiPage() {
         </CardContent>
       </Card>
 
-      {/* Empty State */}
-      {!selectedSubject || !selectedExam ? (
+      {!selectedSubject || !selectedExam || !selectedSemester || !selectedClass ? (
         <Alert>
           <AlertDescription>
-            Pilih mata pelajaran dan nama ulangan untuk melihat analisis penguasaan TP kelas.
+            Silakan lengkapi semua filter (Mata Pelajaran, Semester, Kelas, dan Nama Ulangan) untuk melihat hasil analisis.
           </AlertDescription>
         </Alert>
       ) : null}
 
       {/* Class TP Analysis Results */}
-      {selectedSubject && selectedExam && classAnalysis.length > 0 && (
+      {selectedSubject && selectedExam && selectedSemester && selectedClass && classAnalysis.length > 0 && (
         <div className="space-y-6">
-          {/* Summary Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -486,7 +496,7 @@ export default function AnalisisNilaiPage() {
                 </Badge>
               </CardTitle>
               <CardDescription>
-                {className} • {selectedSubject} • {selectedExam}
+                Kelas {className} • {selectedSubject} • {selectedExam}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -502,16 +512,13 @@ export default function AnalisisNilaiPage() {
                 <div className="space-y-1 text-center p-4 bg-purple-50 rounded-lg">
                   <p className="text-sm text-gray-600">Rata-rata Penguasaan</p>
                   <p className="text-3xl font-bold text-purple-600">
-                    {Math.round(
-                      classAnalysis.reduce((acc, tp) => acc + tp.percentage, 0) / classAnalysis.length
-                    )}%
+                    {Math.round(classAnalysis.reduce((acc, tp) => acc + tp.percentage, 0) / classAnalysis.length)}%
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* TP Analysis List */}
           <Card>
             <CardHeader>
               <CardTitle>Analisis Penguasaan per Tujuan Pembelajaran (TP)</CardTitle>
@@ -523,7 +530,6 @@ export default function AnalisisNilaiPage() {
               <div className="space-y-4">
                 {classAnalysis.map((tp, index) => (
                   <div key={tp.tpId} className="space-y-3 p-5 border rounded-lg hover:shadow-md transition-shadow">
-                    {/* TP Header */}
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -536,7 +542,6 @@ export default function AnalisisNilaiPage() {
                       </div>
                     </div>
 
-                    {/* Stats */}
                     <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-4">
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mb-1">Siswa Menguasai</p>
@@ -558,7 +563,6 @@ export default function AnalisisNilaiPage() {
                       </div>
                     </div>
 
-                    {/* Progress Bar - Persentase Penguasaan Kelas */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center text-sm">
                         <span className="font-medium text-gray-700">Tingkat Penguasaan Kelas</span>
@@ -580,7 +584,6 @@ export default function AnalisisNilaiPage() {
                       </div>
                     </div>
 
-                    {/* Recommendation per TP */}
                     {tp.status === "perlu-perbaikan" && (
                       <Alert className="bg-red-50 border-red-200">
                         <XCircle className="h-4 w-4 text-red-600" />
@@ -605,7 +608,6 @@ export default function AnalisisNilaiPage() {
             </CardContent>
           </Card>
 
-          {/* Overall Class Recommendation */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -652,12 +654,11 @@ export default function AnalisisNilaiPage() {
         </div>
       )}
 
-      {/* No Data State */}
-      {selectedSubject && selectedExam && classAnalysis.length === 0 && !loading && (
+      {selectedSubject && selectedExam && selectedSemester && selectedClass && classAnalysis.length === 0 && !loading && (
         <Alert>
           <AlertDescription>
-            Tidak ada data analisis untuk kombinasi mata pelajaran dan ujian yang dipilih.
-            Pastikan data koreksi sudah tersimpan dan memiliki pemetaan TP.
+            Tidak ada data analisis untuk kombinasi yang dipilih.
+            Pastikan data koreksi sudah tersimpan untuk kelas dan ulangan ini.
           </AlertDescription>
         </Alert>
       )}

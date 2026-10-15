@@ -985,7 +985,7 @@ export default function DashboardLayout({
                 </p>
 
                 <p className="mt-1 truncate text-[11px] text-slate-400">
-                  Kurikulum Merdeka
+                  SD Negeri Nusawangkal 02
                 </p>
               </motion.div>
             )}
@@ -2087,7 +2087,7 @@ export default function DashboardLayout({
         <footer className="px-4 pb-8 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1700px] flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row">
             <p>
-              © {new Date().getFullYear()} EdTech
+              © {new Date().getFullYear()} EdTech Gara Nuradin,S.Pd.SD
             </p>
 
             <div className="flex items-center gap-4">
