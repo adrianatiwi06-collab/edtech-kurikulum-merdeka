@@ -203,8 +203,8 @@ export default function AnalisisTPPage() {
       const normalize = (s: string) => String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
       const gradeTitle = normalize(gradeData.exam_title || gradeData.examTitle || gradeData.exam_name);
       if (gradeTitle) {
-        source = questionBanks.find(q => normalize(q.examTitle || q.exam_title || q.title) === gradeTitle) ||
-                 templates.find(t => normalize(t.exam_name || t.examName || t.title) === gradeTitle);
+        source = questionBanks.find(q => normalize(q.examTitle || (q as any).exam_title) === gradeTitle) ||
+                 templates.find(t => normalize((t as any).exam_name || (t as any).examName) === gradeTitle);
       }
     }
 
