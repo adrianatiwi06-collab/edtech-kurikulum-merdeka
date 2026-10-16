@@ -82,7 +82,6 @@ export default function AnalisisNilaiPage() {
 
       const uniqueClasses = new Set<string>();
 
-      // 1. Ambil daftar kelas resmi dari collection 'classes'
       const classesQuery = query(
         collection(db, "classes"),
         where("user_id", "==", user.uid)
@@ -94,7 +93,6 @@ export default function AnalisisNilaiPage() {
         if (classNameStr) uniqueClasses.add(String(classNameStr));
       });
 
-      // 2. Ambil data nilai, mata pelajaran, dan ulangan dari collection 'grades'
       const gradesQuery = query(
         collection(db, "grades"),
         where("user_id", "==", user.uid)
@@ -141,6 +139,38 @@ export default function AnalisisNilaiPage() {
     }
   };
 
+  // Validasi penolakan teks generik
+  const isValidTpText = (t: any): boolean => {
+    if (!t) return false;
+    const text = String(t).toLowerCase().trim();
+    if (text.length < 5) return false;
+    if (text.includes('tujuan pembelajaran soal') || text.includes('materi ujian soal') || text.includes('soal nomor')) return false;
+    if (/^(tujuan pembelajaran|tp)\s*\d+$/.test(text)) return false;
+    return true;
+  };
+
+  // Pembersih teks TP dari butir soal
+  const getCleanTpText = (q: any): string => {
+    if (!q) return '';
+    let text = '';
+    if (typeof q === 'string') text = q;
+    else {
+      const keys = ['tp', 'tpText', 'tp_text', 'tujuanPembelajaran', 'tujuan_pembelajaran', 'learningObjective', 'learning_objective', 'indikator', 'materi', 'deskripsi', 'kompetensi'];
+      for (const k of keys) {
+        if (q[k] && typeof q[k] === 'string' && q[k].trim().length > 3) { text = q[k]; break; }
+        if (q[k] && typeof q[k] === 'object' && q[k].text) { text = q[k].text; break; }
+      }
+      if (!text && typeof q === 'object') {
+        for (const key in q) {
+          if (typeof q[key] === 'string' && q[key].length > 15 && !['type', 'id', 'question', 'pertanyaan', 'soal', 'pembahasan', 'jawaban', 'explanation', 'correctanswer', 'options'].includes(key.toLowerCase())) {
+            text = q[key]; break;
+          }
+        }
+      }
+    }
+    return text ? text.replace(/^(TP\s*\d+[\:\-\.\s]*|\d+[\.\)\-\s]+|Bab\s\d+\s)/i, '').trim() : '';
+  };
+
   const analyzeClassTP = async () => {
     if (!user || !selectedSubject || !selectedExam || !selectedSemester || !selectedClass) return;
     try {
@@ -165,8 +195,80 @@ export default function AnalisisNilaiPage() {
 
       const firstDoc = gradesSnapshot.docs[0];
       const firstData = firstDoc.data();
-      const tpMapping = firstData.tp_mapping || [];
       setClassName(firstData.class_name || "Kelas");
+
+      let sourceData: any = null;
+      if (firstData.question_bank_id) {
+        const qbDoc = await getDoc(doc(db, "question_banks", firstData.question_bank_id));
+        if (qbDoc.exists()) sourceData = qbDoc.data();
+      } else if (firstData.exam_template_id) {
+        const templateDoc = await getDoc(doc(db, "exam_templates", firstData.exam_template_id));
+        if (templateDoc.exists()) sourceData = templateDoc.data();
+      }
+
+      let generatedMapping: any[] = [];
+
+      // 1. Cek mapping di source (Bank Soal / Template) terlebih dahulu
+      if (sourceData) {
+        const sourceMappings = sourceData.question_tp_mapping || sourceData.tp_mapping || sourceData.tp_details;
+        if (Array.isArray(sourceMappings) && sourceMappings.some(m => isValidTpText(m.tp_text || m.tpText))) {
+          generatedMapping = sourceMappings.map((m: any, idx: number) => ({
+            question_number: m.question_number || m.questionNumber || idx + 1,
+            tp_id: m.tp_id || m.tpId || `tp_${idx}`,
+            tp_text: getCleanTpText(m.tp_text || m.tpText || m.text) || `Tujuan Pembelajaran Soal ${idx + 1}`,
+            question_type: m.question_type || m.questionType || 'PG'
+          }));
+        } else {
+          // Bongkar langsung dari butir soal jika mapping kosong/generik
+          let questions = sourceData.questions;
+          if (typeof questions === 'string') { try { questions = JSON.parse(questions); } catch(e){} }
+
+          let mcList: any[] = [];
+          let essayList: any[] = [];
+
+          if (Array.isArray(questions)) {
+            mcList = questions.filter((q:any) => q.type !== 'essay' && q.type !== 'isian');
+            essayList = questions.filter((q:any) => q.type === 'essay' || q.type === 'isian');
+            if (mcList.length === 0 && essayList.length === 0) mcList = questions;
+          } else if (questions && typeof questions === 'object') {
+            mcList = questions.multipleChoice || questions.multiple_choice || questions.pilihanGanda || [];
+            essayList = questions.essay || questions.isian || [];
+          }
+
+          mcList.forEach((q: any, idx: number) => {
+            const cleanText = getCleanTpText(q);
+            generatedMapping.push({
+              question_number: idx + 1,
+              tp_id: `tp_pg_${idx}`,
+              tp_text: isValidTpText(cleanText) ? cleanText : `Tujuan Pembelajaran Soal ${idx + 1}`,
+              question_type: 'PG'
+            });
+          });
+
+          const pgCount = mcList.length;
+          essayList.forEach((q: any, idx: number) => {
+            const cleanText = getCleanTpText(q);
+            generatedMapping.push({
+              question_number: pgCount + idx + 1,
+              tp_id: `tp_es_${idx}`,
+              tp_text: isValidTpText(cleanText) ? cleanText : `Tujuan Pembelajaran Soal ${pgCount + idx + 1}`,
+              question_type: 'Essay'
+            });
+          });
+        }
+      }
+
+      // 2. Jika source tidak ada, cek dari firstData.tp_mapping asalkan valid
+      if (generatedMapping.length === 0 && Array.isArray(firstData.tp_mapping)) {
+        generatedMapping = firstData.tp_mapping.map((m: any, idx: number) => ({
+          question_number: m.question_number || idx + 1,
+          tp_id: m.tp_id || `tp_${idx}`,
+          tp_text: getCleanTpText(m.tp_text) || `Tujuan Pembelajaran Soal ${idx + 1}`,
+          question_type: m.question_type || 'PG'
+        }));
+      }
+
+      const tpMapping = generatedMapping;
 
       if (tpMapping.length === 0) {
         alert("Data pemetaan TP tidak tersedia untuk ujian ini");
@@ -212,7 +314,7 @@ export default function AnalisisNilaiPage() {
 
           tpMapping.forEach((mapping: any) => {
             const questionNum = mapping.question_number;
-            const tpId = mapping.tp_id;
+            const tpId = mapping.tp_text; // Kelompokkan berdasarkan teks TP yang sama persis
             const tpText = mapping.tp_text;
             const questionType = mapping.question_type;
 
@@ -232,7 +334,7 @@ export default function AnalisisNilaiPage() {
               const answerIndex = questionNum - 1;
               const studentAnswer = studentGrade.mcAnswers[answerIndex];
               const correctAnswer = correctAnswers[answerIndex];
-              isCorrect = studentAnswer && correctAnswer && studentAnswer.toUpperCase() === correctAnswer.toUpperCase();
+              isCorrect = studentAnswer && correctAnswer && String(studentAnswer).toUpperCase() === String(correctAnswer).toUpperCase();
             } else if (questionType === 'Essay' && studentGrade.essayScores) {
               const mcCount = correctAnswers.length;
               const essayIndex = questionNum - mcCount - 1;
@@ -290,8 +392,8 @@ export default function AnalisisNilaiPage() {
 
       allStudentResults.forEach((studentResult) => {
         studentResult.tpBreakdown.forEach((tpScore) => {
-          if (!tpAnalysisMap.has(tpScore.tpId)) {
-            tpAnalysisMap.set(tpScore.tpId, {
+          if (!tpAnalysisMap.has(tpScore.tpText)) {
+            tpAnalysisMap.set(tpScore.tpText, {
               tpText: tpScore.tpText,
               totalStudents: 0,
               studentsWhoPassed: 0,
@@ -299,7 +401,7 @@ export default function AnalisisNilaiPage() {
             });
           }
 
-          const analysis = tpAnalysisMap.get(tpScore.tpId)!;
+          const analysis = tpAnalysisMap.get(tpScore.tpText)!;
           analysis.totalStudents++;
           analysis.totalScoreSum += tpScore.percentage;
           

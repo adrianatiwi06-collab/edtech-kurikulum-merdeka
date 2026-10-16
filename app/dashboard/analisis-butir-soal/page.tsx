@@ -34,7 +34,37 @@ interface AnalysisItem {
   distractors: Record<string, number>;
 }
 
-// Fungsi pintar ekstrak TP
+// --- FUNGSI VALIDATOR & PEMBERSIH TP YANG AGRESIF ---
+const isValidTpText = (t: any): boolean => {
+  if (!t) return false;
+  const text = String(t).toLowerCase().trim();
+  if (text.length < 5) return false;
+  if (text.includes('tujuan pembelajaran soal') || text.includes('materi ujian soal') || text.includes('soal nomor')) return false;
+  if (/^(tujuan pembelajaran|tp)\s*\d+$/.test(text)) return false;
+  return true;
+};
+
+const getCleanTpText = (q: any): string => {
+  if (!q) return '';
+  let text = '';
+  if (typeof q === 'string') text = q;
+  else {
+    const keys = ['tp', 'tpText', 'tp_text', 'tujuanPembelajaran', 'tujuan_pembelajaran', 'learningObjective', 'learning_objective', 'indikator', 'materi', 'deskripsi', 'kompetensi'];
+    for (const k of keys) {
+      if (q[k] && typeof q[k] === 'string' && q[k].trim().length > 3) { text = q[k]; break; }
+      if (q[k] && typeof q[k] === 'object' && q[k].text) { text = q[k].text; break; }
+    }
+    if (!text && typeof q === 'object') {
+      for (const key in q) {
+        if (typeof q[key] === 'string' && q[key].length > 15 && !['type', 'id', 'question', 'pertanyaan', 'soal', 'pembahasan', 'jawaban', 'explanation', 'correctanswer', 'options'].includes(key.toLowerCase())) {
+          text = q[key]; break;
+        }
+      }
+    }
+  }
+  return text ? text.replace(/^(TP\s*\d+[\:\-\.\s]*|\d+[\.\)\-\s]+|Bab\s\d+\s)/i, '').trim() : '';
+};
+
 const extractTpText = (raw: any): string => {
   if (!raw) return '';
   try {
@@ -43,11 +73,12 @@ const extractTpText = (raw: any): string => {
       if (raw.trim().startsWith('{')) {
         obj = JSON.parse(raw);
       } else {
-        return raw;
+        return getCleanTpText(raw) || raw;
       }
     }
     if (typeof obj === 'object' && obj !== null) {
-      return obj.tp_text || obj.text || obj.desc || obj.label || obj.materi || JSON.stringify(obj);
+      const val = obj.tp_text || obj.tpText || obj.text || obj.desc || obj.label || obj.materi || '';
+      return getCleanTpText(val) || val;
     }
     return String(obj);
   } catch (e) {
@@ -124,20 +155,60 @@ export default function AnalisisNilaiSiswaPage() {
 
       let answerKey: string[] = [];
       let tujuanPembelajaranMapping: any[] = [];
+      let sourceData: any = null;
 
       if (selectedGrade.exam_template_id) {
         const tplDoc = await getDoc(doc(db, 'exam_templates', selectedGrade.exam_template_id));
         if (tplDoc.exists()) {
-          const tplData = tplDoc.data();
-          answerKey = tplData.multiple_choice?.answer_keys || [];
-          tujuanPembelajaranMapping = tplData.multiple_choice?.tujuan_pembelajaran_mapping || [];
+          sourceData = tplDoc.data();
+          answerKey = sourceData.multiple_choice?.answer_keys || sourceData.multiple_choice?.answer_key || [];
+          tujuanPembelajaranMapping = sourceData.multiple_choice?.tujuan_pembelajaran_mapping || sourceData.tp_mapping || [];
         }
       } else if (selectedGrade.question_bank_id) {
         const qbDoc = await getDoc(doc(db, 'question_banks', selectedGrade.question_bank_id));
         if (qbDoc.exists()) {
-          const qbData = qbDoc.data();
-          answerKey = qbData.questions?.multipleChoice?.map((q: any) => q.correctAnswer) || [];
-          tujuanPembelajaranMapping = qbData.question_tp_mapping || [];
+          sourceData = qbDoc.data();
+          answerKey = sourceData.questions?.multipleChoice?.map((q: any) => q.correctAnswer) || [];
+          tujuanPembelajaranMapping = sourceData.question_tp_mapping || sourceData.tp_mapping || [];
+        }
+      }
+
+      // Jika mapping kosong atau tidak valid, bongkar langsung dari butir soal di Bank Soal / Template
+      if (!tujuanPembelajaranMapping || tujuanMeasuredIsInvalid(tujuanPembelajaranMapping)) {
+        if (sourceData) {
+          let questions = sourceData.questions;
+          if (typeof questions === 'string') { try { questions = JSON.parse(questions); } catch(e){} }
+
+          let mcList: any[] = [];
+          let essayList: any[] = [];
+
+          if (Array.isArray(questions)) {
+            mcList = questions.filter((q:any) => q.type !== 'essay' && q.type !== 'isian');
+            essayList = questions.filter((q:any) => q.type === 'essay' || q.type === 'isian');
+            if (mcList.length === 0 && essayList.length === 0) mcList = questions;
+          } else if (questions && typeof questions === 'object') {
+            mcList = questions.multipleChoice || questions.multiple_choice || questions.pilihanGanda || [];
+            essayList = questions.essay || questions.isian || [];
+          }
+
+          const fallbackMapping: any[] = [];
+          mcList.forEach((q: any, idx: number) => {
+            const cleanText = getCleanTpText(q);
+            fallbackMapping.push({
+              question_number: idx + 1,
+              tp_text: isValidTpText(cleanText) ? cleanText : `Tujuan Pembelajaran Soal ${idx + 1}`
+            });
+          });
+          const pgCount = mcList.length;
+          essayList.forEach((q: any, idx: number) => {
+            const cleanText = getCleanTpText(q);
+            fallbackMapping.push({
+              question_number: pgCount + idx + 1,
+              tp_text: isValidTpText(cleanText) ? cleanText : `Tujuan Pembelajaran Soal ${pgCount + idx + 1}`
+            });
+          });
+
+          tujuanPembelajaranMapping = fallbackMapping;
         }
       }
 
@@ -149,17 +220,13 @@ export default function AnalisisNilaiSiswaPage() {
         return;
       }
 
-      // --- PERBAIKAN LOGIKA OPSI A, B, C, D ---
-      let maxCharCode = 67; // Kode ASCII 67 = 'C'. Minimal selalu tampilkan A, B, C.
-      
-      // Cek dari kunci jawaban
+      let maxCharCode = 67; 
       answerKey.forEach(ans => {
         if (ans && ans.length === 1) {
           maxCharCode = Math.max(maxCharCode, ans.toUpperCase().charCodeAt(0));
         }
       });
       
-      // Cek dari seluruh jawaban siswa (siapa tahu ada yang jawab D atau E)
       selectedGrade.grades.forEach(student => {
         if (student.mcAnswers && Array.isArray(student.mcAnswers)) {
           student.mcAnswers.forEach((ans: string) => {
@@ -170,13 +237,11 @@ export default function AnalisisNilaiSiswaPage() {
         }
       });
 
-      // Bentuk array opsi secara berurutan (A, B, C, dst)
       const options = [];
       for (let i = 65; i <= maxCharCode; i++) {
         options.push(String.fromCharCode(i));
       }
       setAvailableOptions(options);
-      // -----------------------------------------
 
       const analysis: AnalysisItem[] = Array.from({ length: mcqQuestionCount }, (_, i) => ({
         questionNumber: i + 1,
@@ -201,7 +266,8 @@ export default function AnalisisNilaiSiswaPage() {
               analysis[idx].distractors[ans] = (analysis[idx].distractors[ans] || 0) + 1;
             }
 
-            const tpText = extractTpText(tujuanPembelajaranMapping[idx]);
+            const rawMappingObj = tujuanPembelajaranMapping.find((m: any) => Number(m.question_number || m.questionNumber || 0) === idx + 1) || tujuanPembelajaranMapping[idx];
+            const tpText = extractTpText(rawMappingObj);
 
             if (tpText && tpText.trim() !== '') {
               if (!tpMapAnalysis[tpText]) {
@@ -213,7 +279,7 @@ export default function AnalisisNilaiSiswaPage() {
         }
       });
 
-      tujuanPembelajaranMapping.forEach(rawTp => {
+      tujuanPembelajaranMapping.forEach((rawTp, idx) => {
         const tpText = extractTpText(rawTp);
         if (tpText && tpText.trim() !== '' && tpMapAnalysis[tpText]) {
           tpMapAnalysis[tpText].totalQuestions++;
@@ -281,6 +347,11 @@ export default function AnalisisNilaiSiswaPage() {
     }
   };
 
+  const tujuanMeasuredIsInvalid = (mapping: any[]) => {
+    if (!mapping || !Array.isArray(mapping) || mapping.length === 0) return true;
+    return !mapping.some(m => isValidTpText(extractTpText(m)));
+  };
+
   const getDifficultyStyles = (val: number) => {
     if (val <= 30) return { text: 'Sulit', bg: 'bg-red-100 text-red-800', printColor: 'text-red-700' };
     if (val > 70) return { text: 'Mudah', bg: 'bg-blue-100 text-blue-800', printColor: 'text-blue-700' };
@@ -326,7 +397,6 @@ export default function AnalisisNilaiSiswaPage() {
   return (
     <div className="container mx-auto pb-10 px-4 pt-6 bg-slate-50 min-h-screen animate-in fade-in print:bg-white print:min-h-0">
       
-      {/* INJEKSI CSS KHUSUS PRINT SUPER KUAT */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: landscape; margin: 15mm; }
@@ -354,7 +424,6 @@ export default function AnalisisNilaiSiswaPage() {
         }
       `}} />
 
-      {/* HEADER PRINT-ONLY */}
       <div className="hidden print:block text-center mb-6 border-b-2 border-slate-800 pb-4">
         <h1 className="text-2xl font-bold uppercase">Laporan Analisis Butir Soal & Ketercapaian TP</h1>
         <p className="text-lg mt-1 font-semibold">{examInfo?.exam_name} - {examInfo?.subject}</p>
