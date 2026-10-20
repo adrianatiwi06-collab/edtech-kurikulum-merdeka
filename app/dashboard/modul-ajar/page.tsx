@@ -1,5 +1,5 @@
 'use client';
-
+import { generateModulAjarAction } from './actions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
@@ -126,7 +126,8 @@ export default function ModulAjarPage() {
     setDimensi(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-const handleGenerate = async () => {
+  // 1. HANDLE GENERATE DENGAN PROMPT INDUK
+  const handleGenerate = async () => {
     if (selectedTPIds.length === 0) {
       toast.error('Pilih/centang minimal satu Tujuan Pembelajaran (TP) terlebih dahulu!');
       return;
@@ -137,75 +138,69 @@ const handleGenerate = async () => {
     }
 
     setLoading(true);
-    setLoadingMessage('AI sedang menyusun Modul Ajar Kurikulum Merdeka (Deep Learning) sesuai prompt standar...');
+    setLoadingMessage('AI sedang menyusun Modul Ajar Pembelajaran Mendalam (Deep Learning)...');
 
     try {
-      // 1. Kumpulkan semua TP yang dicentang
       const selectedTPTexts = filteredTPs
         .filter(tp => selectedTPIds.includes(tp.id))
-        .map(tp => tp.tp)
-        .join('; ');
+        .map(tp => `- ${tp.tp}`)
+        .join('\n');
 
-      // 2. Kumpulkan Dimensi Profil Pelajar Pancasila yang diaktifkan (true)
       const selectedDimensiList = Object.entries(dimensi)
         .filter(([_, value]) => value)
-        .map(([key, _]) => {
-          const labelMap: Record<string, string> = {
-            keimanan: 'Keimanan & Ketakwaan',
-            kewargaan: 'Kewargaan',
-            penalaranKritis: 'Penalaran Kritis',
-            kreativitas: 'Kreativitas',
-            kolaborasi: 'Kolaborasi',
-            kemandirian: 'Kemandirian',
-            kesehatan: 'Kesehatan',
-            komunikasi: 'Komunikasi'
-          };
-          return labelMap[key];
-        })
+        .map(([key, _]) => key)
         .join(', ');
 
-      // ====================================================================
-      // 3. KONSTRUKSI PROMPT INDUK (Dikirimkan ke LLM/AI Engine Anda di backend)
-      // ====================================================================
+      // PROMPT INDUK PEMBUATAN MODUL AJAR PEMBELAJARAN MENDALAM (DEEP LEARNING)
       const aiPrompt = `
-      # PROMPT INDUK PEMBUATAN MODUL AJAR PEMBELAJARAN MENDALAM (DEEP LEARNING) 2026
-      
-      Bertindaklah sebagai ahli pengembangan kurikulum pendidikan Indonesia dan perancang pembelajaran.
-      
-      Gunakan data berikut sebagai dasar penyusunan modul:
-      - Nama satuan pendidikan: ${namaSekolah}
-      - Nama guru/penyusun: ${namaGuru}
-      - NIP: ${nipGuru}
-      - Mata pelajaran: ${mataPelajaran}
-      - Fase: ${fase}
-      - Kelas: ${kelas}
-      - Semester: ${semester}
-      - Tahun pelajaran: ${tahunPelajaran}
-      - Materi pokok/bab: ${materiPokok}
-      - Alokasi waktu: ${alokasiWaktu}
-      - Model Pembelajaran: ${modelPembelajaran}
-      - Tujuan Pembelajaran (TP) Acuan: ${selectedTPTexts}
-      - Dimensi Profil Lulusan Prioritas: ${selectedDimensiList}
-      
-      Tugasmu adalah menyusun **Modul Ajar/Rencana Pembelajaran Mendalam** secara lengkap, akurat, kontekstual, berdiferensiasi, dan mengacu pada standar Kurikulum Merdeka (Deep Learning).
+Bertindaklah sebagai ahli pengembangan kurikulum pendidikan Indonesia, perancang pembelajaran, praktisi Pembelajaran Mendalam (Deep Learning), ahli asesmen pendidikan, dan penyusun perangkat ajar profesional.
 
-      Struktur Modul Ajar yang harus dihasilkan WAJIB mengikuti urutan berikut:
-      A. IDENTITAS MODUL
-      B. IDENTIFIKASI KESIAPAN PESERTA DIDIK
-      C. KARAKTERISTIK MATERI PELAJARAN
-      D. DIMENSI PROFIL LULUSAN
-      E. DESAIN PEMBELAJARAN (Tujuan Pembelajaran, Praktik Pedagogik, Pendekatan Deep Learning)
-      F. LANGKAH-LANGKAH PEMBELAJARAN BERDIFERENSIASI (Pendahuluan, Inti, Penutup)
-      G. ASESMEN PEMBELAJARAN (Diagnostik, Formatif, Sumatif)
-      
-      Pastikan prinsip Mindful, Meaningful, dan Joyful Learning terlihat jelas pada langkah-langkah pembelajaran.
+Tugasmu adalah menyusun **Modul Ajar/Rencana Pembelajaran Mendalam yang lengkap, akurat, kontekstual, berdiferensiasi, sesuai regulasi yang berlaku pada tahun 2026, dan siap digunakan guru dalam pembelajaran nyata**.
+
+Gunakan data berikut sebagai dasar penyusunan modul:
+- Nama satuan pendidikan: ${namaSekolah}
+- Nama guru/penyusun: ${namaGuru}
+- NIP/NUPTK: ${nipGuru || '[PERLU DIISI GURU]'}
+- Jenjang pendidikan: SD
+- Mata pelajaran: ${mataPelajaran}
+- Fase: ${fase}
+- Kelas: ${kelas}
+- Semester: ${semester}
+- Tahun pelajaran: ${tahunPelajaran}
+- Materi pokok/bab: ${materiPokok}
+- Alokasi waktu: ${alokasiWaktu}
+- Model Pembelajaran: ${modelPembelajaran}
+- Tujuan Pembelajaran (TP): 
+${selectedTPTexts}
+- Dimensi Profil Lulusan: ${selectedDimensiList}
+
+Susunlah modul ajar secara lengkap mencakup:
+1. Hasil Verifikasi Acuan dan Regulasi
+2. Identitas Modul
+3. Identifikasi Kesiapan Peserta Didik
+4. Karakteristik Materi
+5. Dimensi Profil Lulusan
+6. Desain Pembelajaran Mendalam (Mindful, Meaningful, Joyful)
+7. Matriks Keterlacakan CP–TP–Asesmen
+8. Rencana Pembelajaran per Pertemuan (Lengkap dengan Tabel Tahap, Aktivitas Guru, Siswa, dan Asesmen)
+9. Diferensiasi dan Dukungan Inklusif
+10. Asesmen Diagnostik, Formatif, dan Sumatif
+11. Kisi-kisi, Kunci Jawaban, dan Rubrik
+12. LKPD Siap Cetak
+13. Bahan Ajar dan Media
+14. Refleksi dan Tindak Lanjut
+15. Lampiran dan Daftar Pustaka
+16. Daftar Periksa Kualitas Modul
+
+Gunakan bahasa Indonesia baku, terstruktur rapi dengan markdown, dan uraian yang mendalam agar langsung dapat diterapkan.
       `;
 
-      // 4. Simulasi proses AI/LLM berjalan (Di sinilah seharusnya fetch ke API AI Anda)
-      // await fetch('/api/generate-modul', { method: 'POST', body: JSON.stringify({ prompt: aiPrompt }) });
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const result = await generateModulAjarAction(aiPrompt);
 
-      // 5. Data Struktur Hasil dari AI (Digunakan untuk Preview dan Cetak Word)
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Server AI tidak memberikan respons.');
+      }
+
       const modulData = {
         title: `Modul Ajar ${mataPelajaran} - ${materiPokok}`,
         school: namaSekolah,
@@ -224,15 +219,16 @@ const handleGenerate = async () => {
         materi: materiPokok,
         model: modelPembelajaran,
         tujuan: selectedTPTexts,
-        dimensi: dimensi, // State boolean asli disimpan
-        dimensiList: selectedDimensiList, // Teks list hasil filter
-        created_at: Timestamp.now().toDate().toISOString()
+        dimensi: dimensi,
+        konten_ai: result.data, // Menyimpan teks utuh hasil Prompt Induk AI
+        created_at: new Date().toISOString()
       };
 
       setGeneratedModul(modulData);
-      toast.success('Modul Ajar Deep Learning berhasil digenerate berdasarkan Parameter Form!');
+      toast.success('Modul Ajar Deep Learning berhasil dibuat!');
     } catch (err: any) {
       toast.error('Gagal generate: ' + err.message);
+      console.error("AI Generation Error:", err);
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -257,104 +253,53 @@ const handleGenerate = async () => {
     }
   };
 
+  // 2. HANDLE EXPORT WORD MERENDER MODUL.KONTEN_AI SECARA DINAMIS
   const handleExportWord = (modul: any) => {
+    if (!modul || !modul.konten_ai) {
+      toast.error('Konten modul kosong.');
+      return;
+    }
+
+    const contentLines = modul.konten_ai.split('\n');
+    let dynamicHtmlBody = '';
+
+    contentLines.forEach((line: string) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('# ')) {
+        dynamicHtmlBody += `<h1>${trimmed.replace('# ', '')}</h1>`;
+      } else if (trimmed.startsWith('## ')) {
+        dynamicHtmlBody += `<h2>${trimmed.replace('## ', '')}</h2>`;
+      } else if (trimmed.startsWith('### ')) {
+        dynamicHtmlBody += `<h3>${trimmed.replace('### ', '')}</h3>`;
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        dynamicHtmlBody += `<ul><li>${trimmed.substring(2)}</li></ul>`;
+      } else if (trimmed.length > 0) {
+        dynamicHtmlBody += `<p>${trimmed}</p>`;
+      }
+    });
+
     const htmlContent = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
       <head><meta charset="utf-8"><title>${modul.title}</title>
       <style>
-        body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; margin: 2cm; }
-        h1 { text-align: center; font-size: 14pt; font-weight: bold; }
-        h2 { font-size: 12pt; text-transform: uppercase; margin-top: 20px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        td { padding: 4px; vertical-align: top; }
-        ul { margin-top: 0; padding-left: 20px; }
+        body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; margin: 2cm; color: #000; }
+        h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; }
+        h2 { font-size: 13pt; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #000; padding-bottom: 3px; }
+        h3 { font-size: 12pt; font-weight: bold; margin-top: 15px; }
+        p { margin-bottom: 10px; text-align: justify; }
+        ul, ol { margin-top: 5px; margin-bottom: 10px; padding-left: 20px; }
+        li { margin-bottom: 4px; }
       </style>
       </head>
       <body>
-        <h1 style="margin-top: 40px;">MODUL AJAR<br/>KURIKULUM MERDEKA (Deep Learning)</h1>
-        <br/><br/>
-        <table>
-          <tr><td width="30%">Nama Sekolah</td><td>: ${modul.school}</td></tr>
-          <tr><td>Nama Penyusun</td><td>: ${modul.teacher}</td></tr>
-          <tr><td>NIP</td><td>: ${modul.teacherNip}</td></tr>
-          <tr><td>Mata pelajaran</td><td>: ${modul.subject}</td></tr>
-          <tr><td>Fase, Kelas / Semester</td><td>: Fase ${modul.fase}, Kelas ${modul.grade} / ${modul.semester}</td></tr>
-        </table>
+        <h1>MODUL AJAR KURIKULUM MERDEKA<br/>(PEMBELAJARAN MENDALAM / DEEP LEARNING)</h1>
+        <p style="text-align: center; font-weight: bold;">Mata Pelajaran: ${modul.subject} | Kelas: ${modul.grade} (${modul.school})</p>
+        <hr style="margin-bottom: 30px;" />
         
-        <div style="page-break-before: always;"></div>
-
-        <h2 style="text-align: center;">MODUL AJAR DEEP LEARNING<br/>MATA PELAJARAN : ${modul.subject.toUpperCase()}<br/>BAB : ${modul.materi.toUpperCase()}</h2>
-
-        <h2>A. IDENTITAS MODUL</h2>
-        <table>
-          <tr><td width="30%">Nama Sekolah</td><td>: ${modul.school}</td></tr>
-          <tr><td>Nama Penyusun</td><td>: ${modul.teacher}</td></tr>
-          <tr><td>Mata Pelajaran</td><td>: ${modul.subject}</td></tr>
-          <tr><td>Kelas / Fase / Semester</td><td>: ${modul.grade} / ${modul.fase} / ${modul.semester}</td></tr>
-          <tr><td>Alokasi Waktu</td><td>: ${modul.alokasi}</td></tr>
-          <tr><td>Tahun Pelajaran</td><td>: ${modul.academicYear}</td></tr>
-        </table>
-
-        <h2>B. IDENTIFIKASI KESIAPAN PESERTA DIDIK</h2>
-        <p><b>Pengetahuan Awal :</b> Peserta didik umumnya sudah mampu memahami konsep dasar terkait secara lisan dan mengenali materi.</p>
-        <p><b>Minat :</b> Peserta didik memiliki minat yang tinggi terhadap kegiatan belajar yang melibatkan permainan, lagu, gambar berwarna, dan benda-benda konkret.</p>
-        <p><b>Kebutuhan Belajar :</b></p>
-        <ul>
-          <li>Visual: Membutuhkan media gambar, video pembelajaran, dan peragaan langsung.</li>
-          <li>Auditori: Merespon baik terhadap penjelasan lisan, cerita, dan diskusi kelompok.</li>
-          <li>Kinestetik: Perlu terlibat aktif dalam kegiatan fisik.</li>
-        </ul>
-
-        <h2>C. KARAKTERISTIK MATERI PELAJARAN</h2>
-        <p><b>Jenis Pengetahuan yang Akan Dicapai:</b> Konseptual dan Prosedural dalam memahami materi ${modul.materi}.</p>
-        <p><b>Relevansi dengan Kehidupan Nyata:</b> Sangat relevan dan sering digunakan dalam aktivitas sehari-hari.</p>
-        <p><b>Integrasi Nilai dan Karakter:</b> Menanamkan nilai ketelitian, kejujuran saat bermain, kerja sama dalam kelompok, dan rasa syukur.</p>
-
-        <h2>D. DIMENSI PROFIL LULUSAN</h2>
-        <ul>
-          ${modul.dimensi.keimanan ? '<li>Keimanan dan Ketakwaan terhadap Tuhan Yang Maha Esa, dan Berakhlak Mulia.</li>' : ''}
-          ${modul.dimensi.kewargaan ? '<li>Kewargaan: Belajar antre dan mengikuti aturan.</li>' : ''}
-          ${modul.dimensi.penalaranKritis ? '<li>Penalaran Kritis: Mengidentifikasi dan memecahkan masalah.</li>' : ''}
-          ${modul.dimensi.kreativitas ? '<li>Kreativitas: Menghasilkan karya (produk).</li>' : ''}
-          ${modul.dimensi.kolaborasi ? '<li>Kolaborasi: Bekerja sama dalam kelompok.</li>' : ''}
-          ${modul.dimensi.kemandirian ? '<li>Kemandirian: Mengerjakan latihan secara mandiri.</li>' : ''}
-          ${modul.dimensi.kesehatan ? '<li>Kesehatan: Menjaga kebersihan diri dan lingkungan.</li>' : ''}
-          ${modul.dimensi.komunikasi ? '<li>Komunikasi: Mampu menyampaikan pendapat dengan tepat.</li>' : ''}
-        </ul>
-
-        <div style="page-break-before: always;"></div>
-
-        <h2 style="text-align: center;">DESAIN PEMBELAJARAN</h2>
-
-        <h2>A. TUJUAN PEMBELAJARAN</h2>
-        <p>${modul.tujuan.replace(/\n/g, '<br/>')}</p>
-
-        <h2>B. KERANGKA PEMBELAJARAN (PRAKTIK PEDAGOGIK)</h2>
-        <p><b>Model Pembelajaran:</b> ${modul.model}</p>
-        <p><b>Pendekatan:</b> Deep Learning</p>
-        <ul>
-          <li><b>Mindful Learning:</b> Peserta didik diajak untuk fokus dan menyadari proses belajar dengan cermat.</li>
-          <li><b>Meaningful Learning:</b> Peserta didik menghubungkan konsep dengan kehidupan nyata.</li>
-          <li><b>Joyful Learning:</b> Pembelajaran dikemas melalui permainan dan aktivitas menyenangkan.</li>
-        </ul>
-
-        <h2>C. LANGKAH-LANGKAH PEMBELAJARAN BERDIFERENSIASI</h2>
-        <p><b>KEGIATAN PENDAHULUAN (10 MENIT)</b><br/>
-        Guru menyapa, mengajak berdoa, dan melakukan apersepsi (Joyful & Meaningful Learning) dengan mengaitkan materi ${modul.materi}.</p>
-        
-        <p><b>KEGIATAN INTI (50 MENIT)</b><br/>
-        Eksplorasi mendalam secara Mindful. Peserta didik berdiskusi dan berlatih secara berkelompok. Guru melakukan Diferensiasi Proses (mendampingi yang kesulitan) dan Diferensiasi Produk (hasil karya).</p>
-
-        <p><b>KEGIATAN PENUTUP (10 MENIT)</b><br/>
-        Refleksi pembelajaran, merangkum materi, dan menutup kegiatan dengan doa.</p>
-
-        <h2>D. ASESMEN PEMBELAJARAN</h2>
-        <p><b>Asesmen Diagnostik:</b> Tanya jawab awal.</p>
-        <p><b>Asesmen Formatif:</b> Observasi keaktifan diskusi kelompok dan LKPD.</p>
-        <p><b>Asesmen Sumatif:</b> Praktik kinerja dan Tes Tertulis (soal isian & pilihan ganda).</p>
+        ${dynamicHtmlBody}
 
         <br/><br/><br/>
-        <table style="width: 100%; border: none;">
+        <table style="width: 100%; border: none; margin-top: 40px;">
           <tr>
             <td style="width: 50%; text-align: center; border: none;">
               Mengetahui,<br/>Kepala Sekolah<br/><br/><br/><br/>
@@ -446,7 +391,7 @@ const handleGenerate = async () => {
       {activeTab === 'generator' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* KOLOM KIRI: FORMULIR INPUT PERSIS GAMBAR UI */}
+          {/* KOLOM KIRI: FORMULIR INPUT */}
           <div className="lg:col-span-4 space-y-6">
             <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm space-y-5">
               
@@ -637,7 +582,7 @@ const handleGenerate = async () => {
                     </select>
                   </div>
 
-                  {/* KONEKSI TP TERSIMPAN (Sesuai Mapel Terpilih) */}
+                  {/* KONEKSI TP TERSIMPAN */}
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
                     <div className="flex justify-between items-center mb-1">
                       <label className="text-[10px] font-bold text-slate-700">PILIH TUJUAN PEMBELAJARAN (TP) DARI BANK DATA</label>
@@ -737,55 +682,8 @@ const handleGenerate = async () => {
                   </div>
                 </div>
 
-                <div className="space-y-5 text-sm text-slate-800 font-serif leading-relaxed">
-                  
-                  {/* PREVIEW KONTEN SESUAI CONTOH */}
-                  <div className="text-center pb-4 border-b border-slate-300">
-                    <h3 className="font-bold text-base uppercase">MODUL AJAR KURIKULUM MERDEKA (DEEP LEARNING)</h3>
-                    <p className="font-bold text-sm uppercase mt-2">Mata Pelajaran: {generatedModul.subject}</p>
-                    <p className="font-bold text-sm uppercase">BAB: {generatedModul.materi}</p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold bg-slate-100 px-2 py-1 mb-2 border-l-4 border-slate-800 uppercase">A. Identitas Modul</h4>
-                    <table className="w-full text-sm">
-                      <tbody>
-                        <tr><td className="w-48 py-1">Nama Sekolah</td><td>: {generatedModul.school}</td></tr>
-                        <tr><td className="py-1">Nama Penyusun</td><td>: {generatedModul.teacher}</td></tr>
-                        <tr><td className="py-1">Kelas / Fase / Semester</td><td>: {generatedModul.grade} / {generatedModul.fase} / {generatedModul.semester}</td></tr>
-                        <tr><td className="py-1">Alokasi Waktu</td><td>: {generatedModul.alokasi}</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold bg-slate-100 px-2 py-1 mb-2 border-l-4 border-slate-800 uppercase">B. Identifikasi Kesiapan Peserta Didik</h4>
-                    <p><b>Pengetahuan Awal:</b> Peserta didik sudah mampu memahami dasar konsep {generatedModul.subject} secara sederhana.</p>
-                    <p><b>Minat:</b> Peserta didik tertarik pada pembelajaran interaktif (permainan, lagu, dan benda konkret).</p>
-                    <p><b>Kebutuhan Belajar:</b> Memerlukan diferensiasi visual (gambar), auditori (diskusi), dan kinestetik (gerakan/praktik).</p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold bg-slate-100 px-2 py-1 mb-2 border-l-4 border-slate-800 uppercase">C. Karakteristik Materi Pelajaran</h4>
-                    <p><b>Konseptual & Prosedural:</b> Memahami konsep dan mampu mempraktekkan pemecahan masalah terkait {generatedModul.materi}.</p>
-                    <p><b>Integrasi Nilai:</b> Menanamkan ketelitian, kejujuran, kerja sama kelompok, dan kemandirian.</p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold bg-slate-100 px-2 py-1 mb-2 border-l-4 border-slate-800 uppercase">D. Desain Pembelajaran</h4>
-                    <p><b>Tujuan Pembelajaran:</b><br/>
-                      <span className="whitespace-pre-line ml-4">{generatedModul.tujuan}</span>
-                    </p>
-                    <p className="mt-2"><b>Kerangka Pedagogik:</b> Model {generatedModul.model} dengan pendekatan <i>Deep Learning (Mindful, Meaningful, Joyful Learning)</i>.</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-bold bg-slate-100 px-2 py-1 mb-2 border-l-4 border-slate-800 uppercase">E. Asesmen Pembelajaran</h4>
-                    <p><b>Asesmen Diagnostik:</b> Tanya jawab lisan awal kelas.<br/>
-                    <b>Asesmen Formatif:</b> Observasi selama proses belajar (diskusi/LKPD).<br/>
-                    <b>Asesmen Sumatif:</b> Praktik kinerja atau tes tertulis (pilihan ganda/isian) di akhir materi.</p>
-                  </div>
-
+                <div className="space-y-4 text-sm text-slate-800 font-serif leading-relaxed whitespace-pre-wrap">
+                  {generatedModul.konten_ai}
                 </div>
               </motion.div>
             ) : (
@@ -836,7 +734,7 @@ const handleGenerate = async () => {
                       </div>
                     </div>
                     <h3 className="font-black text-slate-900 text-lg">{mod.materi}</h3>
-                    <p className="text-xs text-slate-500">Penyusun: {mod.teacher} | {mod.model}</p>
+                    <p className="text-xs text-slate-500">Penyusun: {mod.teacher} | Model: {mod.model}</p>
                   </div>
                 </div>
               ))}
