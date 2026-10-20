@@ -33,6 +33,7 @@ import {
   Database,
   FileCheck,
   FileText,
+  GitMerge,
   GraduationCap,
   HelpCircle,
   Home,
@@ -357,6 +358,14 @@ export default function DashboardLayout({
         title: 'Generate TP',
       },
       {
+        match: 'atp',
+        title: 'Alur Tujuan Pembelajaran (ATP)',
+      },
+      {
+        match: 'modul ajar',
+        title: 'Modul Ajar',
+      },
+      {
         match: 'my-tp',
         title: 'TP Tersimpan',
       },
@@ -437,6 +446,16 @@ export default function DashboardLayout({
           label: 'Generate TP',
           href: '/dashboard/generate-tp',
           icon: Brain,
+        },
+        {
+          label: 'Generate ATP',
+          href: '/dashboard/atp',
+          icon: GitMerge,
+        },
+        {
+          label: 'Modul Ajar',
+          href: '/dashboard/modul-ajar',
+          icon: BookOpen,
         },
         {
           label: 'TP Tersimpan',

@@ -16,6 +16,7 @@ import {
   Clock3,
   FileCheck2,
   FileText,
+  GitMerge,
   FolderOpen,
   Lightbulb,
   LineChart,
@@ -278,6 +279,15 @@ export default function DashboardPage() {
       icon: Target,
       label: 'Mulai membuat',
       tone: 'blue',
+    },
+    {
+      title: 'Generate ATP',
+      description: 
+        'Susun Alur Tujuan Pembelajaran otomatis dengan AI.',
+      href: '/dashboard/atp',
+      icon: GitMerge,
+      label: 'Mulai buat',
+      tone: 'indigo',
     },
     {
       title: 'Generate Soal AI',
