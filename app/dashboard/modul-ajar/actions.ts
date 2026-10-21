@@ -17,7 +17,7 @@ export async function generateModulAjarAction(prompt: string) {
     const genAI = new GoogleGenerativeAI(apiKey);
     
     // GUNAKAN MODEL PALING STABIL YANG DIDUKUNG DI SEMUA VERSI API v1beta
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.8-flash' });
 
     const result = await model.generateContent(prompt);
     const aiText = result.response.text();

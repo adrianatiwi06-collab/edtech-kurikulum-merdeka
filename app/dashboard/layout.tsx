@@ -366,6 +366,10 @@ export default function DashboardLayout({
         title: 'Modul Ajar',
       },
       {
+        match: 'promes prota',
+        title: 'Promes Prota',
+      },
+      {
         match: 'my-tp',
         title: 'TP Tersimpan',
       },
@@ -455,6 +459,11 @@ export default function DashboardLayout({
         {
           label: 'Modul Ajar',
           href: '/dashboard/modul-ajar',
+          icon: BookOpen,
+        },
+        {
+          label: 'Promes Prota',
+          href: '/dashboard/promes-prota',
           icon: BookOpen,
         },
         {

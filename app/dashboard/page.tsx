@@ -290,6 +290,15 @@ export default function DashboardPage() {
       tone: 'indigo',
     },
     {
+      title: 'Promes Prota',
+      description: 
+        'Pembuatan Prota Promes otomatis dengan AI.',
+      href: '/dashboard/promes-prota',
+      icon: GitMerge,
+      label: 'Mulai buat',
+      tone: 'indigo',
+    },
+    {
       title: 'Generate Soal AI',
       description:
         'Susun soal berdasarkan Tujuan Pembelajaran.',

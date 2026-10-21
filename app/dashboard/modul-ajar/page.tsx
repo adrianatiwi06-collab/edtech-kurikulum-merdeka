@@ -12,6 +12,189 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
+
+/**
+ * Mengubah Markdown hasil AI menjadi HTML terstruktur untuk preview dan Word.
+ * HTML mentah di-escape terlebih dahulu agar konten AI tidak menyisipkan markup/script.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderInlineMarkdown(value: string): string {
+  // Beberapa respons AI menyisipkan <br> di dalam sel tabel Markdown.
+  return value.split(/<br\s*\/?\s*>/i).map((part) => {
+    let text = escapeHtml(part);
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    text = text.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+    text = text.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>');
+    return text;
+  }).join('<br/>');
+}
+/** Gaya tabel disisipkan inline karena Word mengabaikan sebagian CSS berbasis class. */
+const TABLE_STYLE = 'width:100%;border-collapse:collapse;border:1px solid #444444;margin:6pt 0 12pt;';
+const TH_STYLE = 'border:1px solid #444444;padding:4pt 6pt;background:#F2DCDB;font-weight:bold;text-align:center;vertical-align:middle;';
+const TD_STYLE = 'border:1px solid #444444;padding:4pt 6pt;vertical-align:top;text-align:left;';
+
+/**
+ * Membersihkan Markdown AI sebelum diubah ke HTML:
+ * - membuang judul/subjudul sebelum heading "## " pertama (diganti halaman sampul),
+ * - membuang blok pengesahan/tanda tangan buatan AI (aplikasi menambah tanda tangan sendiri),
+ * - membuang garis pemisah "---".
+ */
+function prepareModulMarkdown(markdown: string): string {
+  let lines = (markdown || '').replace(/\r\n?/g, '\n').split('\n');
+
+  const firstH2 = lines.findIndex(l => /^\s*##\s+/.test(l));
+  if (firstH2 > 0) lines = lines.slice(firstH2);
+
+  const sigIdx = lines.findIndex((l, i) =>
+    i > lines.length - 30 &&
+    !l.trim().startsWith('|') &&
+    /^\W*(Disahkan|Mengetahui|Kepala\s+(Sekolah|SD))/i.test(l.trim())
+  );
+  if (sigIdx > 0) lines = lines.slice(0, sigIdx);
+
+  return lines
+    .filter(l => !/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(l))
+    // buang sisa "---" yang menempel di akhir kalimat (kecuali baris tabel)
+    .map(l => (l.trim().startsWith('|') ? l : l.replace(/(\S)\s*-{3,}\s*$/, '$1')))
+    .join('\n');
+}
+
+function markdownToHtml(markdown: string): string {
+  const lines = (markdown || '').replace(/\r\n?/g, '\n').split('\n');
+  const output: string[] = [];
+  let paragraph: string[] = [];
+  const listStack: { type: 'ul' | 'ol'; indent: number }[] = [];
+  let tableRows: string[][] = [];
+  let inCodeBlock = false;
+  let codeLines: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      output.push(`<p>${paragraph.map(renderInlineMarkdown).join('<br/>')}</p>`);
+      paragraph = [];
+    }
+  };
+  const closeList = () => {
+    while (listStack.length) output.push(`</${listStack.pop()!.type}>`);
+  };
+  const splitRow = (line: string) =>
+    line.trim().slice(1, -1).split(/(?<!\\)\|/).map(c => c.replace(/\\\|/g, '|').trim());
+
+  const flushTable = () => {
+    if (!tableRows.length) return;
+    const rows = tableRows.filter(row => !row.every(cell => /^:?-{3,}:?$/.test(cell.replace(/\s/g, ''))));
+    if (rows.length) {
+      const header = rows[0];
+      const body = rows.slice(1);
+      output.push(
+        `<table class="md-table" border="1" cellspacing="0" cellpadding="5" style="${TABLE_STYLE}"><thead><tr>` +
+        header.map(cell => `<th style="${TH_STYLE}">${renderInlineMarkdown(cell)}</th>`).join('') +
+        '</tr></thead><tbody>' +
+        body.map(row => '<tr>' + header.map((_, i) =>
+          `<td style="${TD_STYLE}">${renderInlineMarkdown(row[i] ?? '')}</td>`
+        ).join('') + '</tr>').join('') +
+        '</tbody></table>');
+    }
+    tableRows = [];
+  };
+  const isTableLine = (line: string) => line.trim().startsWith('|') && line.trim().endsWith('|');
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+
+    if (/^```/.test(trimmed)) {
+      flushParagraph(); closeList(); flushTable();
+      if (inCodeBlock) {
+        output.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+        codeLines = [];
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      codeLines.push(raw);
+      continue;
+    }
+
+    if (isTableLine(raw)) {
+      flushParagraph(); closeList();
+      tableRows.push(splitRow(raw));
+      continue;
+    } else {
+      flushTable();
+    }
+
+    if (!trimmed) {
+      flushParagraph(); closeList();
+      continue;
+    }
+
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      flushParagraph(); closeList();
+      const level = Math.min(heading[1].length, 5);
+      output.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    if (/^([-*_])(?:\s*\1){2,}\s*$/.test(trimmed)) {
+      flushParagraph(); closeList();
+      continue;
+    }
+
+    // Daftar bertingkat (indentasi) untuk bullet maupun numbering
+    const listItem = raw.match(/^(\s*)([-*+]|\d+[.)])\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      const indent = listItem[1].replace(/\t/g, '    ').length;
+      const type: 'ul' | 'ol' = /\d/.test(listItem[2]) ? 'ol' : 'ul';
+      while (listStack.length && indent < listStack[listStack.length - 1].indent) {
+        output.push(`</${listStack.pop()!.type}>`);
+      }
+      const top = listStack[listStack.length - 1];
+      if (!top || indent > top.indent) {
+        listStack.push({ type, indent });
+        output.push(`<${type}>`);
+      } else if (top.type !== type) {
+        output.push(`</${listStack.pop()!.type}>`);
+        listStack.push({ type, indent });
+        output.push(`<${type}>`);
+      }
+      output.push(`<li>${renderInlineMarkdown(listItem[3])}</li>`);
+      continue;
+    }
+
+    const quote = trimmed.match(/^>\s?(.*)$/);
+    if (quote) {
+      flushParagraph(); closeList();
+      output.push(`<blockquote>${renderInlineMarkdown(quote[1])}</blockquote>`);
+      continue;
+    }
+
+    closeList();
+    paragraph.push(trimmed);
+  }
+
+  if (inCodeBlock) output.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+  flushParagraph();
+  closeList();
+  flushTable();
+  return output.join('\n');
+}
+
 interface SavedTP {
   id: string;
   chapter: string;
@@ -174,25 +357,58 @@ Gunakan data berikut sebagai dasar penyusunan modul:
 ${selectedTPTexts}
 - Dimensi Profil Lulusan: ${selectedDimensiList}
 
-Susunlah modul ajar secara lengkap mencakup:
-1. Hasil Verifikasi Acuan dan Regulasi
-2. Identitas Modul
-3. Identifikasi Kesiapan Peserta Didik
-4. Karakteristik Materi
-5. Dimensi Profil Lulusan
-6. Desain Pembelajaran Mendalam (Mindful, Meaningful, Joyful)
-7. Matriks Keterlacakan CP–TP–Asesmen
-8. Rencana Pembelajaran per Pertemuan (Lengkap dengan Tabel Tahap, Aktivitas Guru, Siswa, dan Asesmen)
-9. Diferensiasi dan Dukungan Inklusif
-10. Asesmen Diagnostik, Formatif, dan Sumatif
-11. Kisi-kisi, Kunci Jawaban, dan Rubrik
-12. LKPD Siap Cetak
-13. Bahan Ajar dan Media
-14. Refleksi dan Tindak Lanjut
-15. Lampiran dan Daftar Pustaka
-16. Daftar Periksa Kualitas Modul
+ATURAN FORMAT (WAJIB, karena hasilnya langsung diekspor ke dokumen Word):
+- JANGAN menulis judul dokumen, subjudul, nama sekolah/tahun di bagian atas, dan JANGAN menulis blok pengesahan/tanda tangan di akhir. Aplikasi menambahkannya sendiri. Mulai langsung dari "## INFORMASI UMUM".
+- Gunakan HANYA heading: "## " untuk bagian utama (huruf kapital), "### " untuk sub-bagian bernomor huruf (A., B., ...), dan "#### " untuk sub-sub-bagian.
+- Sajikan isi dalam TABEL Markdown (baris pemisah |---|---|), setiap baris tabel harus ditulis dalam SATU baris teks dengan jumlah kolom sama dengan header. Jangan menulis karakter "|" di dalam isi sel. Untuk baris baru di dalam sel gunakan <br>.
+- Dilarang memakai blok kode (tanda backtick tiga kali), diagram ASCII/panah, emoji, garis pemisah "---", dan HTML selain <br>.
+- Gunakan **tebal** seperlunya. Daftar memakai "- " atau "1. ". Jangan membuat bullet satu per satu terpisah jika sebenarnya satu kelompok.
+- Gunakan bahasa Indonesia baku, konkret, dan siap pakai di kelas. Hindari kalimat pembuka/penutup basa-basi.
 
-Gunakan bahasa Indonesia baku, terstruktur rapi dengan markdown, dan uraian yang mendalam agar langsung dapat diterapkan.
+STRUKTUR MODUL (ikuti urutan dan nama bagian persis seperti berikut):
+
+## INFORMASI UMUM
+### A. Identitas Modul
+Tabel 2 kolom (Komponen | Keterangan) berisi baris: Nama Penyusun, Satuan Pendidikan, Tahun Ajaran, Mata Pelajaran, Kelas / Fase, Bab / Topik Spesifik, Alokasi Waktu, Model Pembelajaran, Acuan Regulasi (sebutkan regulasi dan CP yang benar-benar berlaku; tulis "[PERLU DIVERIFIKASI GURU]" bila tidak yakin).
+### B. Identifikasi Murid (Kompetensi Awal)
+Tabel 2 kolom (Kategori | Deskripsi): Pengetahuan Awal, Minat, Kebutuhan Belajar, serta Kesiapan (kelompok kesiapan rendah/sedang/tinggi dan strategi masing-masing; jangan mengarang jumlah siswa).
+### C. Karakteristik Materi dan Sarana Prasarana
+Tabel 2 kolom (Komponen | Deskripsi): Konsep Kunci, Kaitan dengan Kehidupan Sehari-hari, Sarana dan Prasarana, Media dan Alat Peraga.
+### D. Dimensi Profil Lulusan
+Tabel 2 kolom (Dimensi | Elemen yang Dikembangkan) hanya untuk dimensi yang dipilih, dengan penjelasan konkret pada kegiatan bab ini.
+
+## E. DESAIN PEMBELAJARAN
+Tabel 2 kolom (Komponen | Deskripsi): Capaian Pembelajaran, Tujuan Pembelajaran Bab Ini (daftar bernomor, kalimat operasional), Lintas Disiplin Ilmu, Praktik Pedagogis (Pendekatan Deep Learning, model, masalah/topik utama, prinsip Berkesadaran-Bermakna-Menggembirakan), Pemanfaatan Digital, Kemitraan Pembelajaran, Lingkungan Pembelajaran.
+
+## F. PENGALAMAN BELAJAR (RINCIAN PER PERTEMUAN)
+Untuk SETIAP pertemuan sesuai alokasi waktu, tulis "### Pertemuan N: <judul pertemuan>" lalu satu tabel 2 kolom (Tahapan | Deskripsi Kegiatan (Berpusat pada Siswa)) dengan tepat tiga baris: "Kegiatan Awal (X Menit)", "Kegiatan Inti (X Menit)", "Kegiatan Penutup (X Menit)". Isi sel menguraikan langkah guru dan siswa secara runtut memakai <br> antarlangkah, memuat sintaks model pembelajaran, aktivitas konkret, pertanyaan pemantik, dan unsur Mindful/Meaningful/Joyful.
+
+## G. ASESMEN
+### Matriks Keterlacakan CP - TP - Asesmen
+Tabel (Tujuan Pembelajaran | Indikator | Bentuk Asesmen | Pertemuan).
+### Asesmen Diagnostik (Awal Bab)
+Uraian singkat dan contoh pertanyaan.
+### Asesmen Formatif (Selama Proses)
+#### 1. Lembar Kerja Peserta Didik (LKPD)
+LKPD lengkap siap cetak (identitas "Nama: ....", petunjuk, soal/tugas bernomor, ruang jawaban berupa titik-titik).
+#### 2. Kisi-kisi dan Kunci Jawaban
+Tabel kisi-kisi (No | Tujuan Pembelajaran | Indikator | Bentuk Soal | No. Soal) dan kunci jawaban untuk semua soal LKPD.
+#### 3. Rubrik Penilaian Asesmen Formatif
+Tabel rubrik (Kriteria Penilaian | Skor 1 (Kurang) | Skor 2 (Cukup) | Skor 3 (Baik)), total skor maksimal, dan keterangan tindak lanjut berdasarkan rentang skor.
+### Asesmen Sumatif (Akhir Bab)
+Proyek atau tes akhir beserta kriteria penilaiannya.
+
+## H. PENGAYAAN DAN REMEDIAL
+Daftar: Pengayaan, Remedial, dan Dukungan Inklusif/Diferensiasi.
+
+## I. REFLEKSI PENDIDIK DAN PESERTA DIDIK
+### Refleksi Peserta Didik
+Daftar pertanyaan refleksi sederhana sesuai usia.
+### Refleksi Pendidik
+Daftar pertanyaan refleksi.
+
+## J. BAHAN BACAAN, GLOSARIUM, DAN DAFTAR PUSTAKA
+Bahan bacaan/media, glosarium (istilah: pengertian), dan daftar pustaka. Jangan menambahkan tabel daftar periksa kualitas atau blok tanda tangan.
       `;
 
       const result = await generateModulAjarAction(aiPrompt);
@@ -253,79 +469,74 @@ Gunakan bahasa Indonesia baku, terstruktur rapi dengan markdown, dan uraian yang
     }
   };
 
-  // 2. HANDLE EXPORT WORD MERENDER MODUL.KONTEN_AI SECARA DINAMIS
+  // 2. EXPORT WORD: render Markdown secara utuh (heading, tabel, daftar, bold, dll.)
   const handleExportWord = (modul: any) => {
     if (!modul || !modul.konten_ai) {
       toast.error('Konten modul kosong.');
       return;
     }
 
-    const contentLines = modul.konten_ai.split('\n');
-    let dynamicHtmlBody = '';
-
-    contentLines.forEach((line: string) => {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('# ')) {
-        dynamicHtmlBody += `<h1>${trimmed.replace('# ', '')}</h1>`;
-      } else if (trimmed.startsWith('## ')) {
-        dynamicHtmlBody += `<h2>${trimmed.replace('## ', '')}</h2>`;
-      } else if (trimmed.startsWith('### ')) {
-        dynamicHtmlBody += `<h3>${trimmed.replace('### ', '')}</h3>`;
-      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        dynamicHtmlBody += `<ul><li>${trimmed.substring(2)}</li></ul>`;
-      } else if (trimmed.length > 0) {
-        dynamicHtmlBody += `<p>${trimmed}</p>`;
-      }
-    });
-
+    const dynamicHtmlBody = markdownToHtml(prepareModulMarkdown(modul.konten_ai));
+    const safe = (value: unknown) => escapeHtml(String(value ?? ''));
     const htmlContent = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-      <head><meta charset="utf-8"><title>${modul.title}</title>
-      <style>
-        body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.5; margin: 2cm; color: #000; }
-        h1 { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; }
-        h2 { font-size: 13pt; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #000; padding-bottom: 3px; }
-        h3 { font-size: 12pt; font-weight: bold; margin-top: 15px; }
-        p { margin-bottom: 10px; text-align: justify; }
-        ul, ol { margin-top: 5px; margin-bottom: 10px; padding-left: 20px; }
-        li { margin-bottom: 4px; }
-      </style>
+      <!DOCTYPE html>
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:w="urn:schemas-microsoft-com:office:word"
+            xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8"/>
+        <meta name="ProgId" content="Word.Document"/>
+        <meta name="Generator" content="Modul Ajar Generator"/>
+        <title>${safe(modul.title)}</title>
+        <style>
+          @page { size: A4; margin: 2cm 2cm 2cm 2.5cm; }
+          body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.3; color: #111; }
+          h1 { font-size: 16pt; text-align: center; margin: 14pt 0 8pt; page-break-after: avoid; }
+          h2 { font-size: 12pt; font-weight: bold; margin: 18pt 0 8pt; padding: 4pt 6pt; background: #9B1C1C; color: #FFFFFF; page-break-after: avoid; }
+          h3 { font-size: 11.5pt; font-weight: bold; margin: 12pt 0 5pt; page-break-after: avoid; }
+          h4 { font-size: 11pt; font-weight: bold; margin: 10pt 0 4pt; page-break-after: avoid; }
+          h5 { font-size: 11pt; font-weight: bold; font-style: italic; margin: 8pt 0 4pt; page-break-after: avoid; }
+          p { margin: 0 0 6pt; text-align: left; }
+          ul, ol { margin: 3pt 0 8pt; padding-left: 22pt; }
+          li { margin: 0 0 3pt; text-align: left; }
+          td p, th p { margin: 0 0 3pt; }
+          tr { page-break-inside: avoid; }
+          blockquote { margin: 8pt 18pt; padding-left: 10pt; border-left: 2px solid #888; color: #333; }
+          pre { white-space: pre-wrap; font-family: "Courier New", monospace; font-size: 9pt; }
+          code { font-family: "Courier New", monospace; font-size: 9pt; }
+          .cover-title { text-align: center; font-size: 16pt; font-weight: bold; margin: 6pt 0 4pt; }
+          .cover-subtitle { text-align: center; font-size: 11.5pt; font-weight: bold; margin: 0 0 4pt; }
+          .cover-meta { text-align: center; font-size: 10.5pt; margin: 0 0 14pt; }
+          .signature { width: 100%; border-collapse: collapse; margin-top: 30pt; page-break-inside: avoid; }
+          .signature td { width: 50%; border: none; text-align: center; vertical-align: top; padding: 5pt; }
+          .signature-space { height: 55pt; }
+        </style>
       </head>
       <body>
-        <h1>MODUL AJAR KURIKULUM MERDEKA<br/>(PEMBELAJARAN MENDALAM / DEEP LEARNING)</h1>
-        <p style="text-align: center; font-weight: bold;">Mata Pelajaran: ${modul.subject} | Kelas: ${modul.grade} (${modul.school})</p>
-        <hr style="margin-bottom: 30px;" />
-        
+        <p class="cover-title">MODUL AJAR ${safe(String(modul.subject || '').toUpperCase())}</p>
+        <p class="cover-subtitle">Bab: ${safe(modul.materi)}</p>
+        <p class="cover-meta">Kelas ${safe(modul.grade)} / Fase ${safe(modul.fase)} &nbsp;|&nbsp; ${safe(modul.school)} &nbsp;|&nbsp; Tahun Pelajaran ${safe(modul.academicYear)}</p>
         ${dynamicHtmlBody}
-
-        <br/><br/><br/>
-        <table style="width: 100%; border: none; margin-top: 40px;">
+        <table class="signature">
           <tr>
-            <td style="width: 50%; text-align: center; border: none;">
-              Mengetahui,<br/>Kepala Sekolah<br/><br/><br/><br/>
-              <b>${modul.headmaster}</b><br/>
-              NIP. ${modul.headmasterNip}
-            </td>
-            <td style="width: 50%; text-align: center; border: none;">
-              ${modul.city}, ${modul.date}<br/>Guru Mata Pelajaran<br/><br/><br/><br/>
-              <b>${modul.teacher}</b><br/>
-              NIP. ${modul.teacherNip}
-            </td>
+            <td>Mengetahui,<br/>Kepala Sekolah<div class="signature-space"></div><strong>${safe(modul.headmaster)}</strong><br/>NIP. ${safe(modul.headmasterNip)}</td>
+            <td>${safe(modul.city)}, ${safe(modul.date)}<br/>Guru Mata Pelajaran<div class="signature-space"></div><strong>${safe(modul.teacher)}</strong><br/>NIP. ${safe(modul.teacherNip)}</td>
           </tr>
         </table>
       </body>
       </html>
     `;
 
-    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+    const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${modul.title.replace(/\s+/g, '_')}.doc`;
+    a.download = `${String(modul.title || 'Modul_Ajar').replace(/[^\w\-]+/g, '_')}.doc`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    toast.success('Dokumen Word Modul Ajar Deep Learning berhasil diunduh!');
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success('Dokumen Word berhasil diunduh dengan format heading, daftar, dan tabel.');
   };
 
   const handleDeleteModule = async (id: string) => {
@@ -682,9 +893,26 @@ Gunakan bahasa Indonesia baku, terstruktur rapi dengan markdown, dan uraian yang
                   </div>
                 </div>
 
-                <div className="space-y-4 text-sm text-slate-800 font-serif leading-relaxed whitespace-pre-wrap">
-                  {generatedModul.konten_ai}
-                </div>
+                <div
+                  className="modul-ajar-preview text-sm text-slate-800 font-serif leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: markdownToHtml(generatedModul.konten_ai) }}
+                />
+                <style jsx>{`
+                  .modul-ajar-preview :global(h2) { font-size: 1.15rem; font-weight: 800; margin: 1.5rem 0 .6rem; padding-bottom: .35rem; border-bottom: 1px solid #e2e8f0; }
+                  .modul-ajar-preview :global(h3) { font-size: 1.02rem; font-weight: 800; margin: 1.15rem 0 .5rem; }
+                  .modul-ajar-preview :global(h4), .modul-ajar-preview :global(h5) { font-weight: 700; margin: .9rem 0 .4rem; }
+                  .modul-ajar-preview :global(p) { margin: .45rem 0 .8rem; text-align: justify; }
+                  .modul-ajar-preview :global(ul), .modul-ajar-preview :global(ol) { margin: .4rem 0 .9rem; padding-left: 1.5rem; }
+                  .modul-ajar-preview :global(ul) { list-style: disc; }
+                  .modul-ajar-preview :global(ol) { list-style: decimal; }
+                  .modul-ajar-preview :global(li) { margin: .25rem 0; padding-left: .15rem; }
+                  .modul-ajar-preview :global(.md-table) { width: 100%; border-collapse: collapse; margin: .8rem 0 1.2rem; font-family: Arial, sans-serif; font-size: .78rem; }
+                  .modul-ajar-preview :global(.md-table th), .modul-ajar-preview :global(.md-table td) { border: 1px solid #cbd5e1; padding: .5rem; vertical-align: top; }
+                  .modul-ajar-preview :global(.md-table th) { background: #eef2ff; font-weight: 800; }
+                  .modul-ajar-preview :global(blockquote) { border-left: 3px solid #a5b4fc; padding-left: .8rem; margin: .8rem 0; color: #475569; }
+                  .modul-ajar-preview :global(pre) { white-space: pre-wrap; background: #f8fafc; padding: .75rem; border-radius: .5rem; }
+                  .modul-ajar-preview :global(hr) { margin: 1rem 0; border-color: #e2e8f0; }
+                `}</style>
               </motion.div>
             ) : (
               <div className="rounded-[30px] border border-dashed border-slate-300 bg-slate-50 p-16 text-center flex flex-col items-center justify-center min-h-[500px]">
