@@ -47,7 +47,7 @@ export const POST = withAuthAndRateLimit(generateTPLimiter, async (request: Next
 
     // 4. Catat log audit sukses
     try {
-      await logAuditFromServer(request, userId, 'GENERATE_MODUL_AJAR', 'success', 'learning_modules', {
+      await logAuditFromServer(request, userId, 'CREATE', 'success', 'learning_modules', {
         metadata: { promptLength: prompt.length }
       });
     } catch (auditError: any) {
