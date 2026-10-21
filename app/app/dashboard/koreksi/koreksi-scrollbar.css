@@ -1,0 +1,44 @@
+/* Hide default scrollbar in content wrapper */
+#content-wrapper {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#content-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+/* Native scrollbar styling for custom-scrollbar - Simple and clear like image 2 */
+#custom-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: #3b82f6 #e5e7eb;
+}
+
+/* WebKit scrollbar styling - Make it prominent like in image 2 */
+#custom-scrollbar::-webkit-scrollbar {
+  height: 16px;
+}
+
+#custom-scrollbar::-webkit-scrollbar-track {
+  background: #d1d5db;
+  border-radius: 0;
+}
+
+#custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 0;
+  border: 1px solid #9ca3af;
+}
+
+#custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+#custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #1d4ed8;
+}
+
+/* Firefox scrollbar */
+#custom-scrollbar {
+  scrollbar-width: auto !important;
+  scrollbar-color: #3b82f6 #d1d5db !important;
+}
