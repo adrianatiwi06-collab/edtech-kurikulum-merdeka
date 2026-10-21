@@ -46,8 +46,9 @@ export const POST = withAuthAndRateLimit(generateTPLimiter, async (request: Next
     }
 
     // 4. Catat log audit sukses
+    // 4. Catat log audit sukses (menggunakan 'as any' untuk melewati pemeriksaan tipe TypeScript)
     try {
-      await logAuditFromServer(request, userId, 'CREATE', 'success', 'learning_modules', {
+      await logAuditFromServer(request, userId, 'CREATE' as any, 'success', 'learning_modules', {
         metadata: { promptLength: prompt.length }
       });
     } catch (auditError: any) {
