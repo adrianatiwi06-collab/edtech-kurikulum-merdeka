@@ -1,26 +1,34 @@
 'use client';
-import { generateModulAjarAction } from '../modul-ajar/actions'; // Menggunakan action server Gemini yang sama
+import { generateModulAjarAction } from '../modul-ajar/actions';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProtaPromesExport } from '@/lib/prota-promes/useProtaPromesExport'; // ← Hook Ekspor DOCX Professional
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { 
-  Sparkles, Loader2, Trash2, Search, FileText, Download, Calendar 
+  Sparkles, Loader2, Trash2, Search, FileText, Download, Calendar, ListChecks 
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
+// IMPOR FUNGSI KALDIK DARI MODEL & STORE ANDA
+import { loadYear, fallbackDoc } from '@/lib/kaldik/store';
+import { buildModel } from '@/lib/kaldik/model';
+
 export default function ProtaPromesPage() {
   const { user } = useAuth();
   
+  // Inisialisasi Hook Ekspor DOCX Prota & Promes
+  const { exportAsDocx } = useProtaPromesExport();
+
   // Tab State
   const [activeTab, setActiveTab] = useState<'generator' | 'tersimpan'>('generator');
 
   // Form State
   const [namaSekolah, setNamaSekolah] = useState('SD Negeri Nusawangkal 02');
-  const [namaKepalaSekolah, setNamaKepalaSekolah] = useState('..............................');
-  const [nipKepalaSekolah, setNipKepalaSekolah] = useState('..............................');
+  const [namaKepalaSekolah, setNamaKepalaSekolah] = useState('Painem,S.Pd.SD.');
+  const [nipKepalaSekolah, setNipKepalaSekolah] = useState('198507242009032008');
   const [namaGuru, setNamaGuru] = useState('Gara Nuradin, S.Pd.SD.');
   const [nipGuru, setNipGuru] = useState('198207142022211006');
   
@@ -64,49 +72,82 @@ export default function ProtaPromesPage() {
     }
   };
 
-  // PROMPT INDUK PROTA & PROMES
+  // LOGIKA AI DINAMIS TERHUBUNG DENGAN DATABASE KALDIK
   const handleGenerate = async () => {
     setLoading(true);
-    setLoadingMessage('AI sedang menyusun Program Tahunan (Prota) & Program Semester (Promes) Kurikulum Merdeka...');
+    setLoadingMessage('Mengekstrak data Kalender Pendidikan dari database...');
 
     try {
+      const kaldikId = tahunPelajaran.replace('/', '-');
+      
+      let kaldikDocData = null;
+      try {
+        kaldikDocData = await loadYear(kaldikId);
+      } catch (e) {
+        console.warn("Gagal memuat kaldik dari DB", e);
+      }
+
+      if (!kaldikDocData) {
+        kaldikDocData = fallbackDoc().doc;
+        toast.info(`Data Kaldik khusus ${tahunPelajaran} belum disimpan di database. Menggunakan data standar aplikasi.`);
+      }
+
+      const kaldikModel = buildModel(kaldikDocData);
+      const rowsSem1 = kaldikModel.rowsOfSemester(1);
+      const rowsSem2 = kaldikModel.rowsOfSemester(2);
+      const totalSem1 = kaldikModel.effectiveTotal(1);
+      const totalSem2 = kaldikModel.effectiveTotal(2);
+      const totalHbe = totalSem1 + totalSem2;
+
+      const textHbeSem1 = rowsSem1.map(r => `- ${r.bulan}: ${r.jumlahHariEfektif} Hari Belajar Efektif (${r.pekan} Pekan). Catatan: ${r.catatan || 'Normal'}`).join('\n   ');
+      const textHbeSem2 = rowsSem2.map(r => `- ${r.bulan}: ${r.jumlahHariEfektif} Hari Belajar Efektif (${r.pekan} Pekan). Catatan: ${r.catatan || 'Normal'}`).join('\n   ');
+
+      setLoadingMessage(`Data Kaldik ditemukan (${totalHbe} HBE). AI sedang menyusun Prota & Promes...`);
+
       const prompt = `
-// Bertindaklah sebagai ahli kurikulum, perancang pembelajaran nasional, dan praktisi administrasi guru profesional di Indonesia.
-//
-// Tugasmu adalah menyusun dokumen **Program Tahunan (Prota) dan Program Semester (Promes) secara lengkap, logis, terstruktur, dan siap pakai** untuk tahun ajaran ${tahunPelajaran}.
-//
-// Gunakan data berikut sebagai acuan:
-// - Nama Satuan Pendidikan: ${namaSekolah}
-// - Mata Pelajaran: ${mataPelajaran}
-// - Fase: ${fase} / Kelas: ${kelas}
-// - Tahun Pelajaran: ${tahunPelajaran}
-// - Penyusun: ${namaGuru} (NIP: ${nipGuru})
-//
-// ATURAN FORMAT OUTPUT (WAJIB, karena output langsung diekspor ke dokumen Word):
-// - JANGAN menulis halaman sampul, judul ganda, atau blok tanda tangan di dokumen. Aplikasi menambahkannya sendiri. Mulai langsung dari "## BAGIAN I".
-// - Gunakan HANYA heading: "## " untuk bagian utama (HURUF KAPITAL), dan "### " untuk sub-bagian bernomor.
-// - Sajikan informasi dalam TABEL Markdown dengan baris pemisah |---|---|. Setiap baris tabel harus satu baris teks dengan jumlah kolom sama header.
-// - Dilarang: blok kode, diagram ASCII, emoji, garis pemisah "---", HTML. Gunakan <br> untuk baris baru di sel tabel.
-// - Gunakan **tebal** hanya untuk penekanan penting. Daftar pakai "- " atau "1. ". Kelompok daftar tulis sebagai satu blok.
-// - Gunakan bahasa Indonesia baku, konkret, siap pakai. Hindari kalimat pembuka/penutup berbelit.
-//
-// Struktur:
-//
-// ## BAGIAN I: ANALISIS STRUKTUR WAKTU & KALENDER PENDIDIKAN
-// - Tabel Perhitungan Pekan Efektif Semester 1: No | Bulan | Jumlah Minggu | Minggu Tidak Efektif | Minggu Efektif | JP Efektif
-// - Tabel Perhitungan Pekan Efektif Semester 2 (sama struktur)
-// - Tabel Distribusi JP Efektif: Semester | Total JP | JP Efektif
-//
-// ## BAGIAN II: PROGRAM TAHUNAN (PROTA)
-// Tabel 3 kolom: No | Bab/Topik | Alokasi Waktu/JP (pemetaan materi seluruh tahun Semester 1 & 2)
-//
-// ## BAGIAN III: PROGRAM SEMESTER (PROMES) SEMESTER 1
-// Tabel matriks: Bulan | Minggu Ke-1 | Minggu Ke-2 | ... | Minggu Ke-5/6
-//
-// ## BAGIAN IV: PROGRAM SEMESTER (PROMES) SEMESTER 2
-// Tabel matriks serupa untuk Semester 2
-// `;
-//
+Bertindaklah sebagai ahli kurikulum nasional, perancang pembelajaran, dan praktisi administrasi guru profesional di Indonesia.
+
+Tugasmu adalah menyusun dokumen **Program Tahunan (Prota) dan Program Semester (Promes) secara lengkap, logis, terstruktur, dan siap pakai** untuk tahun ajaran ${tahunPelajaran}, dengan **WAJIB menyesuaikan Kalender Pendidikan Resmi Provinsi Jawa Tengah untuk jenjang SD (Sistem 5 Hari Sekolah)**.
+
+Data Acuan:
+- Nama Satuan Pendidikan: ${namaSekolah}
+- Mata Pelajaran: ${mataPelajaran}
+- Fase: ${fase} / Kelas: ${kelas}
+- Tahun Pelajaran: ${tahunPelajaran}
+- Wilayah / Acuan Kaldik: Provinsi Jawa Tengah (5 Hari Sekolah)
+- Penyusun: ${namaGuru} (NIP: ${nipGuru})
+
+DATA REFERENSI HARI BELAJAR EFEKTIF (HBE) BERDASARKAN DATABASE KALDIK TERBARU:
+1. **Semester Gasal (Total ${totalSem1} Hari Belajar Efektif):**
+   ${textHbeSem1}
+   
+2. **Semester Genap (Total ${totalSem2} Hari Belajar Efektif):**
+   ${textHbeSem2}
+
+ATURAN FORMAT OUTPUT (WAJIB, karena output langsung diekspor ke dokumen Word):
+- JANGAN menulis halaman sampul, judul ganda, atau blok tanda tangan di dokumen. Aplikasi menambahkannya sendiri. Mulai langsung dari "## BAGIAN I".
+- Gunakan HANYA heading: "## " untuk bagian utama (HURUF KAPITAL), dan "### " untuk sub-bagian bernomor.
+- Sajikan informasi dalam TABEL Markdown dengan baris pemisah |---|---|. Setiap baris tabel harus satu baris teks dengan jumlah kolom sama header.
+- Dilarang: blok kode, diagram ASCII, emoji, garis pemisah "---", HTML. Gunakan <br> untuk baris baru di sel tabel.
+- Gunakan **tebal** hanya untuk penekanan penting. Daftar pakai "- " atau "1. ". Kelompok daftar tulis sebagai satu blok.
+- Gunakan bahasa Indonesia baku, konkret, siap pakai. Hindari kalimat pembuka/penutup berbelit.
+
+Struktur Dokumen:
+
+## BAGIAN I: ANALISIS STRUKTUR WAKTU & KALENDER PENDIDIKAN JATENG
+- Tabel Perhitungan Hari Belajar Efektif (HBE) Semester Gasal Berdasarkan Kaldik Jateng (Kolom: No | Bulan | Hari Belajar Efektif | Jumlah Pekan | Catatan Kegiatan)
+- Tabel Perhitungan Hari Belajar Efektif (HBE) Semester Genap Berdasarkan Kaldik Jateng (Kolom sama, menyesuaikan data semester genap)
+- Tabel Rekapitulasi Total HBE 1 Tahun Ajaran (Total ${totalHbe} HBE)
+
+## BAGIAN II: PROGRAM TAHUNAN (PROTA)
+- Tabel pemetaan materi/lingkup materi seluruh bab untuk Semester 1 dan Semester 2 (Kolom: No | Bab / Lingkup Materi | Alokasi Waktu / JP)
+
+## BAGIAN III: PROGRAM SEMESTER (PROMES) SEMESTER GASAL
+- Tabel matriks bulanan untuk Semester Gasal dengan rincian alokasi per minggu efektif berdasarkan jumlah HBE bulanan dari data di atas.
+
+## BAGIAN IV: PROGRAM SEMESTER (PROMES) SEMESTER GENAP
+- Tabel matriks bulanan untuk Semester Genap dengan rincian alokasi per minggu efektif berdasarkan jumlah HBE bulanan dari data di atas.
+      `;
 
       const result = await generateModulAjarAction(prompt);
 
@@ -115,7 +156,7 @@ export default function ProtaPromesPage() {
       }
 
       const docData = {
-        title: `Prota & Promes ${mataPelajaran} Kelas ${kelas}`,
+        title: `Prota & Promes ${mataPelajaran} Kelas ${kelas} (Kaldik Jateng)`,
         school: namaSekolah,
         headmaster: namaKepalaSekolah,
         headmasterNip: nipKepalaSekolah,
@@ -132,7 +173,7 @@ export default function ProtaPromesPage() {
       };
 
       setGeneratedDoc(docData);
-      toast.success('Prota & Promes berhasil digenerate!');
+      toast.success('Prota & Promes berbasis Kaldik Database berhasil digenerate!');
     } catch (err: any) {
       toast.error('Gagal generate: ' + err.message);
     } finally {
@@ -159,218 +200,43 @@ export default function ProtaPromesPage() {
     }
   };
 
-  // Fungsi Export ke Word (.doc) dengan Tabel Otomatis
-  const handleExportWord = (docItem: any) => {
+  // FUNGSI EKSPOR MENGGUNAKAN DOCX PROFESSIONAL EXPORTER HOOK
+  const handleExportWord = async (docItem: any) => {
     if (!docItem || !docItem.konten_ai) {
       toast.error('Konten dokumen kosong.');
       return;
     }
 
-    // Pembersihan: hapus judul buatan AI, blok pengesahan, garis berlebihan
-    let md = docItem.konten_ai;
-    
-    // Buang 5 baris pertama bila berisi judul duplikat
-    const lines = md.split('\n');
-    let startIdx = 0;
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      if (/^(#{1,3}\s+|PROGRAM|DOKUMEN|TAHUN)/.test(lines[i].trim())) {
-        startIdx = i;
-        break;
-      }
-    }
-    md = lines.slice(startIdx).join('\n');
+    try {
+      const result = await exportAsDocx({
+        title: docItem.title,
+        school: docItem.school,
+        headmaster: docItem.headmaster,
+        headmasterNip: docItem.headmasterNip,
+        teacher: docItem.teacher,
+        teacherNip: docItem.teacherNip,
+        subject: docItem.subject,
+        grade: docItem.grade,
+        fase: docItem.fase,
+        academicYear: docItem.academicYear,
+        city: docItem.city,
+        date: docItem.date,
+        konten_ai: docItem.konten_ai,
+      });
 
-    // Buang blok pengesahan (ditambah app sendiri)
-    const sigIdx = md.lastIndexOf('Mengetahui');
-    if (sigIdx > md.length - 1000) md = md.slice(0, sigIdx);
-
-    // Konversi Markdown → HTML dengan tabel, list bertingkat, pembersihan inline markup
-    const htmlBody = markdownToHtmlProta(md);
-
-    // CSS dan layout
-    const style = `
-        @page { size: A4; margin: 2cm 2cm 2cm 2.5cm; }
-        body { font-family: "Times New Roman", serif; font-size: 11pt; line-height: 1.4; color: #111; }
-        h1 { font-size: 14pt; text-align: center; margin: 12pt 0 8pt; page-break-after: avoid; }
-        h2 { font-size: 11.5pt; font-weight: bold; margin: 14pt 0 6pt; padding: 3pt 6pt; background: #D3D3D3; page-break-after: avoid; }
-        h3 { font-size: 11pt; font-weight: bold; margin: 10pt 0 4pt; page-break-after: avoid; }
-        p { margin: 0 0 6pt; text-align: justify; }
-        ul, ol { margin: 3pt 0 6pt; padding-left: 20pt; }
-        li { margin: 0 0 2pt; }
-        table { width: 100%; border-collapse: collapse; margin: 10pt 0; page-break-inside: avoid; }
-        th, td { border: 1px solid #333; padding: 4pt 6pt; text-align: left; vertical-align: top; font-size: 10pt; }
-        th { background: #E8E8E8; font-weight: bold; text-align: center; }
-        tr { page-break-inside: avoid; }
-        .cover-title { text-align: center; font-size: 15pt; font-weight: bold; margin: 6pt 0; }
-        .cover-meta { text-align: center; font-size: 10pt; margin: 0 0 4pt; }
-        .sig-table { width: 100%; border: none; margin-top: 40pt; }
-        .sig-cell { border: none; text-align: center; padding: 5pt; width: 50%; vertical-align: top; }
-        .sig-space { height: 50pt; }
-    `;
-
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docItem.title}</title><style>${style}</style></head><body>
-      <p class="cover-title">PROGRAM TAHUNAN &amp; PROGRAM SEMESTER</p>
-      <p class="cover-meta">${docItem.subject} | Kelas ${docItem.grade} | ${docItem.school}</p>
-      <p class="cover-meta">Tahun Pelajaran ${docItem.academicYear}</p>
-      <hr/>
-      ${htmlBody}
-      <table class="sig-table"><tr>
-        <td class="sig-cell">Mengetahui,<br/>Kepala ${docItem.school}<div class="sig-space"></div><b>${docItem.headmaster}</b><br/>NIP. ${docItem.headmasterNip}</td>
-        <td class="sig-cell">${docItem.city}, ${docItem.date}<br/>Guru Mata Pelajaran<div class="sig-space"></div><b>${docItem.teacher}</b><br/>NIP. ${docItem.teacherNip}</td>
-      </tr></table></body></html>`;
-
-    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${docItem.title.replace(/\s+/g, '_')}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    toast.success('Dokumen berhasil diunduh!');
-  };
-
-  // ---- Fungsi-fungsi pembantu konversi Markdown ----
-  const escapeHtml = (str: string): string =>
-    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-  const renderInlineMarkdown = (text: string): string => {
-    // Hapus atau bersihkan markup inline agar tidak muncul di akhir
-    text = text.replace(/\*\*(.+?)\*\*/g, '$1'); // **tebal** → tebal
-    text = text.replace(/\*(.+?)\*/g, '$1');     // *italic* → italic
-    text = text.replace(/`(.+?)`/g, '$1');       // `kode` → kode
-    return escapeHtml(text);
-  };
-
-  const markdownToHtmlProta = (markdown: string): string => {
-    const lines = (markdown || '').replace(/\r\n?/g, '\n').split('\n');
-    const output: string[] = [];
-    let paragraph: string[] = [];
-    let listStack: Array<{ type: 'ul' | 'ol'; indent: number }> = [];
-    let tableRows: string[][] = [];
-    let inCodeBlock = false;
-    let codeLines: string[] = [];
-
-    const flushPara = () => {
-      if (paragraph.length) {
-        output.push(`<p>${paragraph.map(renderInlineMarkdown).join('<br/>')}</p>`);
-        paragraph = [];
-      }
-    };
-    const closeList = () => {
-      while (listStack.length) output.push(`</${listStack.pop()!.type}>`);
-    };
-    const flushTable = () => {
-      if (!tableRows.length) return;
-      const rows = tableRows.filter(row => !row.every(c => /^:?-{2,}:?$/.test(c.replace(/\s/g, ''))));
-      if (rows.length > 1) {
-        const hdr = rows[0];
-        const bdy = rows.slice(1);
-        output.push(
-          '<table><thead><tr>' +
-          hdr.map(c => `<th>${renderInlineMarkdown(c)}</th>`).join('') +
-          '</tr></thead><tbody>' +
-          bdy.map(row => '<tr>' + hdr.map((_, i) => 
-            `<td>${renderInlineMarkdown(row[i] ?? '')}</td>`
-          ).join('') + '</tr>').join('') +
-          '</tbody></table>'
-        );
-      }
-      tableRows = [];
-    };
-
-    for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i];
-      const trimmed = raw.trim();
-
-      // Blok kode
-      if (/^```/.test(trimmed)) {
-        flushPara();
-        closeList();
-        flushTable();
-        if (inCodeBlock) {
-          output.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-          codeLines = [];
-          inCodeBlock = false;
-        } else {
-          inCodeBlock = true;
-        }
-        continue;
-      }
-      if (inCodeBlock) {
-        codeLines.push(raw);
-        continue;
-      }
-
-      // Tabel
-      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-        flushPara();
-        closeList();
-        const cells = trimmed.split('|').filter(c => c.trim() !== '');
-        tableRows.push(cells);
-        continue;
+      if (result.success) {
+        toast.success('Dokumen Prota & Promes berhasil diunduh dalam format Word (.docx)!');
       } else {
-        flushTable();
+        toast.error('Gagal export DOCX: ' + (result.error || 'Unknown error'));
+        console.error('Export error:', result.error);
       }
-
-      if (!trimmed) {
-        flushPara();
-        closeList();
-        continue;
-      }
-
-      // Heading
-      const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-      if (heading) {
-        flushPara();
-        closeList();
-        const level = Math.min(heading[1].length, 5);
-        output.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
-        continue;
-      }
-
-      // Garis separator (jangan output sebagai <hr>, paling-paling skip)
-      if (/^([-*_])(?:\s*\1){2,}\s*$/.test(trimmed)) {
-        flushPara();
-        closeList();
-        continue;
-      }
-
-      // List bertingkat
-      const listMatch = raw.match(/^(\s*)([-*+]|\d+[.)])\s+(.+)$/);
-      if (listMatch) {
-        flushPara();
-        const indent = listMatch[1].replace(/\t/g, '    ').length;
-        const type: 'ul' | 'ol' = /\d/.test(listMatch[2]) ? 'ol' : 'ul';
-        while (listStack.length && indent < listStack[listStack.length - 1].indent) {
-          output.push(`</${listStack.pop()!.type}>`);
-        }
-        const top = listStack[listStack.length - 1];
-        if (!top || indent > top.indent) {
-          listStack.push({ type, indent });
-          output.push(`<${type}>`);
-        } else if (top.type !== type) {
-          output.push(`</${listStack.pop()!.type}>`);
-          listStack.push({ type, indent });
-          output.push(`<${type}>`);
-        }
-        output.push(`<li>${renderInlineMarkdown(listMatch[3])}</li>`);
-        continue;
-      }
-
-      closeList();
-      paragraph.push(trimmed);
+    } catch (err: any) {
+      toast.error('Gagal export: ' + err.message);
+      console.error('Export exception:', err);
     }
-
-    if (inCodeBlock) output.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
-    flushPara();
-    closeList();
-    flushTable();
-    return output.join('\n');
   };
 
-
-    const handleDeleteDoc = async (id: string) => {
+  const handleDeleteDoc = async (id: string) => {
     if (!confirm('Hapus dokumen ini?')) return;
     try {
       await deleteDoc(doc(db, 'prota_promes_docs', id));
@@ -387,56 +253,85 @@ export default function ProtaPromesPage() {
   );
 
   return (
-    <div className="w-full space-y-8 py-4 px-2 max-w-[1600px] mx-auto font-sans">
+    <div className="w-full space-y-5 py-4 px-2 max-w-[1600px] mx-auto font-sans">
       
-      {/* HEADER UTAMA */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-8 shadow-[0_12px_40px_rgba(15,23,42,0.04)]"
-      >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700">
-              <Calendar className="h-4 w-4" />
-              Administrasi Guru Workspace
+      {/* ── HEADER BARU ── */}
+      <header className="relative rounded-[2rem] bg-[#0b3d33] text-white">
+        <div
+          className="absolute inset-0 overflow-hidden rounded-[2rem]"
+          aria-hidden="true"
+          style={{
+            backgroundImage:
+              'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.5px), radial-gradient(700px 320px at 100% 0%, rgba(52,211,153,0.28), transparent 65%)',
+            backgroundSize: '20px 20px, 100% 100%',
+          }}
+        />
+
+        <div className="relative grid gap-8 p-6 sm:p-9 lg:grid-cols-[1fr_auto] lg:items-end z-10">
+          <div className="max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 ring-1 ring-inset ring-white/25">
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-emerald-300"/>
+                Material 3 AI Curriculum Workspace
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200">
+                <Calendar aria-hidden="true" className="h-3.5 w-3.5"/>
+                Terhubung ke Database Kaldik
+              </span>
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Generator <span className="text-emerald-600">Prota & Promes</span>
+            
+            <h1 className="kd-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
+              Generator & Manajemen
+              <span className="block text-emerald-300/90 mt-1">Prota & Promes Terintegrasi</span>
             </h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-emerald-50/75">
+              Buat Program Tahunan dan Program Semester secara otomatis. Sistem akan langsung mencocokkan perhitungan Hari Belajar Efektif (HBE) dari Kalender Pendidikan Jawa Tengah yang tersimpan.
+            </p>
           </div>
 
-          <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-            <button
-              onClick={() => setActiveTab('generator')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'generator' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Buat Prota & Promes
-            </button>
-            <button
-              onClick={() => setActiveTab('tersimpan')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'tersimpan' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Dokumen Tersimpan ({savedDocs.length})
-            </button>
+          <div className="flex flex-col gap-3 lg:w-80">
+            <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
+              <p className="text-xs text-emerald-200/80">Dokumen Tersimpan</p>
+              <p className="mt-1.5 text-sm font-semibold leading-snug">{savedDocs.length} Dokumen Prota/Promes</p>
+              <p className="mt-1 text-xs text-emerald-100/70">Siap untuk diunduh (.docx)</p>
+            </div>
           </div>
         </div>
-      </motion.section>
+      </header>
 
-      {/* TAB GENERATOR */}
+      {/* ── TAB NAVIGASI ── */}
+      <nav aria-label="Tampilan" className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5">
+        <button
+          type="button"
+          onClick={() => setActiveTab('generator')}
+          className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+            activeTab === 'generator' ? 'bg-[#0b3d33] text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Sparkles aria-hidden="true" className="h-4 w-4"/>
+          Buat Prota & Promes
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('tersimpan')}
+          className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+            activeTab === 'tersimpan' ? 'bg-[#0b3d33] text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <ListChecks aria-hidden="true" className="h-4 w-4"/>
+          Dokumen Tersimpan ({savedDocs.length})
+        </button>
+      </nav>
+
+      {/* ── ISI TAB ── */}
       {activeTab === 'generator' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start mt-2">
           
-          {/* KOLOM KIRI: FORMULIR INPUT */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-              <h3 className="text-[11px] font-black text-emerald-700 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+              <h3 className="text-[11px] font-black text-[#0b3d33] uppercase tracking-wider flex items-center gap-1.5 mb-3">
                 <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[10px]">1</span> 
-                PARAMETER DOKUMEN PROTA & PROMES
+                PARAMETER IDENTITAS & KALDIK
               </h3>
 
               <div className="space-y-4">
@@ -446,7 +341,7 @@ export default function ProtaPromesPage() {
                     type="text"
                     value={namaSekolah}
                     onChange={(e) => setNamaSekolah(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                   />
                 </div>
 
@@ -457,7 +352,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={namaKepalaSekolah}
                       onChange={(e) => setNamaKepalaSekolah(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                   <div>
@@ -466,7 +361,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={nipKepalaSekolah}
                       onChange={(e) => setNipKepalaSekolah(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                 </div>
@@ -478,7 +373,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={namaGuru}
                       onChange={(e) => setNamaGuru(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                   <div>
@@ -487,7 +382,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={nipGuru}
                       onChange={(e) => setNipGuru(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                 </div>
@@ -497,7 +392,7 @@ export default function ProtaPromesPage() {
                   <select
                     value={mataPelajaran}
                     onChange={(e) => setMataPelajaran(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 font-bold outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 font-bold outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                   >
                     {sdSubjects.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                   </select>
@@ -510,7 +405,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={kelas}
                       onChange={(e) => setKelas(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                   <div>
@@ -519,19 +414,21 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={fase}
                       onChange={(e) => setFase(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1">TAHUN PELAJARAN</label>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1">TAHUN PELAJARAN (SINKRON DB)</label>
                   <input
                     type="text"
                     value={tahunPelajaran}
                     onChange={(e) => setTahunPelajaran(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
+                    placeholder="Contoh: 2026/2027"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">Pastikan format persis seperti di menu Kalender (misal: 2026/2027)</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -541,7 +438,7 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={kota}
                       onChange={(e) => setKota(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                   <div>
@@ -550,35 +447,30 @@ export default function ProtaPromesPage() {
                       type="text"
                       value={tanggalPembuatan}
                       onChange={(e) => setTanggalPembuatan(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
                     />
                   </div>
                 </div>
               </div>
 
-              <Button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 mt-4"
-              >
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-                Buat Prota & Promes AI
+              <Button className="w-full rounded-xl bg-[#0b3d33] hover:bg-[#0f5244] text-white font-bold py-3 mt-4" disabled={loading} onClick={handleGenerate}>
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Sparkles className="w-4 h-4 mr-2"/>}
+                Buat Prota & Promes (Sync DB)
               </Button>
             </div>
           </div>
 
-          {/* KOLOM KANAN: PREVIEW HASIL */}
           <div className="lg:col-span-8">
             {loading ? (
-              <div className="rounded-[30px] border border-dashed border-slate-300 bg-slate-50 p-16 text-center flex flex-col items-center justify-center min-h-[500px]">
-                <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+              <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-16 text-center flex flex-col items-center justify-center min-h-[500px]">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3"/>
                 <p className="text-sm font-bold text-slate-700">{loadingMessage}</p>
               </div>
             ) : generatedDoc ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm space-y-6 relative"
+                className="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm space-y-6 relative"
               >
                 <div className="flex justify-between items-start border-b border-slate-100 pb-4">
                   <div>
@@ -586,11 +478,11 @@ export default function ProtaPromesPage() {
                     <p className="text-xs text-slate-500">{generatedDoc.subject} &middot; Kelas {generatedDoc.grade} &middot; TP {generatedDoc.academicYear}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => handleExportWord(generatedDoc)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg h-9 px-3 text-xs font-bold">
-                      <Download className="w-4 h-4 mr-1.5" /> Word (.doc)
+                    <Button onClick={() => handleExportWord(generatedDoc)} className="bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg h-9 px-3 text-xs font-bold">
+                      <Download className="w-4 h-4 mr-1.5"/> Ekspor Word (.docx)
                     </Button>
-                    <Button onClick={handleSaveDoc} className="bg-slate-900 hover:bg-slate-800 text-white rounded-lg h-9 px-3 text-xs font-bold">
-                      Simpan
+                    <Button className="bg-[#0b3d33] hover:bg-[#0f5244] text-white rounded-lg h-9 px-3 text-xs font-bold" onClick={handleSaveDoc}>
+                      Simpan Dokumen
                     </Button>
                   </div>
                 </div>
@@ -600,10 +492,10 @@ export default function ProtaPromesPage() {
                 </div>
               </motion.div>
             ) : (
-              <div className="rounded-[30px] border border-dashed border-slate-300 bg-slate-50 p-16 text-center flex flex-col items-center justify-center min-h-[500px]">
-                <Calendar className="w-12 h-12 text-slate-300 mb-3" />
-                <h3 className="text-base font-bold text-slate-800">Dokumen Prota & Promes belum dibuat.</h3>
-                <p className="text-xs text-slate-500 mt-1">Lengkapi parameter di sebelah kiri lalu klik "Buat Prota & Promes AI".</p>
+              <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-16 text-center flex flex-col items-center justify-center min-h-[500px]">
+                <Calendar className="w-12 h-12 text-slate-300 mb-3"/>
+                <h3 className="text-base font-bold text-slate-800">Dokumen Belum Dibuat</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Lengkapi parameter di sebelah kiri lalu klik tombol "Buat Prota & Promes". Sistem akan membaca jumlah HBE dari Database Kalender Pendidikan Anda secara otomatis.</p>
               </div>
             )}
           </div>
@@ -611,43 +503,42 @@ export default function ProtaPromesPage() {
         </div>
       )}
 
-      {/* TAB TERSIMPAN */}
       {activeTab === 'tersimpan' && (
-        <div className="space-y-6">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="space-y-6 mt-2">
+          <div className="bg-white p-4 rounded-[1.75rem] shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
               <input
                 type="text"
                 placeholder="Cari dokumen Prota..."
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 bg-slate-50 transition"
               />
             </div>
           </div>
 
           {filteredDocs.length === 0 ? (
-            <div className="rounded-[30px] border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3"/>
               <h3 className="text-base font-bold text-slate-800">Tidak ada dokumen tersimpan</h3>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {filteredDocs.map(docItem => (
-                <div key={docItem.id} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between space-y-4">
+                <div key={docItem.id} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start gap-2">
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
                         {docItem.subject}
                       </span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handleExportWord(docItem)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50" title="Download Word"><Download className="w-4 h-4" /></button>
-                        <button onClick={() => handleDeleteDoc(docItem.id)} className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50" title="Hapus"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleExportWord(docItem)} className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 transition" title="Download Word (.docx)"><Download className="w-4 h-4"/></button>
+                        <button onClick={() => handleDeleteDoc(docItem.id)} className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition" title="Hapus"><Trash2 className="w-4 h-4"/></button>
                       </div>
                     </div>
-                    <h3 className="font-black text-slate-900 text-lg">{docItem.title}</h3>
-                    <p className="text-xs text-slate-500">Penyusun: {docItem.teacher} | Tahun Ajaran: {docItem.academicYear}</p>
+                    <h3 className="font-bold text-slate-900 text-lg leading-tight">{docItem.title}</h3>
+                    <p className="text-[11px] text-slate-500">Penyusun: {docItem.teacher} <br/> Tahun Ajaran: {docItem.academicYear}</p>
                   </div>
                 </div>
               ))}

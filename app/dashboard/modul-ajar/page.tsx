@@ -216,8 +216,8 @@ export default function ModulAjarPage() {
 
   // Form State sesuai Gambar UI
   const [namaSekolah, setNamaSekolah] = useState('SD Negeri Nusawangkal 02');
-  const [namaKepalaSekolah, setNamaKepalaSekolah] = useState('..............................');
-  const [nipKepalaSekolah, setNipKepalaSekolah] = useState('..............................');
+  const [namaKepalaSekolah, setNamaKepalaSekolah] = useState('Painem,S.Pd.SD.');
+  const [nipKepalaSekolah, setNipKepalaSekolah] = useState('198507242009032008');
   const [namaGuru, setNamaGuru] = useState('Gara Nuradin, S.Pd.SD.');
   const [nipGuru, setNipGuru] = useState('198207142022211006');
   

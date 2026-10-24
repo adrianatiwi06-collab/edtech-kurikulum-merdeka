@@ -354,6 +354,10 @@ export default function DashboardLayout({
         title: 'Master Data',
       },
       {
+        match: 'kaldik-jateng',
+        title: 'Kalender Pendidikan',
+      },
+      {
         match: 'generate-tp',
         title: 'Generate TP',
       },
@@ -445,6 +449,11 @@ export default function DashboardLayout({
           label: 'Kelas & Siswa',
           href: '/dashboard/master-data',
           icon: Users,
+        },
+        {
+          label: 'Kalender Pendidikan',
+          href: '/dashboard/kaldik-jateng',
+          icon: CalendarCheck,
         },
         {
           label: 'Generate TP',

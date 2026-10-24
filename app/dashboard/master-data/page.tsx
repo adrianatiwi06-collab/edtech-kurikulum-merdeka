@@ -52,7 +52,6 @@ const PEKERJAAN_LIST = [
   'Lainnya'
 ];
 
-// Fungsi Format Tanggal Panjang Bahasa Indonesia (Contoh: 7 Agustus 2018)
 const formatTanggalPanjang = (dateStr?: string) => {
   if (!dateStr) return '-';
   try {
@@ -80,7 +79,6 @@ export default function MasterDataPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
 
-  // State untuk interaktif klik tabel laporan
   const [selectedReportCategory, setSelectedReportCategory] = useState<string>('Menampilkan seluruh data');
   const [filteredReportStudents, setFilteredReportStudents] = useState<Student[]>([]);
 
@@ -164,7 +162,6 @@ export default function MasterDataPage() {
       studentsData.sort((a, b) => a.name.localeCompare(b.name));
       setStudents((prev) => {
         const updated = { ...prev, [classId]: studentsData };
-        // Update default filtered report students after load
         const allList: Student[] = Object.values(updated).flat();
         setFilteredReportStudents(allList);
         return updated;
@@ -233,7 +230,9 @@ export default function MasterDataPage() {
   };
 
   const handleSaveStudent = async () => {
-    if (!user || !selectedClass || !studentName || !studentBirthDate) return toast.error('Pilih Kelas, Nama & Tanggal Lahir wajib diisi');
+    if (!user || !selectedClass || !studentName.trim()) {
+      return toast.error('Pilih Kelas dan Nama Siswa wajib diisi');
+    }
     setActionLoading(true);
     try {
       const studentData = {
@@ -253,25 +252,34 @@ export default function MasterDataPage() {
         class_id: selectedClass
       };
 
-      if (editingStudent) {
-        await updateDoc(doc(db, 'classes', selectedClass, 'students', editingStudent.id), studentData);
-        toast.success('Data siswa diperbarui');
+      // JIKA DALAM MODE EDIT (menggunakan ID siswa yang sedang diedit)
+      if (editingStudent && editingStudent.id) {
+        const studentRef = doc(db, 'classes', selectedClass, 'students', editingStudent.id);
+        await updateDoc(studentRef, studentData);
+        toast.success('Data siswa berhasil diperbarui');
       } else {
-        await addDoc(collection(db, 'classes', selectedClass, 'students'), { ...studentData, created_at: new Date().toISOString() });
-        toast.success('Siswa ditambahkan');
+        // MODE TAMBAH BARU
+        await addDoc(collection(db, 'classes', selectedClass, 'students'), { 
+          ...studentData, 
+          created_at: new Date().toISOString() 
+        });
+        toast.success('Siswa baru berhasil ditambahkan');
       }
+
       resetStudentForm();
       loadStudents(selectedClass, true);
     } catch (error: any) {
-      toast.error('Gagal menyimpan siswa');
+      toast.error('Gagal menyimpan siswa: ' + error.message);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleEditStudent = (student: Student) => {
-    setEditingStudent(student);
-    setSelectedClass(student.class_id);
+    setEditingStudent(student); // Mengunci referensi data dan ID siswa yang sedang diedit
+    if (student.class_id) {
+      setSelectedClass(student.class_id);
+    }
     setStudentName(student.name || ''); 
     setStudentNisn(student.nisn || ''); 
     setStudentNis(student.nis || '');
@@ -286,7 +294,7 @@ export default function MasterDataPage() {
     setStudentMotherOcc(student.mother_occupation || '');
     setStudentAddress(student.address || '');
     setActiveTab('siswa');
-    window.scrollTo({ top: 400, behavior: 'smooth' });
+    window.scrollTo({ top: 100, behavior: 'smooth' });
   };
 
   const handleDeleteStudent = async (classId: string, studentId: string) => {
@@ -303,7 +311,6 @@ export default function MasterDataPage() {
     }
   };
 
-  // --- DOWNLOAD / EKSPOR DAFTAR SISWA (CSV) ---
   const exportDaftarSiswaCSV = () => {
     const listToExport = selectedClass ? (students[selectedClass] || []) : Object.values(students).flat();
     if (listToExport.length === 0) return toast.error('Tidak ada data siswa untuk diekspor');
@@ -340,7 +347,6 @@ export default function MasterDataPage() {
     toast.success('Daftar siswa berhasil diunduh');
   };
 
-  // --- TEMPLATE & IMPORT EXCEL ---
   const downloadTemplateXLSX = async () => {
     try {
       const XLSX = await import('xlsx');
@@ -425,7 +431,6 @@ export default function MasterDataPage() {
 
   const currentStudents = selectedClass ? (students[selectedClass] || []) : [];
 
-  // Sinkronisasi default filtered report students jika filter kelas laporan berubah
   useEffect(() => {
     setFilteredReportStudents(reportTargetStudents);
     setSelectedReportCategory(`Semua Siswa (${reportFilterClass === 'all' ? 'Gabungan Seluruh Kelas' : classes.find(c => c.id === reportFilterClass)?.name})`);
@@ -436,13 +441,11 @@ export default function MasterDataPage() {
   return (
     <div className="p-4 md:p-6 bg-[#f8fafc] min-h-screen max-w-[1600px] mx-auto space-y-6">
       
-      {/* HEADER */}
       <div>
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Data Induk &middot; TP 2026/2027</p>
         <h1 className="text-2xl font-bold text-gray-900">Data Kelas & Siswa</h1>
       </div>
 
-      {/* KARTU RINGKASAN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { icon: <BookOpen className="w-5 h-5 text-emerald-600"/>, label: 'Kelas terdaftar', count: classes.length, bg: 'bg-emerald-100' },
@@ -460,7 +463,6 @@ export default function MasterDataPage() {
         ))}
       </div>
 
-      {/* FILTER KELAS GLOBAL */}
       <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
         <label className="block text-xs font-medium text-gray-500 mb-2">Filter laporan & manajemen berdasarkan kelas</label>
         <select 
@@ -474,7 +476,6 @@ export default function MasterDataPage() {
         <p className="text-[11px] text-gray-400 mt-1.5">Digunakan saat menambah siswa baru ke kelas yang bersangkutan.</p>
       </div>
 
-      {/* TABS MENU */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-px">
         <Button 
           variant={activeTab === 'siswa' ? 'default' : 'outline'} 
@@ -499,13 +500,9 @@ export default function MasterDataPage() {
         </Button>
       </div>
 
-      {/* ============================== */}
-      {/* TAB: DATA SISWA                */}
-      {/* ============================== */}
       {activeTab === 'siswa' && (
         <div className="space-y-6 animate-in fade-in duration-300">
           
-          {/* FORM TAMBAH / EDIT SISWA */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-3">
               <div className="flex items-center gap-2">
@@ -541,7 +538,6 @@ export default function MasterDataPage() {
                 </div>
               )}
 
-              {/* PANEL IMPOR EXCEL */}
               {showImportForm && (
                 <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-3">
                   <p className="text-sm font-semibold text-emerald-900">Impor Data Siswa Massal via Excel</p>
@@ -562,7 +558,6 @@ export default function MasterDataPage() {
                 </div>
               )}
 
-              {/* Baris 1: Nama, NISN, NIS, Kelamin, Agama */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nama lengkap *</label>
@@ -586,7 +581,6 @@ export default function MasterDataPage() {
                 </div>
               </div>
 
-              {/* Baris 2: Agama, Tempat Lahir, Tanggal Lahir, Usia */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Agama</label>
@@ -617,7 +611,6 @@ export default function MasterDataPage() {
                 </div>
               </div>
 
-              {/* Baris 3: Data Orang Tua & Alamat */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Nama Ayah</label>
@@ -647,10 +640,9 @@ export default function MasterDataPage() {
                 </div>
               </div>
 
-              {/* Tombol Aksi */}
               <div className="flex flex-wrap gap-3 pt-3 border-t border-gray-100">
                 <Button onClick={handleSaveStudent} disabled={actionLoading || !selectedClass} className="bg-gray-800 hover:bg-gray-900 text-white shadow-sm">
-                  {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Simpan Siswa'}
+                  {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (editingStudent ? 'Perbarui Data Siswa' : 'Simpan Siswa')}
                 </Button>
                 {editingStudent && (
                   <Button variant="outline" onClick={resetStudentForm} disabled={actionLoading}>Batal Edit</Button>
@@ -659,7 +651,6 @@ export default function MasterDataPage() {
             </div>
           </div>
 
-          {/* TABEL DAFTAR SISWA */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
              <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-4 bg-gray-50/50">
                <div className="flex items-center gap-2">
@@ -715,7 +706,6 @@ export default function MasterDataPage() {
                               </div>
                             </TableCell>
                           </TableRow>
-                          {/* Detail Toggle */}
                           {expandedStudent === student.id && (
                             <TableRow className="bg-gray-50 border-b border-gray-200">
                               <TableCell colSpan={8} className="p-4 px-6 shadow-inner">
@@ -737,9 +727,6 @@ export default function MasterDataPage() {
         </div>
       )}
 
-      {/* ============================== */}
-      {/* TAB: DAFTAR KELAS              */}
-      {/* ============================== */}
       {activeTab === 'kelas' && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-5">
@@ -798,13 +785,9 @@ export default function MasterDataPage() {
         </div>
       )}
 
-      {/* ============================== */}
-      {/* TAB: LAPORAN & REKAP           */}
-      {/* ============================== */}
       {activeTab === 'laporan' && (
         <div className="space-y-8 animate-in fade-in duration-300">
           
-          {/* Filter Kelas Laporan */}
           <div className="bg-white border border-gray-200 p-4 rounded-xl shadow-sm flex items-center justify-between flex-wrap gap-4">
             <div>
               <p className="text-xs font-medium text-gray-500">Pilih Cakupan Laporan</p>
@@ -820,7 +803,6 @@ export default function MasterDataPage() {
             </select>
           </div>
 
-          {/* 1. REKAP USIA SISWA */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 space-y-6">
             <div className="flex justify-between items-center border-b border-gray-100 pb-4">
               <div>
@@ -839,7 +821,6 @@ export default function MasterDataPage() {
               </div>
             </div>
 
-            {/* Ringkasan Angka */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 cursor-pointer hover:bg-blue-50 transition-colors" onClick={() => { setFilteredReportStudents(reportTargetStudents); setSelectedReportCategory('Semua Siswa pada Laporan'); }}>
                 <div className="text-2xl font-bold text-gray-800">{reportTargetStudents.length}</div>
@@ -859,7 +840,6 @@ export default function MasterDataPage() {
               </div>
             </div>
 
-            {/* Tabel Kelompok Usia (Klikable) */}
             <div className="border rounded-lg overflow-hidden">
               <Table className="w-full text-sm">
                 <TableHeader className="bg-gray-50">
@@ -911,7 +891,6 @@ export default function MasterDataPage() {
             </div>
           </div>
 
-          {/* 2. REKAP PEKERJAAN ORANG TUA */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 space-y-6">
             <div className="border-b border-gray-100 pb-4">
               <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
@@ -934,7 +913,7 @@ export default function MasterDataPage() {
                   {PEKERJAAN_LIST.map((pek, idx) => {
                     const ayahList = reportTargetStudents.filter(s => s.father_occupation === pek);
                     const ibuList = reportTargetStudents.filter(s => s.mother_occupation === pek);
-                    const combinedList = Array.from(new Set([...ayahList, ...ibuList])); // Gabungan unik siswa
+                    const combinedList = Array.from(new Set([...ayahList, ...ibuList]));
                     const totalPek = ayahList.length + ibuList.length;
                     
                     if (totalPek === 0) return null;
@@ -965,7 +944,6 @@ export default function MasterDataPage() {
             </div>
           </div>
 
-          {/* 3. DAFTAR SISWA PADA LAPORAN (Dinamis Berdasarkan Klik Di Atas) */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
               <div>
