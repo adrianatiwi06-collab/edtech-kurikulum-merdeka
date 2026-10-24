@@ -4,12 +4,12 @@
  */
 
 import {
-  Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, PageBreak,
-  AlignmentType, BorderStyle, UnderlineType, VerticalAlign, WidthType, convertInchesToTwip,
-  HeadingLevel, convertMillimetersToTwip, TabStopType, TabStopPosition,
+  Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun,
+  AlignmentType, BorderStyle, UnderlineType, VerticalAlign, WidthType,
+  HeadingLevel, ShadingType, convertMillimetersToTwip,
 } from 'docx';
 
-interface ProtaPromesData {
+export interface ProtaPromesData {
   title: string;
   school: string;
   headmaster: string;
@@ -25,28 +25,57 @@ interface ProtaPromesData {
   konten_ai: string;
 }
 
+type Block = Paragraph | Table;
+
+/** Lebar area tulis A4: 210mm - margin kiri 25mm - margin kanan 20mm */
+const CONTENT_WIDTH = convertMillimetersToTwip(165);
+const FONT = 'Times New Roman';
+
 /* ────────────────────────────────────────────────────────────────────────
    Parsing Markdown → struktur dokumen
 ──────────────────────────────────────────────────────────────────────── */
 
-interface TextNode { type: 'text'; content: string; bold?: boolean; italic?: boolean; underline?: boolean }
 interface HeadingNode { type: 'heading'; level: number; content: string }
 interface ParagraphNode { type: 'paragraph'; content: string }
 interface ListNode { type: 'list'; ordered: boolean; items: string[] }
 interface TableNode { type: 'table'; headers: string[]; rows: string[][] }
-interface PageBreakNode { type: 'page-break' }
 interface EmptyNode { type: 'empty' }
 
-type DocNode = TextNode | HeadingNode | ParagraphNode | ListNode | TableNode | PageBreakNode | EmptyNode;
+type DocNode = HeadingNode | ParagraphNode | ListNode | TableNode | EmptyNode;
+
+const LIST_REGEX = /^([*\-+]|\d+\.)\s+(.+)$/;
+
+function parseTableRow(row: string): string[] {
+  let r = row.trim();
+  if (r.startsWith('|')) r = r.slice(1);
+  if (r.endsWith('|')) r = r.slice(0, -1);
+  // JANGAN filter sel kosong, supaya posisi kolom tidak bergeser
+  return r.split('|').map((c) => c.trim());
+}
+
+function isSeparatorRow(row: string): boolean {
+  const t = row.trim();
+  return /^\|?[\s:|-]+\|?$/.test(t) && t.includes('-');
+}
 
 function parseMarkdown(md: string): DocNode[] {
-  const lines = (md || '').replace(/\r\n/g, '\n').split('\n');
+  // Buang pembungkus code fence (```markdown ... ```) yang sering dikirim AI
+  const lines = (md || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('```'));
+
   const nodes: DocNode[] = [];
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i];
-    const trimmed = line.trim();
+    const trimmed = lines[i].trim();
+
+    // Garis horizontal (---, ***, ___) → abaikan
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      i++;
+      continue;
+    }
 
     // Heading
     const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
@@ -56,46 +85,44 @@ function parseMarkdown(md: string): DocNode[] {
       continue;
     }
 
-    // Table: dimulai dengan |
+    // Tabel: baris diawali dan diakhiri |
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       const tableLines: string[] = [];
       while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
         tableLines.push(lines[i]);
         i++;
       }
+
       if (tableLines.length >= 2) {
-        const parseRow = (row: string) => row.split('|').filter(c => c.trim() !== '').map(c => c.trim());
-        const headers = parseRow(tableLines[0]);
+        const headers = parseTableRow(tableLines[0]);
+        const start = isSeparatorRow(tableLines[1]) ? 2 : 1;
         const rows: string[][] = [];
-        for (let j = 2; j < tableLines.length; j++) {
-          const cells = parseRow(tableLines[j]);
-          // Normalisasi jumlah kolom
+        for (let j = start; j < tableLines.length; j++) {
+          const cells = parseTableRow(tableLines[j]);
           while (cells.length < headers.length) cells.push('');
           rows.push(cells.slice(0, headers.length));
         }
-        if (rows.length > 0) {
-          nodes.push({ type: 'table', headers, rows });
-        }
+        nodes.push({ type: 'table', headers, rows });
+      } else {
+        // Hanya 1 baris → jangan hilang, jadikan paragraf
+        nodes.push({ type: 'paragraph', content: tableLines[0].trim() });
       }
       continue;
     }
 
     // List
-    const listMatch = trimmed.match(/^([*\-+]|\d+\.)\s+(.+)$/);
+    const listMatch = trimmed.match(LIST_REGEX);
     if (listMatch) {
-      const ordered = /\d+\./.test(listMatch[1]);
+      const ordered = /^\d+\.$/.test(listMatch[1]);
       const items: string[] = [listMatch[2]];
       i++;
       while (i < lines.length) {
-        const nextLine = lines[i].trim();
-        const nextListMatch = nextLine.match(/^([*\-+]|\d+\.)\s+(.+)$/);
-        const isOrdered = /\d+\./.test(nextLine.charAt(0));
-        if (nextListMatch && isOrdered === ordered && nextLine) {
-          items.push(nextListMatch[2]);
-          i++;
-        } else {
-          break;
-        }
+        const nextMatch = lines[i].trim().match(LIST_REGEX);
+        if (!nextMatch) break;
+        const nextOrdered = /^\d+\.$/.test(nextMatch[1]);
+        if (nextOrdered !== ordered) break;
+        items.push(nextMatch[2]);
+        i++;
       }
       nodes.push({ type: 'list', ordered, items });
       continue;
@@ -108,7 +135,7 @@ function parseMarkdown(md: string): DocNode[] {
       continue;
     }
 
-    // Paragraph (teks biasa)
+    // Paragraf biasa
     nodes.push({ type: 'paragraph', content: trimmed });
     i++;
   }
@@ -120,69 +147,94 @@ function parseMarkdown(md: string): DocNode[] {
    Inline formatting: **bold**, *italic*, __underline__
 ──────────────────────────────────────────────────────────────────────── */
 
-function parseInlineMarkdown(text: string): TextRun[] {
-  const runs: TextRun[] = [];
-  let remaining = text;
-  const regex = /\*\*(.+?)\*\*|__(.+?)__|_(.+?)_|\*(.+?)\*/g;
-  let lastIndex = 0;
-  let match;
+interface RunBase { bold?: boolean; size?: number }
 
-  while ((match = regex.exec(remaining)) !== null) {
+function parseInlineMarkdown(text: string, base: RunBase = {}): TextRun[] {
+  const runs: TextRun[] = [];
+  const regex = /\*\*(.+?)\*\*|__(.+?)__|\*(.+?)\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      runs.push(new TextRun({ text: remaining.slice(lastIndex, match.index) }));
+      runs.push(new TextRun({ ...base, text: text.slice(lastIndex, match.index) }));
     }
 
-    const content = match[1] || match[2] || match[3] || match[4];
     if (match[1]) {
-      runs.push(new TextRun({ text: content, bold: true }));
-    } else if (match[2] || match[3]) {
-      runs.push(new TextRun({ text: content, underline: { type: UnderlineType.SINGLE } }));
-    } else if (match[4]) {
-      runs.push(new TextRun({ text: content, italic: true }));
+      runs.push(new TextRun({ ...base, text: match[1], bold: true }));
+    } else if (match[2]) {
+      runs.push(new TextRun({ ...base, text: match[2], underline: { type: UnderlineType.SINGLE } }));
+    } else if (match[3]) {
+      runs.push(new TextRun({ ...base, text: match[3], italics: true }));
     }
 
     lastIndex = regex.lastIndex;
   }
 
-  if (lastIndex < remaining.length) {
-    runs.push(new TextRun({ text: remaining.slice(lastIndex) }));
+  if (lastIndex < text.length) {
+    runs.push(new TextRun({ ...base, text: text.slice(lastIndex) }));
   }
 
-  return runs.length ? runs : [new TextRun({ text })];
+  return runs.length ? runs : [new TextRun({ ...base, text })];
 }
 
 /* ────────────────────────────────────────────────────────────────────────
-   Konversi node ke Paragraph (untuk docx)
+   Konversi node ke Paragraph / Table (untuk docx)
 ──────────────────────────────────────────────────────────────────────── */
 
-function nodeToParagraph(node: DocNode, index: number, total: number): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
+interface BuildContext { firstHeadingSeen: boolean }
+
+/** Isi sel tabel; <br> di dalam sel dijadikan paragraf baru */
+function cellParagraphs(text: string, opts: { bold?: boolean; center?: boolean }): Paragraph[] {
+  return text.split(/<br\s*\/?>/i).map(
+    (part) =>
+      new Paragraph({
+        children: parseInlineMarkdown(part.trim(), { bold: opts.bold, size: 20 }),
+        alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+        spacing: { before: 40, after: 40, line: 240 },
+      }),
+  );
+}
+
+function nodeToBlocks(node: DocNode, ctx: BuildContext): Block[] {
+  const blocks: Block[] = [];
 
   switch (node.type) {
     case 'heading': {
       const levels = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3];
       const level = Math.min(node.level - 1, 2);
       const sizes = [14, 13, 12];
-      paragraphs.push(
+      // H1 pertama tidak perlu page break (cover sudah memberi halaman baru)
+      const needBreak = level === 0 && ctx.firstHeadingSeen;
+      if (level === 0) ctx.firstHeadingSeen = true;
+
+      blocks.push(
         new Paragraph({
-          text: node.content,
           heading: levels[level],
-          bold: true,
-          size: sizes[level] * 2,
           spacing: { before: 200, after: 100, line: 240 },
-          pageBreakBefore: level === 0 && index > 0,
+          pageBreakBefore: needBreak,
+          children: [
+            new TextRun({
+              text: node.content.replace(/\*\*|__/g, ''),
+              bold: true,
+              size: sizes[level] * 2,
+              font: FONT,
+              color: '000000',
+            }),
+          ],
         }),
       );
       break;
     }
 
     case 'paragraph': {
-      paragraphs.push(
+      blocks.push(
         new Paragraph({
           children: parseInlineMarkdown(node.content),
           alignment: AlignmentType.JUSTIFIED,
           spacing: { before: 0, after: 120, line: 240 },
-          indent: { firstLine: convertMillimetersToTwip(1.25) },
+          // 1,25 cm = 12,5 mm (sebelumnya 1,25 mm sehingga nyaris tidak terlihat)
+          indent: { firstLine: convertMillimetersToTwip(12.5) },
         }),
       );
       break;
@@ -190,13 +242,19 @@ function nodeToParagraph(node: DocNode, index: number, total: number): Paragraph
 
     case 'list': {
       node.items.forEach((item, idx) => {
-        paragraphs.push(
+        const runs = parseInlineMarkdown(item);
+        if (node.ordered) {
+          runs.unshift(new TextRun({ text: `${idx + 1}. ` }));
+        }
+        blocks.push(
           new Paragraph({
-            children: parseInlineMarkdown(item),
+            children: runs,
             bullet: node.ordered ? undefined : { level: 0 },
-            numbering: node.ordered ? { level: 0, instance: index } : undefined,
             spacing: { after: 60, line: 240 },
-            indent: { left: convertMillimetersToTwip(10) },
+            indent: {
+              left: convertMillimetersToTwip(10),
+              hanging: node.ordered ? 0 : convertMillimetersToTwip(5),
+            },
           }),
         );
       });
@@ -204,192 +262,176 @@ function nodeToParagraph(node: DocNode, index: number, total: number): Paragraph
     }
 
     case 'table': {
-      const headerCells = node.headers.map(
-        (h) =>
-          new TableCell({
-            children: [new Paragraph({ text: h, bold: true, alignment: AlignmentType.CENTER })],
-            shading: { fill: 'E8E8E8' },
-            verticalAlign: VerticalAlign.CENTER,
-            width: { size: 100 / node.headers.length, type: WidthType.PERCENTAGE },
-          }),
-      );
+      const colCount = node.headers.length;
+      const colWidth = Math.floor(CONTENT_WIDTH / colCount);
+      const columnWidths = node.headers.map(() => colWidth);
+      const cellWidth = { size: colWidth, type: WidthType.DXA } as const;
+
+      const headerRow = new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: node.headers.map(
+          (h) =>
+            new TableCell({
+              children: cellParagraphs(h, { bold: true, center: true }),
+              shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'E8E8E8' },
+              verticalAlign: VerticalAlign.CENTER,
+              width: cellWidth,
+            }),
+        ),
+      });
 
       const bodyRows = node.rows.map(
         (row) =>
           new TableRow({
-            children: node.headers.map((_, colIdx) =>
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    text: row[colIdx] || '',
-                    spacing: { line: 240 },
-                  }),
-                ],
-                shading: colIdx % 2 === 0 ? { fill: 'F9F9F9' } : undefined,
-                verticalAlign: VerticalAlign.TOP,
-              }),
+            cantSplit: true,
+            children: node.headers.map(
+              (_, colIdx) =>
+                new TableCell({
+                  children: cellParagraphs(row[colIdx] || '', {}),
+                  shading:
+                    colIdx % 2 === 0
+                      ? { type: ShadingType.CLEAR, color: 'auto', fill: 'F9F9F9' }
+                      : undefined,
+                  verticalAlign: VerticalAlign.TOP,
+                  width: cellWidth,
+                }),
             ),
           }),
       );
 
-      paragraphs.push(
+      blocks.push(
         new Table({
-          rows: [
-            new TableRow({ children: headerCells }),
-            ...bodyRows,
-          ],
-          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [headerRow, ...bodyRows],
+          width: { size: colWidth * colCount, type: WidthType.DXA },
+          columnWidths,
         }),
+        // Spacer: mencegah tabel menempel/menyatu dengan elemen berikutnya
+        new Paragraph({ text: '', spacing: { after: 120 } }),
       );
       break;
     }
 
-    case 'empty': {
-      paragraphs.push(new Paragraph({ text: '' }));
+    case 'empty':
+      // Baris kosong diabaikan; jarak antar elemen sudah diatur lewat spacing
       break;
-    }
   }
 
-  return paragraphs;
+  return blocks;
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+   Helper layout
+──────────────────────────────────────────────────────────────────────── */
+
+function centered(text: string, size: number, after: number, bold = false): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after },
+    children: [new TextRun({ text, bold, size })],
+  });
+}
+
+function line(text: string, opts: { bold?: boolean; after?: number } = {}): Paragraph {
+  return new Paragraph({
+    spacing: { after: opts.after ?? 0 },
+    children: [new TextRun({ text, bold: opts.bold })],
+  });
+}
+
+const blank = () => new Paragraph({ text: '' });
+
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } as const;
+const NO_BORDERS = {
+  top: NO_BORDER,
+  bottom: NO_BORDER,
+  left: NO_BORDER,
+  right: NO_BORDER,
+} as const;
 
 /* ────────────────────────────────────────────────────────────────────────
    Generate dokumen DOCX
 ──────────────────────────────────────────────────────────────────────── */
 
-export async function exportToDocx(data: ProtaPromesData): Promise<Buffer> {
+function buildDocument(data: ProtaPromesData): Document {
   const nodes = parseMarkdown(data.konten_ai);
 
-  // Cover page
-  const coverParagraphs: Paragraph[] = [
-    new Paragraph({ text: '' }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      text: 'PROGRAM TAHUNAN & PROGRAM SEMESTER',
-      bold: true,
-      size: 28,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-    }),
-    new Paragraph({
-      text: 'Berdasarkan Kalender Pendidikan Prov. Jawa Tengah',
-      size: 20,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      text: `${data.subject} | Kelas ${data.grade}`,
-      size: 20,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      text: data.school,
-      size: 20,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      text: `Tahun Pelajaran ${data.academicYear}`,
-      size: 20,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-    }),
+  // Cover
+  const coverBlocks: Paragraph[] = [
+    blank(),
+    blank(),
+    centered('PROGRAM TAHUNAN & PROGRAM SEMESTER', 28, 200, true),
+    centered('Berdasarkan Kalender Pendidikan Prov. Jawa Tengah', 20, 100),
+    centered(`${data.subject} | Kelas ${data.grade}`, 20, 100),
+    centered(data.school, 20, 100),
+    centered(`Tahun Pelajaran ${data.academicYear}`, 20, 400),
   ];
 
-  // Content
-  const contentParagraphs: Paragraph[] = [];
-  nodes.forEach((node, idx) => {
-    const ps = nodeToParagraph(node, idx, nodes.length);
-    contentParagraphs.push(...ps);
-  });
+  // Konten
+  const ctx: BuildContext = { firstHeadingSeen: false };
+  const contentBlocks: Block[] = [];
+  for (const node of nodes) {
+    contentBlocks.push(...nodeToBlocks(node, ctx));
+  }
 
-  // Signature page
-  const sigParagraphs: Paragraph[] = [
-    new Paragraph({ text: '', pageBreakBefore: true }),
-    new Paragraph({ text: '' }),
-    new Paragraph({ text: '' }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Mengetahui,' }),
-      ],
-      spacing: { after: 200 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `Kepala ${data.school}` }),
-      ],
-    }),
-    new Paragraph({ text: '' }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: data.headmaster, bold: true }),
-      ],
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `NIP. ${data.headmasterNip}` }),
-      ],
-      spacing: { after: 400 },
-    }),
+  // Tanda tangan (2 kolom, baris sejajar)
+  const sigLeft: Paragraph[] = [
+    line('Mengetahui,', { after: 0 }),
+    line(`Kepala ${data.school}`),
+    blank(),
+    blank(),
+    blank(),
+    line(data.headmaster, { bold: true, after: 100 }),
+    line(`NIP. ${data.headmasterNip}`),
   ];
 
   const sigRight: Paragraph[] = [
-    new Paragraph({
-      children: [
-        new TextRun({ text: `${data.city}, ${data.date}` }),
-      ],
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'Guru Mata Pelajaran' }),
-      ],
-    }),
-    new Paragraph({ text: '' }),
-    new Paragraph({ text: '' }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: data.teacher, bold: true }),
-      ],
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `NIP. ${data.teacherNip}` }),
-      ],
-    }),
+    line(`${data.city}, ${data.date}`, { after: 0 }),
+    line('Guru Mata Pelajaran'),
+    blank(),
+    blank(),
+    blank(),
+    line(data.teacher, { bold: true, after: 100 }),
+    line(`NIP. ${data.teacherNip}`),
   ];
 
+  const half = Math.floor(CONTENT_WIDTH / 2);
   const sigTable = new Table({
+    columnWidths: [half, half],
+    width: { size: half * 2, type: WidthType.DXA },
     rows: [
       new TableRow({
         children: [
           new TableCell({
-            children: sigParagraphs,
-            borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
-            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: sigLeft,
+            borders: NO_BORDERS,
+            width: { size: half, type: WidthType.DXA },
           }),
           new TableCell({
             children: sigRight,
-            borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideHorizontal: { style: BorderStyle.NONE }, insideVertical: { style: BorderStyle.NONE } },
-            width: { size: 50, type: WidthType.PERCENTAGE },
+            borders: NO_BORDERS,
+            width: { size: half, type: WidthType.DXA },
           }),
         ],
       }),
     ],
-    width: { size: 100, type: WidthType.PERCENTAGE },
   });
 
-  const doc = new Document({
+  return new Document({
+    styles: {
+      default: {
+        document: { run: { font: FONT, size: 24 } },
+      },
+    },
     sections: [
       {
         properties: {
           page: {
-            margins: {
+            size: {
+              width: convertMillimetersToTwip(210),
+              height: convertMillimetersToTwip(297),
+            },
+            margin: {
               top: convertMillimetersToTwip(20),
               bottom: convertMillimetersToTwip(20),
               left: convertMillimetersToTwip(25),
@@ -398,14 +440,27 @@ export async function exportToDocx(data: ProtaPromesData): Promise<Buffer> {
           },
         },
         children: [
-          ...coverParagraphs,
+          ...coverBlocks,
           new Paragraph({ text: '', pageBreakBefore: true }),
-          ...contentParagraphs,
+          ...contentBlocks,
+          // Page break berada DI LUAR tabel (di dalam sel tidak bekerja dengan benar)
+          new Paragraph({ text: '', pageBreakBefore: true }),
           sigTable,
+          // Word membutuhkan paragraf di akhir dokumen setelah tabel
+          new Paragraph({ text: '' }),
         ],
       },
     ],
   });
 
-  return await Packer.toBuffer(doc);
+}
+
+/** Untuk browser / client component: menghasilkan Blob siap unduh. */
+export async function exportToDocxBlob(data: ProtaPromesData): Promise<Blob> {
+  return await Packer.toBlob(buildDocument(data));
+}
+
+/** Untuk server (Node.js, mis. API route): menghasilkan Buffer. */
+export async function exportToDocx(data: ProtaPromesData): Promise<Buffer> {
+  return await Packer.toBuffer(buildDocument(data));
 }
