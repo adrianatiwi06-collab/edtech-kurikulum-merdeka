@@ -366,57 +366,144 @@ export default function MasterDataPage() {
   const handleImportXLSX = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedClass) return;
-    setImportError(''); setActionLoading(true);
+    setImportError('');
+    setActionLoading(true);
 
     try {
       const { read, utils } = await import('xlsx');
       const arrayBuffer = await file.arrayBuffer();
       const workbook = read(arrayBuffer);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      
-      if (!worksheet) return setImportError('File XLSX tidak valid atau kosong');
-      const data: any[] = utils.sheet_to_json(worksheet, { header: 1 });
-      if (data.length < 2) return setImportError('File XLSX kosong atau tidak memiliki data siswa');
 
-      const dataLines = data.slice(1);
-      const batch = writeBatch(db);
-      let validRowsCount = 0;
-
-      for (const row of dataLines) {
-        const name = String(row[0] || '').trim();
-        if (name) {
-          const newStudentRef = doc(collection(db, 'classes', selectedClass, 'students'));
-          const tglLahir = String(row[6] || '').trim();
-          batch.set(newStudentRef, {
-            name,
-            nisn: String(row[1] || '').trim(),
-            nis: String(row[2] || '').trim(),
-            gender: String(row[3] || '').toUpperCase() === 'P' ? 'P' : (String(row[3] || '').toUpperCase() === 'L' ? 'L' : ''),
-            religion: String(row[4] || '').trim(),
-            birth_place: String(row[5] || '').trim(),
-            birth_date: tglLahir,
-            age: String(row[7] || '').trim() || hitungUsia(tglLahir),
-            father_name: String(row[8] || '').trim(),
-            father_occupation: String(row[9] || '').trim(),
-            mother_name: String(row[10] || '').trim(),
-            mother_occupation: String(row[11] || '').trim(),
-            address: String(row[12] || '').trim(),
-            created_at: new Date().toISOString()
-          });
-          validRowsCount++;
-        }
+      if (!worksheet) {
+        setImportError('File XLSX tidak valid atau kosong');
+        return;
       }
 
+      const data: any[] = utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      if (data.length < 2) {
+        setImportError('File XLSX kosong atau tidak memiliki data siswa');
+        return;
+      }
+
+      // Ambil seluruh siswa di kelas agar impor bisa memperbarui dokumen yang sudah ada.
+      const studentsRef = collection(db, 'classes', selectedClass, 'students');
+      const existingSnapshot = await getDocs(studentsRef);
+      type ExistingStudent = { id: string; data: Record<string, any> };
+      const existingStudents: ExistingStudent[] = existingSnapshot.docs.map((studentDoc) => ({
+        id: studentDoc.id,
+        data: studentDoc.data(),
+      }));
+
+      const normalize = (value: unknown) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
+      const normalizeId = (value: unknown) => String(value ?? '').trim().replace(/\s+/g, '');
+      const byNisn = new Map<string, ExistingStudent>();
+      const byNis = new Map<string, ExistingStudent>();
+      const byName = new Map<string, ExistingStudent[]>();
+
+      const addToIndexes = (student: ExistingStudent) => {
+        const nisn = normalizeId(student.data.nisn);
+        const nis = normalizeId(student.data.nis);
+        const name = normalize(student.data.name);
+        if (nisn) byNisn.set(nisn, student);
+        if (nis) byNis.set(nis, student);
+        if (name) {
+          const matches = byName.get(name) || [];
+          if (!matches.some((item) => item.id === student.id)) matches.push(student);
+          byName.set(name, matches);
+        }
+      };
+      existingStudents.forEach(addToIndexes);
+
+      // Satu batch Firestore maksimal 500 operasi; commit per 450 agar tetap aman.
+      let batch = writeBatch(db);
+      let operationsInBatch = 0;
+      let createdCount = 0;
+      let updatedCount = 0;
+      let validRowsCount = 0;
+      const commitBatchIfNeeded = async (force = false) => {
+        if (operationsInBatch >= 450 || (force && operationsInBatch > 0)) {
+          await batch.commit();
+          batch = writeBatch(db);
+          operationsInBatch = 0;
+        }
+      };
+
+      for (const row of data.slice(1)) {
+        const name = String(row[0] ?? '').trim();
+        if (!name) continue;
+
+        const nisn = normalizeId(row[1]);
+        const nis = normalizeId(row[2]);
+        const normalizedName = normalize(name);
+        let matched: ExistingStudent | undefined;
+
+        if (nisn) matched = byNisn.get(nisn);
+        if (!matched && nis) matched = byNis.get(nis);
+        // Nama dipakai sebagai fallback bila tidak ada kecocokan ID.
+        // Jika nama tidak unik, jangan menimpa siswa yang salah.
+        if (!matched) {
+          const sameName = byName.get(normalizedName) || [];
+          if (sameName.length === 1) matched = sameName[0];
+        }
+
+        const tglLahir = String(row[6] ?? '').trim();
+        const studentData = {
+          name,
+          nisn: String(row[1] ?? '').trim(),
+          nis: String(row[2] ?? '').trim(),
+          gender: String(row[3] ?? '').trim().toUpperCase() === 'P'
+            ? 'P'
+            : (String(row[3] ?? '').trim().toUpperCase() === 'L' ? 'L' : ''),
+          religion: String(row[4] ?? '').trim(),
+          birth_place: String(row[5] ?? '').trim(),
+          birth_date: tglLahir,
+          age: String(row[7] ?? '').trim() || hitungUsia(tglLahir),
+          father_name: String(row[8] ?? '').trim(),
+          father_occupation: String(row[9] ?? '').trim(),
+          mother_name: String(row[10] ?? '').trim(),
+          mother_occupation: String(row[11] ?? '').trim(),
+          address: String(row[12] ?? '').trim(),
+          updated_at: new Date().toISOString(),
+        };
+
+        let target: ExistingStudent;
+        if (matched) {
+          target = { id: matched.id, data: { ...matched.data, ...studentData } };
+          batch.set(doc(db, 'classes', selectedClass, 'students', matched.id), {
+            ...studentData,
+            created_at: matched.data.created_at || new Date().toISOString(),
+          }, { merge: true });
+          updatedCount++;
+        } else {
+          const newRef = doc(studentsRef);
+          target = {
+            id: newRef.id,
+            data: { ...studentData, created_at: new Date().toISOString() },
+          };
+          batch.set(newRef, target.data);
+          createdCount++;
+        }
+
+        // Perbarui indeks agar baris berulang dalam file yang sama tidak membuat duplikat.
+        addToIndexes(target);
+        operationsInBatch++;
+        validRowsCount++;
+        await commitBatchIfNeeded();
+      }
+
+      await commitBatchIfNeeded(true);
+
       if (validRowsCount > 0) {
-        await batch.commit();
-        toast.success(`Berhasil mengimpor ${validRowsCount} siswa`);
-        loadStudents(selectedClass, true); 
+        toast.success(`Impor selesai: ${createdCount} siswa baru, ${updatedCount} siswa diperbarui`);
+        await loadStudents(selectedClass, true);
         setShowImportForm(false);
       } else {
         setImportError('Tidak ada data siswa yang valid ditemukan');
       }
     } catch (error: any) {
-      setImportError('Gagal membaca file XLSX');
+      console.error('Gagal impor data siswa XLSX:', error);
+      setImportError('Gagal membaca atau menyimpan file XLSX. Periksa format file dan akses Firestore.');
       toast.error('Terjadi kesalahan saat import data');
     } finally {
       setActionLoading(false);
