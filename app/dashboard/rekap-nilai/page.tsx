@@ -31,6 +31,8 @@ interface Grade {
   created_at: string;
   is_finalized?: boolean;
   semester?: number;
+  uh_number?: number | null;
+  exam_category?: 'uh' | 'pts' | 'pas';
 }
 
 interface ConsolidatedStudentGrade {
@@ -43,6 +45,22 @@ interface ConsolidatedStudentGrade {
 }
 
 const ITEMS_PER_PAGE = 10;
+
+// Jenis penilaian: pakai batas kata (\b) supaya "Evaluasi"/"Dapat" tidak salah terbaca sebagai PAS
+const detectExamType = (g: { exam_name?: string; exam_title?: string; exam_category?: string }): 'uh' | 'pts' | 'pas' => {
+  if (g.exam_category === 'uh' || g.exam_category === 'pts' || g.exam_category === 'pas') return g.exam_category;
+  const t = `${g.exam_name || ''} ${g.exam_title || ''}`.toLowerCase();
+  if (/\b(pas|uas|pat|sas|asat|akhir semester|akhir tahun)\b/.test(t)) return 'pas';
+  if (/\b(pts|uts|sts|mid|tengah semester)\b/.test(t)) return 'pts';
+  return 'uh';
+};
+
+// Nomor UH: utamakan field uh_number, lalu baca dari nama ("UH 3", "Ulangan Harian 3")
+const detectUhNumber = (g: { exam_name?: string; uh_number?: number | null }): number | undefined => {
+  if (g.uh_number && Number(g.uh_number) > 0) return Number(g.uh_number);
+  const m = (g.exam_name || '').match(/\b(?:uh|ulangan harian)\s*[-.]?\s*(\d+)/i);
+  return m ? Number(m[1]) : undefined;
+};
 
 export default function RekapNilaiPage() {
   const { user } = useAuth();
@@ -76,7 +94,7 @@ export default function RekapNilaiPage() {
       loadMetadata();
       loadGrades();
     }
-  }, [user, selectedSubject, selectedClass, sortBy, sortOrder, currentPage, selectedSemester]);
+  }, [user, selectedSubject, selectedClass, sortBy, sortOrder, currentPage, selectedSemester, viewMode]);
 
   // Effect 2: "ALARM OTOMATIS" merender ulang tabel konsolidasi jika data/filter berubah
   useEffect(() => {
@@ -139,12 +157,16 @@ export default function RekapNilaiPage() {
         return aVal < bVal ? 1 : -1;
       });
 
-      const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-      const endIdx = startIdx + ITEMS_PER_PAGE;
-      const paginatedData = gradesData.slice(startIdx, endIdx);
-      
-      setGrades(paginatedData);
-      setHasMore(endIdx < gradesData.length);
+      // FIX: tampilan konsolidasi harus memakai SEMUA data, bukan hanya 10 dokumen per halaman
+      if (viewMode === 'consolidated') {
+        setGrades(gradesData);
+        setHasMore(false);
+      } else {
+        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIdx = startIdx + ITEMS_PER_PAGE;
+        setGrades(gradesData.slice(startIdx, endIdx));
+        setHasMore(endIdx < gradesData.length);
+      }
     } catch (error) {
       console.error('Error loading grades:', error);
     } finally {
@@ -191,15 +213,29 @@ export default function RekapNilaiPage() {
     
     const studentMap = new Map<string, { uh: number[]; pts: number; pas: number; }>();
 
-    grades.forEach(grade => {
-      const combinedTitle = `${grade.exam_name || ''} ${grade.exam_title || ''}`.toLowerCase();
-      let examType = 'uh';
+    // FIX: urutkan dari yang terlama supaya UH 1 = ulangan paling awal
+    const sortedGrades = [...grades].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-      if (combinedTitle.match(/(pas|uas|pat|sas|asat|akhir semester|akhir tahun)/)) {
-        examType = 'pas';
-      } else if (combinedTitle.match(/(pts|uts|sts|mid|tengah semester)/)) {
-        examType = 'pts';
-      }
+    // Tentukan kolom UH per DOKUMEN (bukan per siswa) agar konsisten untuk semua siswa
+    const usedSlots = new Set<number>();
+    sortedGrades.forEach(g => {
+      if (detectExamType(g) !== 'uh') return;
+      const n = detectUhNumber(g);
+      if (n) usedSlots.add(n - 1);
+    });
+    const slotByDoc = new Map<string, number>();
+    let nextFree = 0;
+    sortedGrades.forEach(g => {
+      if (detectExamType(g) !== 'uh') return;
+      const n = detectUhNumber(g);
+      if (n) { slotByDoc.set(g.id, n - 1); return; }
+      while (usedSlots.has(nextFree)) nextFree++;
+      slotByDoc.set(g.id, nextFree);
+      usedSlots.add(nextFree);
+    });
+
+    sortedGrades.forEach(grade => {
+      const examType = detectExamType(grade);
 
       grade.grades.forEach(studentGrade => {
         if (selectedSemester && studentGrade.semester && studentGrade.semester !== selectedSemester && grade.semester !== selectedSemester) {
@@ -217,7 +253,8 @@ export default function RekapNilaiPage() {
           if (typeof studentGrade.pas === 'number' && studentGrade.pas > 0) {
             student.pas = studentGrade.pas;
           } else {
-            student.uh.push(score);
+            // Kolom UH sesuai nomor (sparse array: slot kosong tampil "-")
+            student.uh[slotByDoc.get(grade.id) ?? student.uh.length] = score;
           }
         }
         studentMap.set(studentGrade.studentName, student);
@@ -225,7 +262,8 @@ export default function RekapNilaiPage() {
     });
 
     const consolidated: ConsolidatedStudentGrade[] = Array.from(studentMap.entries()).map(([name, data]) => {
-      const rataUH = data.uh.length > 0 ? data.uh.reduce((a, b) => a + b, 0) / data.uh.length : 0;
+      const filledUH = data.uh.filter(v => typeof v === 'number');
+      const rataUH = filledUH.length > 0 ? filledUH.reduce((a, b) => a + b, 0) / filledUH.length : 0;
       
       let totalWeight = 0;
       let totalScore = 0;
@@ -455,6 +493,11 @@ export default function RekapNilaiPage() {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         {grade.exam_name}
+                        {detectExamType(grade) === 'uh' && (
+                          <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            {detectUhNumber(grade) ? `UH ${detectUhNumber(grade)}` : 'UH (otomatis)'}
+                          </span>
+                        )}
                       </CardTitle>
                       <CardDescription>
                         {grade.subject} - {grade.class_name} - {grade.exam_title}<br />
