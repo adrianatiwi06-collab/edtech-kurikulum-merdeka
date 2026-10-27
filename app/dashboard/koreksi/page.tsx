@@ -57,6 +57,8 @@ interface SavedGrade {
   created_at: string;
   updated_at: string;
   semester?: number;
+  uh_number?: number | null;
+  exam_category?: 'uh' | 'pts' | 'pas';
 }
 
 export default function KoreksiPage() {
@@ -82,6 +84,8 @@ export default function KoreksiPage() {
   const [students, setStudents] = useState<Student[]>([]);
   
   const [examName, setExamName] = useState('');
+  // Nomor kolom UH di Rekap Nilai (kosong = otomatis berdasarkan urutan / nomor di nama ulangan)
+  const [uhNumber, setUhNumber] = useState<number | ''>('');
   const [grades, setGrades] = useState<StudentGrade[]>([]);
   const [savedGradeId, setSavedGradeId] = useState<string | null>(null);
   const [tableScrollWidth, setTableScrollWidth] = useState(0);
@@ -217,6 +221,7 @@ export default function KoreksiPage() {
       }
       setSavedGradeId(savedGrade.id);
       setSelectedSemester(savedGrade.semester || '');
+      setUhNumber(savedGrade.uh_number || '');
       setStep(3); setShowSavedGrades(false);
     } catch (error) { alert('Gagal memuat data koreksi'); } 
     finally { setLoading(false); }
@@ -332,11 +337,19 @@ export default function KoreksiPage() {
       const gradesWithSemester = grades.map(g => ({ ...g, semester: selectedSemester }));
 
       if (savedGradeId) {
-        await updateDoc(doc(db, 'grades', savedGradeId), { grades: gradesWithSemester, updated_at: new Date().toISOString(), semester: selectedSemester });
+        await updateDoc(doc(db, 'grades', savedGradeId), {
+          grades: gradesWithSemester,
+          updated_at: new Date().toISOString(),
+          semester: selectedSemester,
+          // FIX: nama ulangan & nomor UH ikut diperbarui saat menyimpan ulang
+          exam_name: examName,
+          uh_number: uhNumber || null,
+        });
       } else {
         const gradeData: any = {
           user_id: user.uid, exam_name: examName, class_id: selectedClass.id, class_name: selectedClass.name,
-          grades: gradesWithSemester, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), semester: selectedSemester
+          grades: gradesWithSemester, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), semester: selectedSemester,
+          uh_number: uhNumber || null
         };
         if (useTemplate && selectedTemplate) {
           gradeData.subject = selectedTemplate.subject; gradeData.exam_title = selectedTemplate.exam_name; gradeData.exam_template_id = selectedTemplate.id;
@@ -382,13 +395,13 @@ export default function KoreksiPage() {
             </Button>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="hover:shadow-md cursor-pointer border-blue-200 hover:border-blue-500 transition-all" onClick={() => { setUseTemplate(false); setStep(1); setFilterKelas(''); setFilterSubject(''); }}>
+            <Card className="hover:shadow-md cursor-pointer border-blue-200 hover:border-blue-500 transition-all" onClick={() => { setUseTemplate(false); setStep(1); setFilterKelas(''); setFilterSubject(''); setSavedGradeId(null); setUhNumber(''); }}>
               <CardHeader>
                 <CardTitle className="text-blue-700">Koreksi dari Bank Soal</CardTitle>
                 <CardDescription>Koreksi jawaban berdasarkan bank soal PDF yang telah Anda ekstrak sebelumnya.</CardDescription>
               </CardHeader>
             </Card>
-            <Card className="hover:shadow-md cursor-pointer border-green-200 hover:border-green-500 transition-all" onClick={() => { setUseTemplate(true); setStep(1); setFilterKelas(''); setFilterSubject(''); }}>
+            <Card className="hover:shadow-md cursor-pointer border-green-200 hover:border-green-500 transition-all" onClick={() => { setUseTemplate(true); setStep(1); setFilterKelas(''); setFilterSubject(''); setSavedGradeId(null); setUhNumber(''); }}>
               <CardHeader>
                 <CardTitle className="text-green-700">Koreksi dari Template</CardTitle>
                 <CardDescription>Koreksi menggunakan kerangka/template soal buatan sendiri secara manual.</CardDescription>
@@ -553,6 +566,14 @@ export default function KoreksiPage() {
                   <option value={2}>Semester 2 (Genap)</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Kolom di Rekap Nilai <span className="text-xs font-normal text-gray-500">(khusus Ulangan Harian)</span></label>
+                <select className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" value={uhNumber} onChange={(e) => setUhNumber(e.target.value ? Number(e.target.value) : '')}>
+                  <option value="">Otomatis (urut / dari nama)</option>
+                  {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>UH {n}</option>)}
+                </select>
+              </div>
             </div>
 
             {students.length > 0 && (
@@ -586,6 +607,19 @@ export default function KoreksiPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
+                    <div className="flex flex-wrap items-end gap-3 mb-3">
+                      <div className="min-w-[280px]">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Nama Ulangan</label>
+                        <Input value={examName} onChange={(e) => setExamName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Kolom di Rekap Nilai</label>
+                        <select className="border border-gray-300 rounded-md px-3 py-2 bg-white text-sm" value={uhNumber} onChange={(e) => setUhNumber(e.target.value ? Number(e.target.value) : '')}>
+                          <option value="">Otomatis</option>
+                          {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>UH {n}</option>)}
+                        </select>
+                      </div>
+                    </div>
                     <CardTitle>{examName}</CardTitle>
                     <CardDescription>Kelas {selectedClass?.name} - {examTitleText}</CardDescription>
                     <div className="mt-2 flex gap-4 text-sm bg-gray-100 p-2 rounded-lg border">
