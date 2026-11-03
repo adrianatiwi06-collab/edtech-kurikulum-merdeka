@@ -1644,27 +1644,24 @@ export default function GenerateTPPage() {
             ? undefined
             : 'visible'
         }
-        className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_10px_35px_rgba(15,23,42,0.05)] sm:p-8"
+        className="dashboard-page-header"
       >
-        <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full bg-blue-100/60 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-60 w-60 rounded-full bg-violet-100/50 blur-3xl" />
-
         <div className="relative">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
-                <Sparkles className="h-3.5 w-3.5" />
+              <div className="dashboard-page-eyebrow">
+                <Sparkles className="h-3.5 w-3.5 text-teal-700" />
                 AI Teaching Workspace
               </div>
 
-              <h1 className="max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className="dashboard-page-title max-w-3xl">
                 Generate Tujuan Pembelajaran
-                <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+                <span className="block text-teal-700">
                   dengan bantuan AI
                 </span>
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              <p className="dashboard-page-description">
                 Ubah materi pembelajaran menjadi
                 Tujuan Pembelajaran yang lebih terstruktur,
                 relevan, dan siap direview.

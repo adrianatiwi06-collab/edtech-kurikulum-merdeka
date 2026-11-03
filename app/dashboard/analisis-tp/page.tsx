@@ -786,9 +786,9 @@ export default function AnalisisTPPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Analisis Ketercapaian TP</h1>
-        <p className="text-muted-foreground">
+      <div className="dashboard-page-header">
+        <h1 className="dashboard-page-title">Analisis Ketercapaian TP</h1>
+        <p className="dashboard-page-description">
           Analisis pencapaian Tujuan Pembelajaran per siswa berdasarkan hasil ujian
         </p>
       </div>

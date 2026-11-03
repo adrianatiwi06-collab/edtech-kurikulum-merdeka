@@ -516,23 +516,20 @@ export default function RekapKehadiranPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] px-4 pb-10 pt-6 md:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-violet-700 via-indigo-700 to-blue-700 p-6 text-white shadow-[0_18px_50px_rgba(79,70,229,0.20)] md:p-8">
-          <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-cyan-300/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <section className="dashboard-page-header">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-                <Activity className="h-3.5 w-3.5" />
+              <div className="dashboard-page-eyebrow">
+                <Activity className="h-3.5 w-3.5 text-teal-700" />
                 Monitoring Kehadiran
               </div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Rekap Kehadiran</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-indigo-100 md:text-base">
+              <h1 className="dashboard-page-title">Rekap Kehadiran</h1>
+              <p className="dashboard-page-description">
                 Analisis kehadiran siswa berdasarkan data pada menu Absensi.
               </p>
             </div>
-            <div className="hidden rounded-[28px] bg-white/10 p-5 backdrop-blur md:block">
-              <Users className="h-12 w-12" />
+            <div className="hidden rounded-2xl bg-teal-50 p-4 text-teal-700 md:block">
+              <Users className="h-9 w-9" />
             </div>
           </div>
         </section>

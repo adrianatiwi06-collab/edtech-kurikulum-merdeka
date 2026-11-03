@@ -255,38 +255,35 @@ export default function GenerateATPPage() {
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-8 shadow-[0_12px_40px_rgba(15,23,42,0.04)]"
+        className="dashboard-page-header"
       >
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-100/60 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-blue-100/50 blur-3xl pointer-events-none" />
-
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 text-xs font-bold text-indigo-700">
+            <div className="dashboard-page-eyebrow">
               <GitMerge className="h-4 w-4" />
               Material 3 AI Curriculum Workspace
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Generator & Manajemen <span className="text-indigo-600">ATP</span>
+            <h1 className="dashboard-page-title">
+              Generator & Manajemen <span className="text-teal-700">ATP</span>
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+            <p className="dashboard-page-description">
               Rangkai Alur Tujuan Pembelajaran secara logis dan terstruktur otomatis dari Bank TP Anda menggunakan kecerdasan buatan.
             </p>
           </div>
 
-          <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
+          <div className="flex flex-wrap gap-2 rounded-2xl bg-slate-100 p-1.5">
             <button
               onClick={() => setActiveTab('generator')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'generator' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-colors ${
+                activeTab === 'generator' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Generator AI ATP
             </button>
             <button
               onClick={() => setActiveTab('tersimpan')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'tersimpan' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-colors ${
+                activeTab === 'tersimpan' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ATP Tersimpan ({savedATPs.length})

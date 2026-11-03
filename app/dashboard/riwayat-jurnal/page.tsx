@@ -89,23 +89,22 @@ export default function RiwayatJurnalPage() {
   return (
     <div className="min-h-screen bg-[#f7f8fc] px-4 pb-12 pt-6 md:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-indigo-700 via-blue-600 to-cyan-600 p-6 text-white shadow-[0_18px_50px_rgba(37,99,235,0.20)] md:p-8">
-          <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <section className="dashboard-page-header">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-                <BookOpen className="h-3.5 w-3.5" /> Dokumentasi Pembelajaran
+              <div className="dashboard-page-eyebrow">
+                <BookOpen className="h-3.5 w-3.5 text-teal-700" /> Dokumentasi Pembelajaran
               </div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Riwayat Jurnal</h1>
-              <p className="mt-2 text-sm leading-6 text-blue-100 md:text-base">
+              <h1 className="dashboard-page-title">Riwayat Jurnal</h1>
+              <p className="dashboard-page-description">
                 Kelola dan export seluruh catatan kegiatan mengajar Anda.
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={exportToExcel} variant="outline" className="rounded-full border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+              <Button onClick={exportToExcel} variant="outline" className="rounded-xl border-teal-200 bg-white text-teal-800 hover:bg-teal-50 hover:text-teal-900">
                 <Download className="mr-2 h-4 w-4" /> Excel
               </Button>
-              <Button onClick={exportToPDF} variant="outline" className="rounded-full border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+              <Button onClick={exportToPDF} variant="outline" className="rounded-xl border-teal-200 bg-white text-teal-800 hover:bg-teal-50 hover:text-teal-900">
                 <FileText className="mr-2 h-4 w-4" /> PDF
               </Button>
             </div>

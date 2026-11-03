@@ -326,9 +326,9 @@ export default function RekapNilaiPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Rekap Nilai</h1>
-        <p className="mt-2 text-gray-600">Lihat rekapitulasi nilai siswa</p>
+      <div className="dashboard-page-header mb-8">
+        <h1 className="dashboard-page-title">Rekap Nilai</h1>
+        <p className="dashboard-page-description">Lihat rekapitulasi nilai siswa</p>
       </div>
 
       <Card className="mb-6">

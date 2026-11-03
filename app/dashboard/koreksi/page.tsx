@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Save } from 'lucide-react';
+import { FolderOpen, Loader2, Save } from 'lucide-react';
 import { calculateTotalScore } from '@/lib/utils';
 import { ExamTemplate } from '@/types';
 
@@ -385,13 +385,14 @@ export default function KoreksiPage() {
       {/* STEP 0: Tampilan Awal Pemilihan Mode */}
       {!showSavedGrades && step === 0 && (
         <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div className="dashboard-page-header flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Koreksi Otomatis</h1>
-              <p className="mt-2 text-gray-600">Sistem penilaian otomatis dan pencatatan nilai terpusat</p>
+              <h1 className="dashboard-page-title">Koreksi Otomatis</h1>
+              <p className="dashboard-page-description">Sistem penilaian otomatis dan pencatatan nilai terpusat</p>
             </div>
-            <Button onClick={() => setShowSavedGrades(true)} variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
-              📂 Muat Koreksi Tersimpan
+            <Button onClick={() => setShowSavedGrades(true)} variant="outline" className="rounded-xl border-teal-200 text-teal-800 hover:bg-teal-50">
+              <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" />
+              Muat Koreksi Tersimpan
             </Button>
           </div>
           <div className="grid md:grid-cols-2 gap-6">

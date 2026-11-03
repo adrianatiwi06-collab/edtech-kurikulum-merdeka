@@ -79,6 +79,22 @@
 }
 
 @layer components {
+  .dashboard-page-header {
+    @apply relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7;
+  }
+
+  .dashboard-page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl;
+  }
+
+  .dashboard-page-description {
+    @apply mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base;
+  }
+
+  .dashboard-page-eyebrow {
+    @apply mb-3 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800;
+  }
+
   /* Card styles - Lebih bersih dan modern */
   .card-elegant {
     @apply bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 rounded-2xl;

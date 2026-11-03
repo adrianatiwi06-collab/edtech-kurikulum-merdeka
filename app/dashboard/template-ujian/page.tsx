@@ -9,6 +9,7 @@ import { ExamTemplate, LearningGoal } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Step = 0 | 1 | 2 | 3; // 0 for saved templates view
@@ -443,23 +444,21 @@ export default function TemplateUjianPage() {
   return (
     <motion.div className="space-y-7" {...pageIn}>
       {/* HERO */}
-      <section className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-100/60 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-60 w-60 rounded-full bg-violet-100/50 blur-3xl" />
-        <div className="relative p-6 sm:p-8">
+      <section className="dashboard-page-header">
+        <div>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
-                <span>✨</span>
+              <div className="dashboard-page-eyebrow">
+                <Sparkles className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
                 Exam Builder Workspace
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className="dashboard-page-title">
                 Template Ujian
-                <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+                <span className="block text-teal-700">
                   buat ujian lebih terstruktur
                 </span>
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500 sm:text-base">
+              <p className="dashboard-page-description">
                 Susun identitas ujian, pilih Tujuan Pembelajaran, lalu petakan setiap
                 soal agar template siap digunakan dan dianalisis.
               </p>
@@ -470,7 +469,7 @@ export default function TemplateUjianPage() {
                 <Button
                   onClick={handleStartNewTemplate}
                   size="lg"
-                  className="rounded-2xl bg-slate-950 px-5 shadow-lg hover:bg-slate-800"
+                  className="rounded-2xl bg-teal-800 px-5 text-white shadow-sm hover:bg-teal-900"
                 >
                   + Buat Template Baru
                 </Button>

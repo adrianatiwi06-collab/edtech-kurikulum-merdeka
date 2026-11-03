@@ -92,25 +92,22 @@ export default function JurnalPage() {
   return (
     <div className="min-h-screen bg-[#f7f8fc] px-4 pb-12 pt-6 md:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 text-white shadow-[0_18px_50px_rgba(37,99,235,0.20)] md:p-8">
-          <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-cyan-300/10 blur-3xl" />
-
-          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <section className="dashboard-page-header">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5" />
+              <div className="dashboard-page-eyebrow">
+                <Sparkles className="h-3.5 w-3.5 text-teal-700" />
                 Jurnal Pembelajaran
               </div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Jurnal Mengajar</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100 md:text-base">
+              <h1 className="dashboard-page-title">Jurnal Mengajar</h1>
+              <p className="dashboard-page-description">
                 Dokumentasikan kegiatan pembelajaran dengan rapi. Data jurnal tersimpan
                 terpisah dari data absensi siswa.
               </p>
             </div>
 
-            <div className="hidden rounded-[24px] bg-white/10 p-5 backdrop-blur md:block">
-              <BookOpen className="h-12 w-12" />
+            <div className="hidden rounded-2xl bg-teal-50 p-4 text-teal-700 md:block">
+              <BookOpen className="h-9 w-9" />
             </div>
           </div>
         </section>

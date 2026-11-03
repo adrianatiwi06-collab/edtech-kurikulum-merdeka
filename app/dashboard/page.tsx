@@ -115,7 +115,7 @@ const pageVariants = {
   visible: {
     opacity: 1,
     transition: {
-      duration: 0.4,
+      duration: 0.32,
       ease: [0.16, 1, 0.3, 1] as const,
       staggerChildren: 0.06,
     },
@@ -131,7 +131,7 @@ const sectionVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.55,
+      duration: 0.35,
       ease: [0.16, 1, 0.3, 1] as const,
     },
   },
@@ -148,7 +148,7 @@ const cardVariants = {
     y: 0,
     scale: 1,
     transition: {
-      duration: 0.45,
+      duration: 0.32,
       
     },
   },
@@ -445,85 +445,85 @@ export default function DashboardPage() {
     }
   > = {
     blue: {
-      icon: 'bg-blue-600 text-white',
-      soft: 'bg-blue-50',
-      hover: 'group-hover:bg-blue-100',
-      text: 'text-blue-700',
-      dot: 'bg-blue-500',
-      border: 'border-blue-100',
-      blob: 'bg-blue-100/70',
+      icon: 'bg-teal-700 text-white',
+      soft: 'bg-teal-50',
+      hover: 'group-hover:bg-teal-100',
+      text: 'text-teal-800',
+      dot: 'bg-teal-600',
+      border: 'border-teal-200',
+      blob: 'bg-teal-100/70',
     },
     emerald: {
-      icon: 'bg-emerald-500 text-white',
+      icon: 'bg-emerald-700 text-white',
       soft: 'bg-emerald-50',
       hover: 'group-hover:bg-emerald-100',
-      text: 'text-emerald-700',
-      dot: 'bg-emerald-500',
-      border: 'border-emerald-100',
+      text: 'text-emerald-800',
+      dot: 'bg-emerald-600',
+      border: 'border-emerald-200',
       blob: 'bg-emerald-100/70',
     },
     violet: {
-      icon: 'bg-violet-600 text-white',
-      soft: 'bg-violet-50',
-      hover: 'group-hover:bg-violet-100',
-      text: 'text-violet-700',
-      dot: 'bg-violet-500',
-      border: 'border-violet-100',
-      blob: 'bg-violet-100/70',
+      icon: 'bg-cyan-800 text-white',
+      soft: 'bg-cyan-50',
+      hover: 'group-hover:bg-cyan-100',
+      text: 'text-cyan-900',
+      dot: 'bg-cyan-700',
+      border: 'border-cyan-200',
+      blob: 'bg-cyan-100/70',
     },
     orange: {
-      icon: 'bg-orange-500 text-white',
-      soft: 'bg-orange-50',
-      hover: 'group-hover:bg-orange-100',
-      text: 'text-orange-700',
-      dot: 'bg-orange-500',
-      border: 'border-orange-100',
-      blob: 'bg-orange-100/70',
+      icon: 'bg-amber-700 text-white',
+      soft: 'bg-amber-50',
+      hover: 'group-hover:bg-amber-100',
+      text: 'text-amber-800',
+      dot: 'bg-amber-700',
+      border: 'border-amber-200',
+      blob: 'bg-amber-100/70',
     },
     rose: {
-      icon: 'bg-rose-500 text-white',
+      icon: 'bg-rose-700 text-white',
       soft: 'bg-rose-50',
       hover: 'group-hover:bg-rose-100',
-      text: 'text-rose-700',
-      dot: 'bg-rose-500',
-      border: 'border-rose-100',
+      text: 'text-rose-800',
+      dot: 'bg-rose-600',
+      border: 'border-rose-200',
       blob: 'bg-rose-100/70',
     },
     indigo: {
-      icon: 'bg-indigo-500 text-white',
-      soft: 'bg-indigo-50',
-      hover: 'group-hover:bg-indigo-100',
-      text: 'text-indigo-700',
-      dot: 'bg-indigo-500',
-      border: 'border-indigo-100',
-      blob: 'bg-indigo-100/70',
+      icon: 'bg-teal-800 text-white',
+      soft: 'bg-teal-50',
+      hover: 'group-hover:bg-teal-100',
+      text: 'text-teal-800',
+      dot: 'bg-teal-700',
+      border: 'border-teal-200',
+      blob: 'bg-teal-100/70',
     },
     cyan: {
-      icon: 'bg-cyan-500 text-white',
+      icon: 'bg-cyan-800 text-white',
       soft: 'bg-cyan-50',
       hover: 'group-hover:bg-cyan-100',
-      text: 'text-cyan-700',
-      dot: 'bg-cyan-500',
-      border: 'border-cyan-100',
+      text: 'text-cyan-900',
+      dot: 'bg-cyan-700',
+      border: 'border-cyan-200',
       blob: 'bg-cyan-100/70',
     },
     amber: {
-      icon: 'bg-amber-500 text-white',
+      icon: 'bg-amber-700 text-white',
       soft: 'bg-amber-50',
       hover: 'group-hover:bg-amber-100',
-      text: 'text-amber-700',
-      dot: 'bg-amber-500',
-      border: 'border-amber-100',
+      text: 'text-amber-800',
+      dot: 'bg-amber-700',
+      border: 'border-amber-200',
       blob: 'bg-amber-100/70',
     },
     sky: {
-      icon: 'bg-sky-500 text-white',
-      soft: 'bg-sky-50',
-      hover: 'group-hover:bg-sky-100',
-      text: 'text-sky-700',
-      dot: 'bg-sky-500',
-      border: 'border-sky-100',
-      blob: 'bg-sky-100/70',
+      icon: 'bg-teal-700 text-white',
+      soft: 'bg-teal-50',
+      hover: 'group-hover:bg-teal-100',
+      text: 'text-teal-800',
+      dot: 'bg-teal-600',
+      border: 'border-teal-200',
+      blob: 'bg-teal-100/70',
     },
   };
 
@@ -552,17 +552,17 @@ export default function DashboardPage() {
 
   return (
     <motion.div
-      className="relative min-h-full w-full min-w-0 overflow-hidden bg-[#f5f7fc] pb-12 pt-6 sm:pt-8 lg:pt-10"
+      className="relative min-h-full w-full min-w-0 overflow-hidden bg-[#F0FDFA] pb-12 pt-6 sm:pt-8 lg:pt-10"
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={reduceMotion ? undefined : { opacity: 1 }}
-      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
     >
       {/* =====================================================
           V2 BACKGROUND
       ===================================================== */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-blue-200/20 blur-3xl" />
-        <div className="absolute right-[-12rem] top-24 h-[30rem] w-[30rem] rounded-full bg-violet-200/18 blur-3xl" />
+        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-teal-200/20 blur-3xl" />
+        <div className="absolute right-[-12rem] top-24 h-[30rem] w-[30rem] rounded-full bg-cyan-200/18 blur-3xl" />
         <div className="absolute left-[34%] top-[48rem] h-72 w-72 rounded-full bg-cyan-200/15 blur-3xl" />
         <div className="absolute left-[18%] top-[86rem] h-64 w-64 rounded-full bg-amber-100/18 blur-3xl" />
         <div
@@ -584,41 +584,41 @@ export default function DashboardPage() {
           variants={sectionVariants}
           initial={reduceMotion ? false : 'hidden'}
           animate="visible"
-          className="relative overflow-hidden rounded-[38px] border border-white/90 bg-gradient-to-br from-[#edf4ff] via-white to-[#f2efff] shadow-[0_26px_72px_rgba(37,99,235,0.085)]"
+          className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-teal-50 via-white to-cyan-50 shadow-[0_18px_48px_rgba(15,118,110,0.08)] sm:rounded-[32px]"
         >
-          <div className="absolute -right-20 -top-28 h-80 w-80 rounded-[42%] bg-indigo-300/20 blur-2xl" />
-          <div className="absolute -bottom-36 left-[35%] h-96 w-96 rounded-[46%] bg-violet-300/12 blur-3xl" />
+          <div className="absolute -right-20 -top-28 h-80 w-80 rounded-[42%] bg-teal-300/20 blur-2xl" />
+          <div className="absolute -bottom-36 left-[35%] h-96 w-96 rounded-[46%] bg-cyan-300/12 blur-3xl" />
           <div className="absolute right-[45%] top-10 h-3 w-3 rounded-full bg-cyan-400/70 shadow-[0_0_0_8px_rgba(34,211,238,0.08)]" />
-          <div className="absolute right-[41%] top-20 h-2 w-2 rounded-full bg-indigo-400/60" />
+          <div className="absolute right-[41%] top-20 h-2 w-2 rounded-full bg-teal-400/60" />
 
-          <div className="pointer-events-none absolute left-[45%] top-24 hidden rotate-[-10deg] text-indigo-300/[0.07] lg:block">
+          <div className="pointer-events-none absolute left-[45%] top-24 hidden rotate-[-10deg] text-teal-300/[0.07] lg:block">
             <BookOpen className="h-28 w-28" strokeWidth={1.15} />
           </div>
-          <div className="pointer-events-none absolute bottom-10 left-[56%] hidden rotate-[8deg] text-violet-400/[0.055] lg:block">
+          <div className="pointer-events-none absolute bottom-10 left-[56%] hidden rotate-[8deg] text-cyan-400/[0.055] lg:block">
             <PenLine className="h-24 w-24" strokeWidth={1.1} />
           </div>
           <div className="pointer-events-none absolute right-[37%] bottom-8 hidden text-cyan-400/[0.07] lg:block">
             <Sparkles className="h-16 w-16" strokeWidth={1.2} />
           </div>
 
-          <div className="relative grid gap-6 p-5 sm:gap-7 sm:p-9 lg:grid-cols-[1fr_430px] lg:p-10">
+          <div className="relative grid gap-6 p-5 sm:gap-7 sm:p-8 lg:p-9 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.78fr)] xl:p-10">
             <div className="flex min-h-0 flex-col justify-between sm:min-h-[360px]">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-white/85 px-3.5 py-2 text-[11px] font-black tracking-wide text-indigo-700 shadow-sm backdrop-blur">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100">
+                <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3.5 py-2 text-xs font-black tracking-wide text-teal-800 shadow-sm">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-100">
                     <Sparkles className="h-3.5 w-3.5" />
                   </span>
                   AI TEACHING WORKSPACE
                 </div>
 
-                <h1 className="mt-5 max-w-4xl text-[clamp(2.25rem,10vw,3.1rem)] sm:mt-6 sm:text-[clamp(2.7rem,5.3vw,5rem)] font-black leading-[0.93] tracking-[-0.055em] text-slate-950">
+                <h1 className="mt-5 max-w-4xl text-[clamp(2.25rem,10vw,3.1rem)] font-black leading-[0.98] tracking-[-0.045em] text-slate-950 sm:mt-6 sm:text-[clamp(2.7rem,5.3vw,5rem)]">
                   Selamat datang kembali,
-                  <span className="mt-2 block bg-gradient-to-r from-[#315ef6] via-[#5b4af5] to-[#7047df] bg-clip-text text-transparent">
+                  <span className="mt-2 block bg-gradient-to-r from-teal-800 via-teal-700 to-cyan-800 bg-clip-text text-transparent">
                     Mas Wowo <span className="inline-block">👋</span>
                   </span>
                 </h1>
 
-                <p className="mt-5 max-w-2xl text-sm font-medium leading-6 text-slate-500 sm:mt-6 sm:leading-7 sm:text-base">
+                <p className="mt-5 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:mt-6 sm:leading-7 sm:text-base">
                   Kelola Tujuan Pembelajaran, buat soal, analisis nilai,
                   dan selesaikan administrasi pembelajaran dari satu tempat.
                 </p>
@@ -629,7 +629,7 @@ export default function DashboardPage() {
                     Workspace aktif
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">
-                    <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                    <Sparkles className="h-3.5 w-3.5 text-teal-700" />
                     AI siap membantu
                   </span>
                   <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold shadow-sm ${todayState.attendanceDone ? 'bg-emerald-50 text-emerald-700' : 'bg-white/80 text-slate-600'}`}>
@@ -640,11 +640,11 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
-                <Link href="/dashboard/generate-tp">
+                <Link href="/dashboard/generate-tp" className="cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                   <motion.div
                     whileHover={reduceMotion ? undefined : { y: -3, scale: 1.015 }}
                     whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-teal-800 px-5 py-3.5 text-sm font-black text-white shadow-[0_8px_20px_rgba(15,118,110,0.18)] transition-colors hover:bg-teal-900"
                   >
                     <WandSparkles className="h-4 w-4" />
                     Generate TP
@@ -652,11 +652,11 @@ export default function DashboardPage() {
                   </motion.div>
                 </Link>
 
-                <Link href="/dashboard/generate-soal">
+                <Link href="/dashboard/generate-soal" className="cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                   <motion.div
                     whileHover={reduceMotion ? undefined : { y: -3 }}
                     whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white bg-white/90 px-5 py-3.5 text-sm font-black text-slate-700 shadow-sm hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
                   >
                     <BrainCircuit className="h-4 w-4" />
                     Generate Soal AI
@@ -669,16 +669,16 @@ export default function DashboardPage() {
             <motion.div
               initial={reduceMotion ? false : { opacity: 0, x: 28, scale: 0.97 }}
               animate={reduceMotion ? undefined : { opacity: 1, x: 0, scale: 1 }}
-              transition={{ delay: 0.18, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.18, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="relative flex items-center"
             >
-              <div className="relative w-full overflow-hidden rounded-[28px] bg-gradient-to-br from-[#101735] via-[#202653] to-[#3d277e] p-5 text-white sm:rounded-[32px] sm:p-6 shadow-[0_24px_55px_rgba(49,46,129,0.25)]">
-                <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-violet-400/12 blur-2xl" />
+              <div className="relative w-full overflow-hidden rounded-[24px] bg-gradient-to-br from-[#123c3b] via-[#134e4a] to-[#0f766e] p-5 text-white shadow-[0_16px_40px_rgba(19,78,74,0.2)] sm:rounded-[28px] sm:p-6">
+                <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-teal-300/12 blur-2xl" />
                 <div className="absolute -bottom-20 left-8 h-40 w-40 rounded-full bg-cyan-400/10 blur-2xl" />
 
                 <div className="relative">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-black text-indigo-100">
+                    <div className="flex items-center gap-2 text-sm font-black text-teal-50">
                       <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
                         <Sparkles className="h-4 w-4 text-cyan-300" />
                       </span>
@@ -696,7 +696,7 @@ export default function DashboardPage() {
                   <div className="mt-6 space-y-3">
                     <Link
                       href="/dashboard/generate-soal"
-                      className="group block rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur transition hover:bg-white/[0.15]"
+                      className="group block cursor-pointer rounded-2xl border border-white/15 bg-white/10 p-4 transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900"
                     >
                       <div className="flex gap-3">
                         <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_0_5px_rgba(103,232,249,0.08)]" />
@@ -704,36 +704,36 @@ export default function DashboardPage() {
                           <p className="text-sm font-black">
                             Buat soal dari TP yang tersimpan
                           </p>
-                          <p className="mt-1 text-xs leading-5 text-indigo-100/65">
+                          <p className="mt-1 text-xs leading-5 text-teal-50/90">
                             12 TP terdeteksi belum memiliki bank soal terkait.
                           </p>
                         </div>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-indigo-200 transition group-hover:translate-x-1" />
+                        <ArrowRight className="h-4 w-4 shrink-0 text-cyan-100 transition group-hover:translate-x-1" />
                       </div>
                     </Link>
 
                     <Link
                       href="/dashboard/analisis-nilai"
-                      className="group block rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur transition hover:bg-white/[0.15]"
+                      className="group block cursor-pointer rounded-2xl border border-white/15 bg-white/10 p-4 transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900"
                     >
                       <div className="flex gap-3">
-                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-violet-300 shadow-[0_0_0_5px_rgba(196,181,253,0.08)]" />
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_0_5px_rgba(103,232,249,0.08)]" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-black">
                             Periksa perkembangan penilaian
                           </p>
-                          <p className="mt-1 text-xs leading-5 text-indigo-100/65">
+                          <p className="mt-1 text-xs leading-5 text-teal-50/90">
                             Ada data penilaian terbaru yang siap dianalisis.
                           </p>
                         </div>
-                        <ArrowRight className="h-4 w-4 shrink-0 text-indigo-200 transition group-hover:translate-x-1" />
+                        <ArrowRight className="h-4 w-4 shrink-0 text-cyan-100 transition group-hover:translate-x-1" />
                       </div>
                     </Link>
                   </div>
 
                   <Link
                     href="/dashboard/analisis-tp"
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white hover:text-cyan-200"
+                    className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-lg text-sm font-black text-white hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900"
                   >
                     Lihat analisis
                     <ArrowRight className="h-4 w-4" />
@@ -755,7 +755,7 @@ export default function DashboardPage() {
         >
           <div className="mb-4 flex items-end justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">
                 Ringkasan
               </p>
               <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
@@ -764,7 +764,7 @@ export default function DashboardPage() {
             </div>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-500 transition hover:bg-white hover:text-indigo-700"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-white hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
@@ -777,19 +777,19 @@ export default function DashboardPage() {
               const tone = tones[stat.tone];
 
               return (
-                <Link key={stat.title} href={stat.href} className="group">
+                <Link key={stat.title} href={stat.href} className="group block cursor-pointer rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                   <motion.div
                     initial={reduceMotion ? false : { opacity: 0, y: 18 }}
                     whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.12 }}
                     transition={{
                       delay: index * 0.06,
-                      duration: 0.45,
+                      duration: 0.3,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                     whileHover={reduceMotion ? undefined : { y: -7 }}
                     whileTap={reduceMotion ? undefined : { scale: 0.985 }}
-                    className="relative min-h-[215px] overflow-hidden rounded-[30px] border border-white/90 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.045)] transition-all hover:-translate-y-1 hover:shadow-[0_24px_48px_rgba(37,99,235,0.11)]"
+                    className="relative min-h-[200px] overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-[0_16px_34px_rgba(15,118,110,0.12)]"
                   >
                     <div
                       className={`absolute -right-10 -top-10 h-36 w-36 rounded-[45%] ${tone.soft} opacity-80`}
@@ -800,22 +800,22 @@ export default function DashboardPage() {
                       <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone.icon} shadow-lg`}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition group-hover:bg-indigo-50 group-hover:text-indigo-500">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-600 transition-colors group-hover:bg-teal-50 group-hover:text-teal-700">
                         <ArrowRight className="h-4 w-4 -rotate-45 transition group-hover:rotate-0" />
                       </span>
                     </div>
 
                     <div className="relative mt-8">
-                      <p className="text-sm font-bold text-slate-500">{stat.title}</p>
+                      <p className="text-sm font-bold text-slate-600">{stat.title}</p>
                       <div className="mt-1 flex items-end justify-between gap-2">
                         <p className="text-4xl font-black tracking-tight text-slate-950">
                           {stat.value}
                         </p>
-                        <span className={`rounded-full ${tone.soft} px-2.5 py-1 text-[10px] font-black ${tone.text}`}>
+                        <span className={`rounded-full ${tone.soft} px-2.5 py-1 text-xs font-black ${tone.text}`}>
                           {stat.trend}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs font-medium text-slate-400">
+                      <p className="mt-2 text-xs font-medium text-slate-600">
                         {stat.description}
                       </p>
                     </div>
@@ -837,23 +837,23 @@ export default function DashboardPage() {
           className="grid gap-5 xl:grid-cols-12"
         >
           {/* Quick Create */}
-          <div className="relative overflow-hidden rounded-[28px] border border-white/90 bg-white/95 p-5 shadow-[0_14px_38px_rgba(15,23,42,0.05)] sm:rounded-[32px] sm:p-7 xl:col-span-7">
-            <div className="absolute -right-20 -top-20 h-52 w-52 rounded-[45%] bg-indigo-100/55" />
+          <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_26px_rgba(15,23,42,0.05)] sm:p-7 xl:col-span-7">
+            <div className="absolute -right-20 -top-20 h-52 w-52 rounded-[45%] bg-teal-100/55" />
             <div className="absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-cyan-100/35 blur-2xl" />
 
             <div className="relative flex items-start justify-between">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">
                   Quick Create
                 </p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                   Mulai pekerjaan baru
                 </h2>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-slate-600">
                   Pilih aktivitas yang ingin Anda kerjakan.
                 </p>
               </div>
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-800">
                 <Plus className="h-5 w-5" />
               </span>
             </div>
@@ -886,11 +886,11 @@ export default function DashboardPage() {
                 const tone = tones[item.tone];
 
                 return (
-                  <Link key={item.title} href={item.href}>
+                  <Link key={item.title} href={item.href} className="group block h-full cursor-pointer rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                     <motion.div
                       whileHover={reduceMotion ? undefined : { y: -5 }}
                       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                      className={`relative h-full overflow-hidden rounded-[24px] border ${tone.border} ${tone.soft} p-4 transition-shadow hover:shadow-lg`}
+                      className={`relative h-full overflow-hidden rounded-3xl border ${tone.border} ${tone.soft} p-4 transition-shadow hover:shadow-md`}
                     >
                       <div className={`absolute -right-6 -top-6 h-20 w-20 rounded-full ${tone.blob}`} />
                       <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tone.icon} shadow-md`}>
@@ -899,7 +899,7 @@ export default function DashboardPage() {
                       <h3 className="relative mt-5 text-sm font-black text-slate-900">
                         {item.title}
                       </h3>
-                      <p className="relative mt-1.5 min-h-[40px] text-xs leading-5 text-slate-500">
+                      <p className="relative mt-1.5 min-h-[40px] text-xs leading-5 text-slate-600">
                         {item.desc}
                       </p>
                       <span className={`relative mt-4 inline-flex items-center gap-1 text-xs font-black ${tone.text}`}>
@@ -914,14 +914,14 @@ export default function DashboardPage() {
           </div>
 
           {/* Today */}
-          <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#0f1738] via-[#20285b] to-[#3d247e] p-5 text-white shadow-[0_20px_50px_rgba(30,41,100,0.20)] sm:rounded-[32px] sm:p-7 xl:col-span-5">
+          <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#123c3b] via-[#134e4a] to-[#0f766e] p-5 text-white shadow-[0_16px_40px_rgba(19,78,74,0.2)] sm:p-7 xl:col-span-5">
             <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-cyan-400/10 blur-2xl" />
-            <div className="absolute -bottom-20 left-10 h-44 w-44 rounded-full bg-fuchsia-400/10 blur-2xl" />
+            <div className="absolute -bottom-20 left-10 h-44 w-44 rounded-full bg-amber-300/10 blur-2xl" />
 
             <div className="relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
                     Hari ini
                   </p>
                   <h2 className="mt-1 text-2xl font-black tracking-tight">
@@ -934,48 +934,48 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 space-y-3">
-                <Link href="/dashboard/absensi" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.attendanceDone ? 'bg-emerald-400/15 text-emerald-300' : 'bg-cyan-400/15 text-cyan-300'}`}>
+                <Link href="/dashboard/absensi" className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3.5 transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.attendanceDone ? 'bg-emerald-300/20 text-emerald-100' : 'bg-cyan-300/20 text-cyan-100'}`}>
                     {todayState.attendanceDone ? <CheckCircle2 className="h-4 w-4" /> : <CalendarCheck className="h-4 w-4" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-black">Absensi siswa</p>
-                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${todayState.attendanceDone ? 'bg-emerald-300/15 text-emerald-200' : 'bg-amber-300/15 text-amber-200'}`}>{todayState.attendanceDone ? 'SELESAI' : 'PERLU'}</span>}
+                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-xs font-black ${todayState.attendanceDone ? 'bg-emerald-300/15 text-emerald-100' : 'bg-amber-300/15 text-amber-100'}`}>{todayState.attendanceDone ? 'SELESAI' : 'PERLU'}</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-indigo-100/60">
+                    <p className="mt-0.5 text-xs text-teal-50/90">
                       {todayState.loading ? 'Memeriksa data hari ini…' : todayState.attendanceDone ? `${todayState.attendanceCount} catatan absensi hari ini` : 'Catat kehadiran siswa satu kali hari ini'}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                  <ArrowRight className="h-4 w-4 text-cyan-100 transition group-hover:translate-x-1" />
                 </Link>
 
-                <Link href="/dashboard/jurnal" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.journalDone ? 'bg-emerald-400/15 text-emerald-300' : 'bg-violet-400/15 text-violet-300'}`}>
+                <Link href="/dashboard/jurnal" className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3.5 transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${todayState.journalDone ? 'bg-emerald-300/20 text-emerald-100' : 'bg-cyan-300/20 text-cyan-100'}`}>
                     {todayState.journalDone ? <CheckCircle2 className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-black">Jurnal mengajar</p>
-                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${todayState.journalDone ? 'bg-emerald-300/15 text-emerald-200' : 'bg-amber-300/15 text-amber-200'}`}>{todayState.journalDone ? 'SELESAI' : 'PERLU'}</span>}
+                      {!todayState.loading && <span className={`rounded-full px-2 py-0.5 text-xs font-black ${todayState.journalDone ? 'bg-emerald-300/15 text-emerald-100' : 'bg-amber-300/15 text-amber-100'}`}>{todayState.journalDone ? 'SELESAI' : 'PERLU'}</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-indigo-100/60">
+                    <p className="mt-0.5 text-xs text-teal-50/90">
                       {todayState.loading ? 'Memeriksa data hari ini…' : todayState.journalDone ? `${todayState.journalCount} jurnal dibuat hari ini` : 'Catat kegiatan pembelajaran hari ini'}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                  <ArrowRight className="h-4 w-4 text-cyan-100 transition group-hover:translate-x-1" />
                 </Link>
 
-                <Link href="/dashboard/analisis-nilai" className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 p-3.5 backdrop-blur transition hover:bg-white/[0.15]">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300"><TrendingUp className="h-4 w-4" /></span>
+                <Link href="/dashboard/analisis-nilai" className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-3.5 transition-colors hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-300/20 text-emerald-100"><TrendingUp className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-black">Analisis nilai</p>
-                    <p className="mt-0.5 text-xs text-indigo-100/60">Periksa data penilaian terbaru</p>
+                    <p className="mt-0.5 text-xs text-teal-50/90">Periksa data penilaian terbaru</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-indigo-200 transition group-hover:translate-x-1" />
+                  <ArrowRight className="h-4 w-4 text-cyan-100 transition group-hover:translate-x-1" />
                 </Link>
 
-                {todayState.error && <p className="px-1 text-[10px] font-semibold text-amber-200/80">Status administrasi belum dapat diperiksa. Anda tetap dapat membuka menu di atas.</p>}
+                {todayState.error && <p className="px-1 text-xs font-semibold text-amber-100">Status administrasi belum dapat diperiksa. Anda tetap dapat membuka menu di atas.</p>}
               </div>
             </div>
           </div>
@@ -992,12 +992,12 @@ export default function DashboardPage() {
           className="grid gap-5 xl:grid-cols-12"
         >
           {/* Progress */}
-          <div className="relative overflow-hidden rounded-[32px] border border-white/90 bg-gradient-to-br from-white to-emerald-50/55 p-6 shadow-[0_12px_35px_rgba(15,23,42,0.055)] sm:p-7 xl:col-span-5">
+          <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/55 p-5 shadow-[0_8px_26px_rgba(15,23,42,0.05)] sm:p-7 xl:col-span-5">
             <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-emerald-100/55" />
 
             <div className="relative flex items-start justify-between">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-800">
                   Progress
                 </p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
@@ -1031,12 +1031,12 @@ export default function DashboardPage() {
                     strokeLinecap="round"
                     strokeDasharray="301.59"
                     strokeDashoffset="66.35"
-                    className="text-emerald-500"
+                    className="text-emerald-600"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-black text-slate-950">78%</span>
-                  <span className="text-[10px] font-bold text-slate-400">
+                  <span className="text-xs font-bold text-slate-600">
                     selesai
                   </span>
                 </div>
@@ -1044,10 +1044,10 @@ export default function DashboardPage() {
 
               <div>
                 <p className="text-sm font-black text-slate-800">On Track</p>
-                <p className="mt-1 text-xs leading-5 text-slate-400">
+                <p className="mt-1 text-xs leading-5 text-slate-600">
                   Sebagian besar target semester sudah tercapai.
                 </p>
-                <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-[11px] font-black text-emerald-700">
+                <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-800">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   78% selesai
                 </span>
@@ -1055,8 +1055,8 @@ export default function DashboardPage() {
                 <div className="mt-5 space-y-2">
                   {[['Tujuan Pembelajaran', '82%'], ['Penilaian', '68%'], ['Administrasi', '91%']].map(([label, value]) => (
                     <div key={label}>
-                      <div className="mb-1 flex items-center justify-between text-[10px] font-bold text-slate-400"><span>{label}</span><span>{value}</span></div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: value }} /></div>
+                      <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-600"><span>{label}</span><span>{value}</span></div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100"><div className="h-full rounded-full bg-emerald-600" style={{ width: value }} /></div>
                     </div>
                   ))}
                 </div>
@@ -1065,17 +1065,17 @@ export default function DashboardPage() {
           </div>
 
           {/* Activity */}
-          <div className="rounded-[32px] border border-white/90 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.05)] sm:p-7 xl:col-span-7">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_26px_rgba(15,23,42,0.05)] sm:p-7 xl:col-span-7">
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-600">
                   Activity
                 </p>
                 <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                   Aktivitas terbaru
                 </h2>
               </div>
-              <span className="rounded-full bg-indigo-50 px-3 py-1.5 text-[10px] font-black text-indigo-600">
+              <span className="rounded-full bg-teal-50 px-3 py-1.5 text-xs font-black text-teal-800">
                 Terbaru
               </span>
             </div>
@@ -1089,7 +1089,7 @@ export default function DashboardPage() {
                   <Link
                     key={activity.title}
                     href={activity.href}
-                    className="group flex items-center gap-4 rounded-2xl p-3 transition hover:bg-slate-50"
+                    className="group flex cursor-pointer items-center gap-4 rounded-2xl p-3 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                   >
                     <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}>
                       <Icon className="h-5 w-5" />
@@ -1098,14 +1098,14 @@ export default function DashboardPage() {
                       <p className="truncate text-sm font-black text-slate-800">
                         {activity.title}
                       </p>
-                      <p className="mt-0.5 truncate text-xs text-slate-400">
+                      <p className="mt-0.5 truncate text-xs text-slate-600">
                         {activity.description}
                       </p>
                     </div>
-                    <span className="hidden shrink-0 text-[11px] font-bold text-slate-400 sm:block">
+                    <span className="hidden shrink-0 text-xs font-bold text-slate-600 sm:block">
                       {activity.time}
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-1 group-hover:text-slate-500" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-600 transition group-hover:translate-x-1 group-hover:text-slate-700" />
                   </Link>
                 );
               })}
@@ -1124,14 +1124,14 @@ export default function DashboardPage() {
         >
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-teal-700">
                 Workspace
               </p>
               <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
                 Semua fitur
               </h2>
             </div>
-            <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-slate-400 shadow-sm">
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm">
               {features.length} fitur
             </span>
           </div>
@@ -1142,18 +1142,18 @@ export default function DashboardPage() {
               const tone = tones[feature.tone];
 
               return (
-                <Link key={feature.title} href={feature.href} className="group">
+                <Link key={feature.title} href={feature.href} className="group block cursor-pointer rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                   <motion.div
                     initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                     whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.08 }}
                     transition={{
                       delay: Math.min(index * 0.025, 0.22),
-                      duration: 0.4,
+                      duration: 0.3,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                     whileHover={reduceMotion ? undefined : { y: -5 }}
-                    className={`relative min-h-[150px] overflow-hidden rounded-[27px] border ${tone.border} bg-white p-5 shadow-[0_9px_28px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-1 hover:shadow-[0_20px_42px_rgba(37,99,235,0.085)]`}
+                    className={`relative min-h-[150px] overflow-hidden rounded-3xl border ${tone.border} bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-[0_16px_34px_rgba(15,118,110,0.1)]`}
                   >
                     <div className={`absolute -right-9 -top-9 h-28 w-28 rounded-[45%] ${tone.soft}`} />
                     <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${tone.soft} ${tone.text}`}>
@@ -1164,11 +1164,11 @@ export default function DashboardPage() {
                         <h3 className="text-sm font-black text-slate-900">
                           {feature.title}
                         </h3>
-                        <p className="mt-1 text-xs leading-5 text-slate-400">
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
                           {feature.description}
                         </p>
                       </div>
-                      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition group-hover:bg-indigo-50 group-hover:text-indigo-500">
+                      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-600 transition-colors group-hover:bg-teal-50 group-hover:text-teal-700">
                         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
                       </span>
                     </div>
@@ -1187,30 +1187,30 @@ export default function DashboardPage() {
           initial={reduceMotion ? false : 'hidden'}
           whileInView={reduceMotion ? undefined : 'visible'}
           viewport={{ once: true, amount: 0.05 }}
-          className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-[#101735] via-[#20285d] to-[#3f287f] shadow-[0_22px_60px_rgba(49,46,129,0.20)]"
+          className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#123c3b] via-[#134e4a] to-[#0f766e] shadow-[0_16px_40px_rgba(19,78,74,0.2)]"
         >
-          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-fuchsia-400/10 blur-3xl" />
+          <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-teal-300/10 blur-3xl" />
           <div className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
           <div className="relative flex flex-col gap-6 p-7 sm:p-9 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 text-xs font-black text-cyan-300">
+              <div className="inline-flex items-center gap-2 text-xs font-black text-cyan-100">
                 <Sparkles className="h-3.5 w-3.5" />
                 EDTECH AI WORKSPACE
               </div>
               <h2 className="mt-2 max-w-2xl text-2xl font-black tracking-tight text-white sm:text-3xl">
                 Kurangi pekerjaan administratif, fokus pada pembelajaran.
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-indigo-100/65">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-teal-50/90">
                 Gunakan fitur AI untuk membantu menyusun TP, membuat soal,
                 dan membaca data pembelajaran Anda.
               </p>
             </div>
 
-            <Link href="/dashboard/generate-tp" className="shrink-0">
+            <Link href="/dashboard/generate-tp" className="shrink-0 cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-900">
               <motion.div
                 whileHover={reduceMotion ? undefined : { y: -3, scale: 1.02 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.97 }}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-slate-950 shadow-lg"
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-teal-900 shadow-md transition-colors hover:bg-teal-50"
               >
                 <WandSparkles className="h-4 w-4" />
                 Mulai dengan AI
@@ -1223,7 +1223,7 @@ export default function DashboardPage() {
         </div>
 
       <div className="pointer-events-none fixed bottom-6 right-6 z-20 hidden lg:block">
-        <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-3.5 py-2 text-[10px] font-bold text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
           <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
           Semua sistem berjalan normal
         </div>

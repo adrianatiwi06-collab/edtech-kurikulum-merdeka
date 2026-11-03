@@ -7,7 +7,7 @@ import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, FileText, Save } from 'lucide-react';
+import { Loader2, Download, FileText, Save, Sparkles } from 'lucide-react';
 import { generateQuestionsAction } from './actions';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Packer } from 'docx';
@@ -666,26 +666,23 @@ export default function GenerateSoalPage() {
         variants={reduceMotion ? undefined : panelVariants}
         initial={reduceMotion ? false : 'hidden'}
         animate={reduceMotion ? undefined : 'visible'}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8"
+        className="dashboard-page-header"
       >
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl" />
-        <div className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-violet-100/40 blur-3xl" />
-
         <div className="relative grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr] xl:items-end">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
-              <span>✨</span>
+            <div className="dashboard-page-eyebrow">
+              <Sparkles className="h-3.5 w-3.5 text-teal-700" aria-hidden="true" />
               AI Assessment Workspace
             </div>
 
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="dashboard-page-title">
               Generate Soal
-              <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+              <span className="block text-teal-700">
                 dari Tujuan Pembelajaran
               </span>
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
+            <p className="dashboard-page-description">
               Pilih TP, atur karakteristik soal, lalu biarkan AI menyusun
               assessment yang siap direview dan disimpan ke Bank Soal.
             </p>

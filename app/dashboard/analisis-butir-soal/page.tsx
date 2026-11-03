@@ -430,9 +430,9 @@ export default function AnalisisNilaiSiswaPage() {
         <p className="text-sm mt-1">Kelas: {examInfo?.class_name} {examInfo?.semester ? `| Semester: ${examInfo.semester}` : ''}</p>
       </div>
 
-      <div className="mb-6 print:hidden">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Analisis Butir Soal</h1>
-        <p className="mt-2 text-slate-600">Analisis tingkat ketercapaian kognitif siswa dan validitas instrumen ujian otomatis.</p>
+      <div className="dashboard-page-header mb-6 print:hidden">
+        <h1 className="dashboard-page-title">Analisis Butir Soal</h1>
+        <p className="dashboard-page-description">Analisis tingkat ketercapaian kognitif siswa dan validitas instrumen ujian otomatis.</p>
       </div>
 
       <Card className="mb-6 border-slate-200 shadow-sm bg-white print:hidden">

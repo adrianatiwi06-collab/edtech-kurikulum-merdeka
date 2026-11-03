@@ -499,9 +499,9 @@ export default function AnalisisNilaiPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Analisis Penguasaan TP per Kelas</h1>
-        <p className="text-muted-foreground">
+      <div className="dashboard-page-header">
+        <h1 className="dashboard-page-title">Analisis Penguasaan TP per Kelas</h1>
+        <p className="dashboard-page-description">
           Pantau persentase penguasaan Tujuan Pembelajaran (TP) di tingkat kelas untuk setiap ujian
         </p>
       </div>

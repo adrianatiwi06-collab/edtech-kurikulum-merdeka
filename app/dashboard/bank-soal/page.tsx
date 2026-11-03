@@ -501,35 +501,32 @@ export default function BankSoalPage() {
         animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
         className="space-y-6"
       >
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-          <div className="relative overflow-hidden border-b border-slate-100 bg-gradient-to-br from-slate-950 via-blue-950 to-violet-950 p-6 text-white sm:p-8">
-            <div className="absolute -right-20 -top-20 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
-            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className="dashboard-page-header">
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-100">
-                  <FileText className="h-3.5 w-3.5" />
+                <div className="dashboard-page-eyebrow">
+                  <FileText className="h-3.5 w-3.5 text-teal-700" />
                   Question Workspace
                 </div>
-                <h1 className="max-w-4xl text-2xl font-black sm:text-3xl">{selectedSoal.examTitle}</h1>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-white/10 px-3 py-1.5">Kelas {selectedSoal.kelas}</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1.5">{selectedSoal.subject}</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1.5">{selectedSoal.duration} menit</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1.5">{formatDate(selectedSoal.created_at)}</span>
+                <h1 className="dashboard-page-title">{selectedSoal.examTitle}</h1>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5">Kelas {selectedSoal.kelas}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5">{selectedSoal.subject}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5">{selectedSoal.duration} menit</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5">{formatDate(selectedSoal.created_at)}</span>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => { setSelectedSoal(null); setViewMode(false); }} className="rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white">
+                <Button variant="outline" onClick={() => { setSelectedSoal(null); setViewMode(false); }} className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
                   ← Kembali
                 </Button>
-                <Button onClick={() => startEdit(selectedSoal)} className="rounded-xl bg-white text-slate-900 hover:bg-slate-100">
+                <Button onClick={() => startEdit(selectedSoal)} className="rounded-xl bg-teal-800 text-white hover:bg-teal-900">
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Soal
                 </Button>
               </div>
             </div>
-          </div>
 
           <div className="grid grid-cols-1 gap-4 border-b border-slate-100 bg-slate-50/70 p-4 sm:grid-cols-3">
             <div className="rounded-2xl bg-white p-4 text-center shadow-sm">
@@ -712,29 +709,26 @@ export default function BankSoalPage() {
         variants={reduceMotion ? undefined : sectionVariants}
         initial={reduceMotion ? false : 'hidden'}
         animate={reduceMotion ? undefined : 'visible'}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8"
+        className="dashboard-page-header"
       >
-        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-100/60 blur-3xl" />
-        <div className="absolute -bottom-24 left-1/3 h-60 w-60 rounded-full bg-violet-100/40 blur-3xl" />
-
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="dashboard-page-eyebrow">
+              <Sparkles className="h-3.5 w-3.5 text-teal-700" />
               Question Workspace
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="dashboard-page-title">
               Bank Soal
-              <span className="block bg-gradient-to-r from-blue-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+              <span className="block text-teal-700">
                 terpusat untuk semua kebutuhan evaluasi
               </span>
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+            <p className="dashboard-page-description">
               Kelola soal hasil generate AI maupun soal dari PDF dalam satu workspace yang terstruktur dan mudah digunakan kembali.
             </p>
           </div>
 
-          <Button onClick={() => setUploadModalOpen(true)} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-800">
+          <Button onClick={() => setUploadModalOpen(true)} className="rounded-2xl bg-teal-800 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-teal-900">
             <UploadCloud className="mr-2 h-4 w-4" />
             Upload Soal PDF
           </Button>

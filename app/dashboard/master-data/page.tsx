@@ -528,9 +528,9 @@ export default function MasterDataPage() {
   return (
     <div className="p-4 md:p-6 bg-[#f8fafc] min-h-screen max-w-[1600px] mx-auto space-y-6">
       
-      <div>
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Data Induk &middot; TP 2026/2027</p>
-        <h1 className="text-2xl font-bold text-gray-900">Data Kelas & Siswa</h1>
+      <div className="dashboard-page-header">
+        <p className="dashboard-page-eyebrow">Data Induk &middot; TP 2026/2027</p>
+        <h1 className="dashboard-page-title">Data Kelas & Siswa</h1>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">

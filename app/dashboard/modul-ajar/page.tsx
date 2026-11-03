@@ -564,32 +564,32 @@ Bahan bacaan/media, glosarium (istilah: pengertian), dan daftar pustaka. Jangan 
       <motion.section
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-8 shadow-[0_12px_40px_rgba(15,23,42,0.04)]"
+        className="dashboard-page-header"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1.5 text-xs font-bold text-indigo-700">
+            <div className="dashboard-page-eyebrow">
               <FileText className="h-4 w-4" />
               Generator Modul Ajar Workspace
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Generator <span className="text-indigo-600">Modul Ajar Deep Learning</span>
+            <h1 className="dashboard-page-title">
+              Generator <span className="text-teal-700">Modul Ajar Deep Learning</span>
             </h1>
           </div>
 
           <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
             <button
               onClick={() => setActiveTab('generator')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'generator' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-colors ${
+                activeTab === 'generator' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Buat RPP
             </button>
             <button
               onClick={() => setActiveTab('tersimpan')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'tersimpan' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-colors ${
+                activeTab === 'tersimpan' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Modul Tersimpan ({savedModules.length})

@@ -381,16 +381,15 @@ export default function AbsensiPage() {
       )}
 
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-emerald-700 via-teal-600 to-cyan-600 p-6 text-white shadow-[0_18px_50px_rgba(13,148,136,0.20)] md:p-8">
-          <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <section className="dashboard-page-header">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold backdrop-blur">
-                <UserCheck className="h-3.5 w-3.5" />
+              <div className="dashboard-page-eyebrow">
+                <UserCheck className="h-3.5 w-3.5 text-teal-700" />
                 Presensi Harian
               </div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Absensi Siswa</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50 md:text-base">
+              <h1 className="dashboard-page-title">Absensi Siswa</h1>
+              <p className="dashboard-page-description">
                 Satu kali absensi untuk setiap kelas setiap hari. Mata pelajaran dan jam
                 pelajaran tidak diperlukan.
               </p>
@@ -401,13 +400,13 @@ export default function AbsensiPage() {
               <Button 
                 onClick={() => setShowSettings(true)}
                 variant="outline" 
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur"
+                className="rounded-xl border-teal-200 bg-white text-teal-800 hover:bg-teal-50"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Pengaturan Libur
               </Button>
-              <div className="hidden rounded-[24px] bg-white/10 p-5 backdrop-blur md:block">
-                <Users className="h-12 w-12" />
+              <div className="hidden rounded-2xl bg-teal-50 p-4 text-teal-700 md:block">
+                <Users className="h-9 w-9" />
               </div>
             </div>
           </div>

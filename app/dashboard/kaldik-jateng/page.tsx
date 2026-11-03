@@ -555,34 +555,24 @@ function KaldikView({ years, yearId: currentYearId, onYearChange, isAdmin, persi
 
       <div className="mx-auto max-w-[1440px] space-y-5">
         {/* ── HERO ─────────────────────────────────────────────── */}
-        <header className="relative rounded-[2rem] bg-[#0b3d33] text-white">
-          <div
-            className="absolute inset-0 overflow-hidden rounded-[2rem]"
-            aria-hidden="true"
-            style={{
-              backgroundImage:
-                'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.5px), radial-gradient(700px 320px at 100% 0%, rgba(52,211,153,0.28), transparent 65%)',
-              backgroundSize: '20px 20px, 100% 100%',
-            }}
-          />
-
-          <div className="relative grid gap-8 p-6 sm:p-9 lg:grid-cols-[1fr_auto] lg:items-end">
+        <header className="dashboard-page-header">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-2xl">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="mr-1 text-sm font-medium text-emerald-200/90">Referensi resmi Dinas Pendidikan</p>
+                <p className="mr-1 text-sm font-medium text-slate-600">Referensi resmi Dinas Pendidikan</p>
                 <label htmlFor="kd-year" className="sr-only">Tahun pelajaran</label>
                 <select
                   id="kd-year"
                   value={currentYearId}
                   onChange={(e) => onYearChange(e.target.value)}
                   disabled={loading}
-                  className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white outline-none ring-1 ring-inset ring-white/25 focus-visible:ring-2 focus-visible:ring-white [&>option]:text-slate-900"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-teal-600 [&>option]:text-slate-900"
                 >
                   {years.map((id) => <option key={id} value={id}>Tahun pelajaran {id.replace('-', '/')}</option>)}
                 </select>
                 {isAdmin && (
                   <>
-                    <button type="button" onClick={onEdit} disabled={loading || isExtracting} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#0b3d33] hover:bg-emerald-50 disabled:opacity-50">
+                    <button type="button" onClick={onEdit} disabled={loading || isExtracting} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-teal-800 hover:bg-teal-50 disabled:opacity-50">
                       <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       Edit kalender
                     </button>
@@ -609,51 +599,51 @@ function KaldikView({ years, yearId: currentYearId, onYearChange, isAdmin, persi
                       {isExtracting ? 'Mengekstrak AI...' : 'Impor File Kaldik'}
                     </button>
 
-                    <button type="button" onClick={onNewYear} disabled={loading || isExtracting} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-inset ring-white/25 hover:bg-white/20 disabled:opacity-50">
+                    <button type="button" onClick={onNewYear} disabled={loading || isExtracting}                     className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                       <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                       Tahun baru
                     </button>
                   </>
                 )}
-                {loading && <span className="text-xs text-emerald-200/80">Memuat…</span>}
+                {loading && <span className="text-xs text-slate-500">Memuat…</span>}
               </div>
-              {error && <p className="mt-3 text-xs font-semibold text-amber-200" role="alert">{error}</p>}
+              {error && <p className="mt-3 text-xs font-semibold text-amber-800" role="alert">{error}</p>}
               {isAdmin && !persisted && !loading && (
-                <p className="mt-3 max-w-xl rounded-xl bg-amber-300/15 px-3 py-2 text-xs leading-5 text-amber-100">
+                <p className="mt-3 max-w-xl rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
                   Data tahun ini masih bawaan aplikasi dan belum tersimpan di Firebase.{' '}
-                  <button type="button" onClick={onPersist} className="font-bold underline underline-offset-2 hover:text-white">Simpan ke Firebase</button>
+                  <button type="button" onClick={onPersist} className="font-bold underline underline-offset-2 hover:text-amber-700">Simpan ke Firebase</button>
                 </p>
               )}
-              <h1 className="kd-display mt-3 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">
+              <h1 className="dashboard-page-title mt-3">
                 Kalender Pendidikan Jawa Tengah
-                <span className="block text-emerald-300/90">Tahun Pelajaran {doc.label}</span>
+                <span className="block text-teal-700">Tahun Pelajaran {doc.label}</span>
               </h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-emerald-50/75">
+              <p className="dashboard-page-description">
                 Acuan hari efektif, pekan efektif, libur, dan kegiatan untuk menyusun Prota dan Promes.
               </p>
 
               <dl className="mt-7 flex flex-wrap gap-x-8 gap-y-3 text-sm">
                 <div>
-                  <dt className="text-emerald-200/70">Hari efektif</dt>
-                  <dd className="kd-display text-2xl font-semibold">{totalEffective || '–'}</dd>
+                  <dt className="text-slate-600">Hari efektif</dt>
+                  <dd className="text-2xl font-semibold text-slate-900">{totalEffective || '–'}</dd>
                 </div>
                 <div>
-                  <dt className="text-emerald-200/70">Hari libur tercatat</dt>
-                  <dd className="kd-display text-2xl font-semibold">{LIBUR_DAYS}</dd>
+                  <dt className="text-slate-600">Hari libur tercatat</dt>
+                  <dd className="text-2xl font-semibold text-slate-900">{LIBUR_DAYS}</dd>
                 </div>
                 <div>
-                  <dt className="text-emerald-200/70">Kegiatan</dt>
-                  <dd className="kd-display text-2xl font-semibold">{KEGIATAN.length}</dd>
+                  <dt className="text-slate-600">Kegiatan</dt>
+                  <dd className="text-2xl font-semibold text-slate-900">{KEGIATAN.length}</dd>
                 </div>
               </dl>
             </div>
 
             <div className="flex flex-col gap-4 lg:w-80">
               {nextEvent && (
-                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-inset ring-white/15 backdrop-blur-sm">
-                  <p className="text-xs text-emerald-200/80">Kegiatan berikutnya</p>
-                  <p className="mt-1.5 text-sm font-semibold leading-snug">{nextEvent.activity}</p>
-                  <p className="mt-1 text-xs text-emerald-100/70">{nextEvent.date}</p>
+                <div className="rounded-2xl border border-slate-200 bg-teal-50 p-4">
+                  <p className="text-xs font-medium text-teal-800">Kegiatan berikutnya</p>
+                  <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-900">{nextEvent.activity}</p>
+                  <p className="mt-1 text-xs text-slate-600">{nextEvent.date}</p>
                 </div>
               )}
 
@@ -664,7 +654,7 @@ function KaldikView({ years, yearId: currentYearId, onYearChange, isAdmin, persi
                   onClick={() => setMenuOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-bold text-[#0b3d33] transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-800 px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-teal-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                 >
                   <Printer className="h-4 w-4" aria-hidden="true" />
                   Cetak atau simpan PDF

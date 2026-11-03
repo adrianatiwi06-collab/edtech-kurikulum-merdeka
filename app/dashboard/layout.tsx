@@ -584,7 +584,7 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#F0FDFA]">
         <motion.div
           initial={
             reduceMotion
@@ -605,7 +605,7 @@ export default function DashboardLayout({
           className="flex flex-col items-center gap-4"
         >
           <div className="relative">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-xl shadow-blue-200">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-700 to-cyan-600 shadow-lg shadow-teal-200">
               <GraduationCap className="h-7 w-7 text-white" />
             </div>
 
@@ -719,15 +719,20 @@ export default function DashboardLayout({
           duration-200
           ${
             active
-              ? 'bg-blue-50 text-blue-700'
+              ? 'bg-teal-50 text-teal-800'
               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
           }
+          cursor-pointer
+          focus-visible:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-teal-600
+          focus-visible:ring-offset-2
         `}
       >
         {active && (
           <motion.span
             layoutId="desktop-active-indicator"
-            className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-blue-600"
+            className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-teal-600"
             transition={{
               type: 'spring',
               stiffness: 400,
@@ -752,7 +757,7 @@ export default function DashboardLayout({
               w-[19px]
               ${
                 active
-                  ? 'text-blue-600'
+                  ? 'text-teal-700'
                   : 'text-slate-500 group-hover:text-slate-700'
               }
             `}
@@ -766,7 +771,7 @@ export default function DashboardLayout({
               font-medium
               ${
                 active
-                  ? 'text-blue-700'
+                  ? 'text-teal-800'
                   : 'text-slate-600'
               }
             `}
@@ -853,6 +858,11 @@ export default function DashboardLayout({
             duration-200
             hover:bg-slate-50
             hover:text-slate-900
+            cursor-pointer
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-teal-600
+            focus-visible:ring-offset-2
           `}
         >
           <div
@@ -869,7 +879,7 @@ export default function DashboardLayout({
             <Icon className="h-[19px] w-[19px] shrink-0" />
 
             {!isCollapsed && (
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em]">
+              <span className="text-xs font-bold uppercase tracking-[0.12em]">
                 {group.label}
               </span>
             )}
@@ -884,7 +894,7 @@ export default function DashboardLayout({
                 duration: 0.2,
               }}
             >
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <ChevronDown className="h-4 w-4 text-slate-500" />
             </motion.span>
           )}
         </motion.button>
@@ -977,7 +987,7 @@ export default function DashboardLayout({
             }
             className="relative shrink-0"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-700 to-cyan-600 shadow-md shadow-teal-200">
               <GraduationCap className="h-5 w-5 text-white" />
             </div>
 
@@ -1021,7 +1031,7 @@ export default function DashboardLayout({
                   EdTech
                 </p>
 
-                <p className="mt-1 truncate text-[11px] text-slate-400">
+                <p className="mt-1 truncate text-xs text-slate-500">
                   SD Negeri Nusawangkal 02
                 </p>
               </motion.div>
@@ -1071,10 +1081,15 @@ export default function DashboardLayout({
             transition-colors
             hover:bg-slate-100
             hover:text-slate-800
+            cursor-pointer
+            focus-visible:outline-none
+            focus-visible:ring-2
+            focus-visible:ring-teal-600
+            focus-visible:ring-offset-2
           `}
         >
           {!sidebarCollapsed && (
-            <span className="text-[11px] font-semibold">
+            <span className="text-xs font-semibold">
               Navigasi
             </span>
           )}
@@ -1145,14 +1160,14 @@ export default function DashboardLayout({
                         scale: 1.06,
                       }
                 }
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-bold text-white shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-cyan-600 text-sm font-bold text-white shadow-sm"
               >
                 {user.email?.[0]?.toUpperCase() ||
                   'U'}
               </motion.div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-slate-400">
+                <p className="text-xs text-slate-500">
                   Akun aktif
                 </p>
 
@@ -1166,7 +1181,7 @@ export default function DashboardLayout({
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="mt-3 h-9 w-full justify-start rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600"
+              className="mt-3 h-9 w-full justify-start rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -1190,7 +1205,7 @@ export default function DashboardLayout({
             }
             onClick={handleSignOut}
             title="Logout"
-            className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+            className="mx-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
           >
             <LogOut className="h-5 w-5" />
           </motion.button>
@@ -1204,7 +1219,7 @@ export default function DashboardLayout({
   ======================================================= */
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900">
+    <div className="min-h-screen bg-[#F0FDFA] text-slate-900">
 
       {/* ===================================================
           BACKGROUND DECORATION
@@ -1229,7 +1244,7 @@ export default function DashboardLayout({
                   ease: 'easeInOut' as const,
                 }
           }
-          className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-100/30 blur-3xl"
+          className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-teal-100/30 blur-3xl"
         />
 
         <motion.div
@@ -1250,7 +1265,7 @@ export default function DashboardLayout({
                   ease: 'easeInOut' as const,
                 }
           }
-          className="absolute -left-40 top-1/3 h-96 w-96 rounded-full bg-violet-100/25 blur-3xl"
+          className="absolute -left-40 top-1/3 h-96 w-96 rounded-full bg-cyan-100/25 blur-3xl"
         />
       </div>
 
@@ -1272,7 +1287,7 @@ export default function DashboardLayout({
               ? 'collapsed'
               : 'expanded'
         }
-        className="fixed bottom-4 left-4 top-4 z-40 hidden flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-[0_12px_50px_rgba(15,23,42,0.07)] backdrop-blur-xl lg:flex"
+        className="fixed bottom-4 left-4 top-4 z-40 hidden flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_8px_32px_rgba(15,23,42,0.06)] lg:flex"
       >
         {sidebarContent}
       </motion.aside>
@@ -1324,7 +1339,7 @@ export default function DashboardLayout({
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed bottom-0 left-0 top-0 z-[60] flex w-[min(300px,calc(100vw-48px))] flex-col overflow-hidden bg-white shadow-2xl lg:hidden"
+            className="fixed bottom-0 left-0 top-0 z-[60] flex w-[min(300px,calc(100vw-48px))] flex-col overflow-hidden border-r border-slate-200 bg-white shadow-xl lg:hidden"
           >
             <div className="absolute right-3 top-3 z-10">
               <motion.button
@@ -1347,7 +1362,7 @@ export default function DashboardLayout({
                     false
                   )
                 }
-                className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                className="cursor-pointer rounded-xl p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
               >
                 <X className="h-5 w-5" />
               </motion.button>
@@ -1377,7 +1392,7 @@ export default function DashboardLayout({
 
         <header className="sticky top-0 z-30 px-3 pb-1 pt-3 sm:px-6 sm:pt-4 lg:px-8">
 
-          <div className="flex h-[64px] items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 shadow-[0_8px_30px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:h-[72px] sm:px-5">
+          <div className="flex h-[64px] items-center justify-between rounded-2xl border border-slate-200 bg-white px-3.5 shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:h-[72px] sm:px-5">
 
             {/* LEFT */}
             <div className="flex min-w-0 items-center gap-3">
@@ -1395,14 +1410,14 @@ export default function DashboardLayout({
                   setSidebarCollapsed(false);
                   setMobileSidebarOpen(true);
                 }}
-                className="rounded-xl p-2.5 text-slate-600 transition-colors hover:bg-slate-100 lg:hidden"
+                className="cursor-pointer rounded-xl p-2.5 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </motion.button>
 
               {/* Title */}
               <div className="min-w-0">
-                <p className="hidden text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:block">
+                <p className="hidden text-xs font-bold uppercase tracking-[0.14em] text-slate-500 sm:block">
                   EdTech Workspace
                 </p>
 
@@ -1479,7 +1494,7 @@ export default function DashboardLayout({
                 onClick={() =>
                   setSearchOpen(true)
                 }
-                className="hidden h-10 w-[220px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-slate-400 transition-colors hover:bg-slate-100 md:flex lg:w-[280px]"
+                className="hidden h-10 w-[220px] cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-slate-500 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 md:flex lg:w-[280px]"
               >
                 <Search className="h-4 w-4" />
 
@@ -1487,7 +1502,7 @@ export default function DashboardLayout({
                   Cari sesuatu...
                 </span>
 
-                <span className="ml-auto rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold">
+                <span className="ml-auto rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-xs font-semibold text-slate-600">
                   ⌘K
                 </span>
               </motion.button>
@@ -1504,7 +1519,7 @@ export default function DashboardLayout({
                 onClick={() =>
                   setSearchOpen(true)
                 }
-                className="rounded-xl p-2.5 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+                className="cursor-pointer rounded-xl p-2.5 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 md:hidden"
               >
                 <Search className="h-5 w-5" />
               </motion.button>
@@ -1541,9 +1556,14 @@ export default function DashboardLayout({
                     ${
                       notificationOpen
                         ? 'bg-slate-100 text-slate-800'
-                        : 'text-slate-500 hover:bg-slate-100'
+                          : 'text-slate-600 hover:bg-slate-100'
                     }
-                  `}
+                      cursor-pointer
+                      focus-visible:outline-none
+                      focus-visible:ring-2
+                      focus-visible:ring-teal-600
+                      focus-visible:ring-offset-2
+                    `}
                 >
                   <Bell className="h-5 w-5" />
 
@@ -1579,12 +1599,12 @@ export default function DashboardLayout({
                             Notifikasi
                           </p>
 
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-xs text-slate-500">
                             3 pemberitahuan baru
                           </p>
                         </div>
 
-                        <button className="text-[10px] font-semibold text-blue-600 hover:text-blue-700">
+                        <button className="cursor-pointer text-xs font-semibold text-teal-700 hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                           Tandai dibaca
                         </button>
                       </div>
@@ -1599,7 +1619,7 @@ export default function DashboardLayout({
                               'Gunakan Generate Soal AI untuk melanjutkan.',
                             icon: Brain,
                             color:
-                              'bg-violet-50 text-violet-600',
+                              'bg-teal-50 text-teal-700',
                           },
                           {
                             title:
@@ -1608,7 +1628,7 @@ export default function DashboardLayout({
                               'Terdapat penilaian terbaru.',
                             icon: BarChart3,
                             color:
-                              'bg-blue-50 text-blue-600',
+                              'bg-cyan-50 text-cyan-800',
                           },
                           {
                             title:
@@ -1653,7 +1673,7 @@ export default function DashboardLayout({
                                     }
                                   </p>
 
-                                  <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                                  <p className="mt-1 text-xs leading-5 text-slate-500">
                                     {
                                       notification.text
                                     }
@@ -1691,7 +1711,7 @@ export default function DashboardLayout({
                     (value) => !value
                   )
                 }
-                className="hidden rounded-xl p-2.5 text-slate-500 transition-colors hover:bg-slate-100 sm:block"
+                className="hidden cursor-pointer rounded-xl p-2.5 text-slate-600 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 sm:block"
                 title="Tema"
               >
                 <AnimatePresence
@@ -1786,19 +1806,24 @@ export default function DashboardLayout({
                         ? 'bg-slate-100'
                         : 'hover:bg-slate-50'
                     }
-                  `}
+                      cursor-pointer
+                      focus-visible:outline-none
+                      focus-visible:ring-2
+                      focus-visible:ring-teal-600
+                      focus-visible:ring-offset-2
+                    `}
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-bold text-white shadow-sm">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-cyan-600 text-sm font-bold text-white shadow-sm">
                     {user.email?.[0]?.toUpperCase() ||
                       'U'}
                   </div>
 
                   <div className="hidden text-left xl:block">
-                    <p className="max-w-[130px] truncate text-xs font-semibold text-slate-700">
+                    <p className="max-w-[130px] truncate text-xs font-semibold text-slate-800">
                       {user.email}
                     </p>
 
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Guru
                     </p>
                   </div>
@@ -1813,7 +1838,7 @@ export default function DashboardLayout({
                       duration: 0.2,
                     }}
                   >
-                    <ChevronDown className="hidden h-4 w-4 text-slate-400 xl:block" />
+                    <ChevronDown className="hidden h-4 w-4 text-slate-500 xl:block" />
                   </motion.span>
                 </motion.button>
 
@@ -1828,7 +1853,7 @@ export default function DashboardLayout({
                     >
                       <div className="border-b border-slate-100 p-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 font-bold text-white">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-700 to-cyan-600 font-bold text-white">
                             {user.email?.[0]?.toUpperCase() ||
                               'U'}
                           </div>
@@ -1838,7 +1863,7 @@ export default function DashboardLayout({
                               {user.email}
                             </p>
 
-                            <p className="mt-0.5 text-[10px] text-slate-400">
+                            <p className="mt-0.5 text-xs text-slate-500">
                               Guru • EdTech
                             </p>
                           </div>
@@ -1855,7 +1880,7 @@ export default function DashboardLayout({
                                   x: 2,
                                 }
                           }
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                         >
                           <Settings className="h-4 w-4" />
                           Pengaturan
@@ -1869,7 +1894,7 @@ export default function DashboardLayout({
                                   x: 2,
                                 }
                           }
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                         >
                           <HelpCircle className="h-4 w-4" />
                           Bantuan
@@ -1888,7 +1913,7 @@ export default function DashboardLayout({
                           onClick={
                             handleSignOut
                           }
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                         >
                           <LogOut className="h-4 w-4" />
                           Logout
@@ -1928,7 +1953,7 @@ export default function DashboardLayout({
                 duration: 0.7,
                 ease: 'easeOut' as const,
               }}
-              className="h-full bg-gradient-to-r from-blue-500 via-violet-500 to-cyan-400"
+              className="h-full bg-gradient-to-r from-teal-700 via-teal-500 to-amber-400"
             />
 
             <motion.div
@@ -2004,13 +2029,13 @@ export default function DashboardLayout({
               >
                 <div className="border-b border-slate-100 p-4">
                   <div className="flex items-center gap-3">
-                    <Search className="h-5 w-5 text-slate-400" />
+                    <Search className="h-5 w-5 text-slate-500" />
 
                     <input
                       autoFocus
                       type="text"
                       placeholder="Cari fitur, halaman, atau data..."
-                      className="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                      className="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                     />
 
                     <button
@@ -2019,7 +2044,7 @@ export default function DashboardLayout({
                           false
                         )
                       }
-                      className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500"
+                      className="cursor-pointer rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                     >
                       ESC
                     </button>
@@ -2027,7 +2052,7 @@ export default function DashboardLayout({
                 </div>
 
                 <div className="p-3">
-                  <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                  <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                     Akses cepat
                   </p>
 
@@ -2083,9 +2108,9 @@ export default function DashboardLayout({
                               item.href
                             );
                           }}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-slate-50"
+                          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                         >
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
                             <Icon className="h-4 w-4" />
                           </div>
 
@@ -2093,7 +2118,7 @@ export default function DashboardLayout({
                             {item.title}
                           </span>
 
-                          <ChevronRight className="ml-auto h-4 w-4 text-slate-300" />
+                          <ChevronRight className="ml-auto h-4 w-4 text-slate-500" />
                         </motion.button>
                       );
                     }
@@ -2122,21 +2147,21 @@ export default function DashboardLayout({
         ================================================= */}
 
         <footer className="px-4 pb-8 sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-[1700px] flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row">
+          <div className="mx-auto flex max-w-[1700px] flex-col items-center justify-between gap-2 text-xs text-slate-500 sm:flex-row">
             <p>
               © {new Date().getFullYear()} EdTech Gara Nuradin,S.Pd.SD
             </p>
 
             <div className="flex items-center gap-4">
-              <button className="transition-colors hover:text-slate-600">
+              <button className="cursor-pointer transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                 Bantuan
               </button>
 
-              <button className="transition-colors hover:text-slate-600">
+              <button className="cursor-pointer transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                 Kebijakan Privasi
               </button>
 
-              <button className="transition-colors hover:text-slate-600">
+              <button className="cursor-pointer transition-colors hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2">
                 Pengaturan
               </button>
             </div>

@@ -926,29 +926,18 @@ export default function MyTPPage() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.05)] sm:p-8"
+        className="dashboard-page-header"
       >
-        <motion.div
-          animate={{ x: [0, 18, 0], y: [0, -10, 0], scale: [1, 1.05, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl"
-        />
-        <motion.div
-          animate={{ x: [0, -16, 0], y: [0, 12, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -bottom-28 left-1/3 h-72 w-72 rounded-full bg-violet-100/40 blur-3xl"
-        />
-
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700">
-              <BookOpen className="h-3.5 w-3.5" />
+            <div className="dashboard-page-eyebrow">
+              <BookOpen className="h-3.5 w-3.5 text-teal-700" />
               Learning Goals Workspace
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="dashboard-page-title">
               TP Tersimpan
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+            <p className="dashboard-page-description">
               Kelola semua Tujuan Pembelajaran yang telah Anda simpan,
               rapikan metadata, kompres ke format rapor, atau lanjutkan ke pembuatan soal.
             </p>
@@ -966,7 +955,7 @@ export default function MyTPPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12 + index * 0.05, duration: 0.3 }}
-                className="min-w-[96px] rounded-2xl border border-slate-100 bg-white/85 p-3.5 text-center shadow-sm backdrop-blur"
+                className="min-w-[96px] rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-center"
               >
                 <p className="text-xl font-black text-slate-900">{value}</p>
                 <p className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${classes}`}>
