@@ -1563,7 +1563,7 @@ export default function GenerateTPPage() {
                                         tpIdx
                                       )
                                     }
-                                    className="rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                                    className="rounded-xl text-slate-400 hover:bg-teal-50 hover:text-teal-800"
                                     title="Edit TP"
                                   >
                                     <Pencil className="h-4 w-4" />
@@ -1942,7 +1942,7 @@ export default function GenerateTPPage() {
                     selectedTotal ===
                       0
                   }
-                  className="rounded-xl bg-slate-950 hover:bg-slate-800"
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {loading ? (
                     <>

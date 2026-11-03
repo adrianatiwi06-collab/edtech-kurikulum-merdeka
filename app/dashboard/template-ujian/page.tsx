@@ -469,7 +469,7 @@ export default function TemplateUjianPage() {
                 <Button
                   onClick={handleStartNewTemplate}
                   size="lg"
-                  className="rounded-2xl bg-teal-800 px-5 text-white shadow-sm hover:bg-teal-900"
+                  className="rounded-2xl bg-primary px-5 text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
                   + Buat Template Baru
                 </Button>
@@ -737,7 +737,7 @@ export default function TemplateUjianPage() {
                 >
                   ← Daftar Template
                 </Button>
-                <Button onClick={handleStep1Next} className="rounded-xl bg-slate-950 hover:bg-slate-800">
+                <Button onClick={handleStep1Next} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                   Lanjut ke Pemilihan TP →
                 </Button>
               </div>
@@ -840,7 +840,7 @@ export default function TemplateUjianPage() {
                 <Button
                   onClick={handleStep2Next}
                   disabled={selectedTPs.size === 0}
-                  className="rounded-xl bg-slate-950 hover:bg-slate-800"
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   Lanjut ke Konfigurasi ({selectedTPs.size} TP)
                 </Button>
@@ -910,7 +910,7 @@ export default function TemplateUjianPage() {
                     ))}
                   </div>
 
-                  <Button onClick={autoDistributeTPs} variant="outline" className="mt-4 w-full rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50">
+                  <Button onClick={autoDistributeTPs} variant="outline" className="mt-4 w-full rounded-xl border-teal-200 text-teal-800 hover:bg-teal-50 hover:text-teal-900">
                     🔄 Distribusi TP Otomatis
                   </Button>
                   <p className="mt-2 text-[11px] leading-5 text-slate-400">
@@ -1061,7 +1061,7 @@ export default function TemplateUjianPage() {
                   <Button
                     onClick={handleSaveTemplate}
                     disabled={saving}
-                    className="rounded-xl bg-slate-950 px-6 hover:bg-slate-800"
+                    className="rounded-xl bg-primary px-6 text-primary-foreground hover:bg-primary/90"
                   >
                     {saving ? 'Menyimpan...' : editingTemplateId ? '💾 Update Template' : '💾 Simpan Template'}
                   </Button>

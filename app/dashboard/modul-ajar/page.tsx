@@ -856,7 +856,7 @@ Bahan bacaan/media, glosarium (istilah: pengertian), dan daftar pustaka. Jangan 
               <Button
                 onClick={handleGenerate}
                 disabled={loading}
-                className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 mt-4"
+                className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 mt-4"
               >
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
                 Buat Modul Ajar Deep Learning
@@ -884,10 +884,10 @@ Bahan bacaan/media, glosarium (istilah: pengertian), dan daftar pustaka. Jangan 
                     <p className="text-xs text-slate-500">{generatedModul.subject} &middot; Kelas {generatedModul.grade} &middot; {generatedModul.materi}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => handleExportWord(generatedModul)} className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg h-9 px-3 text-xs font-bold">
+                    <Button onClick={() => handleExportWord(generatedModul)} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-9 px-3 text-xs font-bold">
                       <Download className="w-4 h-4 mr-1.5" /> Word (.doc)
                     </Button>
-                    <Button onClick={handleSaveModule} className="bg-slate-900 hover:bg-slate-800 text-white rounded-lg h-9 px-3 text-xs font-bold">
+                    <Button onClick={handleSaveModule} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-9 px-3 text-xs font-bold">
                       Simpan
                     </Button>
                   </div>

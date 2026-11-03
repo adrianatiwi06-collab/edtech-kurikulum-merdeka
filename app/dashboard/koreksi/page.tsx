@@ -520,7 +520,7 @@ export default function KoreksiPage() {
                             </div>
                           </div>
                           <div className="flex flex-row md:flex-col gap-2">
-                            <Button onClick={() => handleLoadSavedGrade(savedGrade)} disabled={loading} className="bg-purple-600 hover:bg-purple-700">Lanjutkan</Button>
+                            <Button onClick={() => handleLoadSavedGrade(savedGrade)} disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">Lanjutkan</Button>
                             <Button onClick={() => handleDeleteSavedGrade(savedGrade.id)} disabled={loading} variant="destructive">Hapus</Button>
                           </div>
                         </div>
@@ -585,7 +585,7 @@ export default function KoreksiPage() {
 
             <div className="flex justify-between mt-6 pt-4 border-t">
               <Button variant="outline" onClick={() => setStep(1)}>← Ganti Soal</Button>
-              <Button onClick={handleStartGrading} disabled={!selectedClass || !examName || !selectedSemester} className="bg-blue-600 hover:bg-blue-700 px-8">
+              <Button onClick={handleStartGrading} disabled={!selectedClass || !examName || !selectedSemester} className="bg-primary text-primary-foreground hover:bg-primary/90 px-8">
                 Mulai Masukkan Nilai →
               </Button>
             </div>
@@ -634,8 +634,8 @@ export default function KoreksiPage() {
               <CardContent>
                 <div className="flex gap-3 mb-4 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
                   <Button onClick={() => setStep(2)} variant="outline" size="lg">← Kembali</Button>
-                  <Button onClick={calculateAllScores} disabled={loading} size="lg" className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm">🧮 Hitung Nilai Akhir</Button>
-                  <Button onClick={handleSaveGrades} disabled={loading} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm">
+                  <Button onClick={calculateAllScores} disabled={loading} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm">🧮 Hitung Nilai Akhir</Button>
+                  <Button onClick={handleSaveGrades} disabled={loading} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm">
                     {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} 💾 Simpan Hasil Koreksi
                   </Button>
                 </div>

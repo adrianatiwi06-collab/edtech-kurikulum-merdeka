@@ -346,7 +346,7 @@ export default function GenerateATPPage() {
               <Button
                 onClick={fetchTPsForContext}
                 disabled={loadingTPs || !selectedGrade || !selectedSubject}
-                className="rounded-2xl h-[46px] bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                className="rounded-2xl h-[46px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
               >
                 {loadingTPs ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
                 Muat Data TP ({savedTPs.length})
@@ -373,7 +373,7 @@ export default function GenerateATPPage() {
                   <Button
                     onClick={handleGenerateATP}
                     disabled={loading}
-                    className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold shadow-md hover:opacity-95"
+                    className="rounded-xl bg-primary text-primary-foreground font-bold shadow-md hover:bg-primary/90"
                   >
                     {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
                     Mulai Generate Alur ATP dengan AI
@@ -409,7 +409,7 @@ export default function GenerateATPPage() {
 
                 <Button
                   onClick={handleSaveATP}
-                  className="rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold"
+                  className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
                 >
                   <Check className="w-4 h-4 mr-2" /> Simpan ATP ke Database
                 </Button>

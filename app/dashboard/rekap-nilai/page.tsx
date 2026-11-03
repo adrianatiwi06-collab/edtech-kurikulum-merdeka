@@ -340,7 +340,7 @@ export default function RekapNilaiPage() {
                 <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} size="sm">
                   Daftar Nilai Mentah
                 </Button>
-                <Button variant={viewMode === 'consolidated' ? 'default' : 'outline'} onClick={handleViewConsolidated} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white border-0">
+                <Button variant={viewMode === 'consolidated' ? 'default' : 'outline'} onClick={handleViewConsolidated} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 border-0">
                   Tabel Kurikulum Merdeka
                 </Button>
               </div>

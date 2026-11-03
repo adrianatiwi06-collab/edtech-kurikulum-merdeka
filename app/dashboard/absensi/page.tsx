@@ -346,7 +346,7 @@ export default function AbsensiPage() {
                 <Button 
                   onClick={handleAddHoliday} 
                   disabled={!newHolidayDate || !newHolidayDesc}
-                  className="w-full bg-slate-800 hover:bg-slate-900"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   Tambahkan Libur
                 </Button>
@@ -537,7 +537,7 @@ export default function AbsensiPage() {
                   <Button
                     variant="outline"
                     onClick={() => setAllStatus('Hadir')}
-                    className="h-10 rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    className="h-10 rounded-full border-teal-200 text-teal-800 hover:bg-teal-50 hover:text-teal-900"
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Semua Hadir
@@ -638,7 +638,7 @@ export default function AbsensiPage() {
                 <Button
                   onClick={handleSave}
                   disabled={saving || checkingExisting}
-                  className="h-12 w-full rounded-2xl bg-emerald-600 font-bold shadow-sm hover:bg-emerald-700 md:w-auto md:px-8"
+                  className="h-12 w-full rounded-2xl bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90 md:w-auto md:px-8"
                 >
                   {saving ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />

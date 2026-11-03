@@ -221,7 +221,7 @@ export default function JurnalPage() {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="h-12 rounded-2xl bg-blue-600 px-7 font-bold shadow-sm hover:bg-blue-700"
+                className="h-12 rounded-2xl bg-primary px-7 font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
               >
                 {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
                 Simpan Jurnal

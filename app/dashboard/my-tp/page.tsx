@@ -1314,27 +1314,27 @@ export default function MyTPPage() {
                                         variant="ghost"
                                         onClick={() => window.location.href = `/dashboard/generate-soal?tpId=${encodeURIComponent(tp.id)}`}
                                         title="Buat soal dari TP"
-                                        className="rounded-xl text-blue-600 hover:bg-blue-50"
+                                        className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900"
                                       >
                                         <span className="text-base">🧠</span>
                                       </Button>
-                                      <Button size="icon" variant="ghost" onClick={() => openEditMetadata(tp)} title="Edit metadata" className="rounded-xl text-indigo-600 hover:bg-indigo-50">
+                                      <Button size="icon" variant="ghost" onClick={() => openEditMetadata(tp)} title="Edit metadata" className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900">
                                         <Settings className="h-4 w-4" />
                                       </Button>
-                                      <Button size="icon" variant="ghost" onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)} title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`} className="rounded-xl text-cyan-600 hover:bg-cyan-50">
+                                      <Button size="icon" variant="ghost" onClick={() => moveToSemester(tp.id, tp.semester, tp.tp)} title={`Pindahkan ke Semester ${tp.semester === 1 ? 2 : 1}`} className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900">
                                         <ArrowRightLeft className="h-4 w-4" />
                                       </Button>
                                       {tp.isRaporFormat && (tp.tpOriginal ? (
-                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForView(tp); setViewFullFormatOpen(true); }} title="Lihat format lengkap ABCD" className="rounded-xl text-violet-600 hover:bg-violet-50">
+                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForView(tp); setViewFullFormatOpen(true); }} title="Lihat format lengkap ABCD" className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900">
                                           <BookOpen className="h-4 w-4" />
                                         </Button>
                                       ) : (
-                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForRestore(tp); setRestoreOriginalOpen(true); setRestoreOriginalText(''); }} title="Tambahkan format ABCD original" className="rounded-xl text-amber-600 hover:bg-amber-50">
+                                        <Button size="icon" variant="ghost" onClick={() => { setSelectedTPForRestore(tp); setRestoreOriginalOpen(true); setRestoreOriginalText(''); }} title="Tambahkan format ABCD original" className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900">
                                           <BookOpen className="h-4 w-4" />
                                         </Button>
                                       ))}
                                       {!tp.isRaporFormat && (
-                                        <Button size="icon" variant="ghost" onClick={() => openCompressModal(tp)} title="Kompres ke format rapor" className="rounded-xl text-orange-600 hover:bg-orange-50">
+                                        <Button size="icon" variant="ghost" onClick={() => openCompressModal(tp)} title="Kompres ke format rapor" className="rounded-xl text-teal-700 hover:bg-teal-50 hover:text-teal-900">
                                           <Zap className="h-4 w-4" />
                                         </Button>
                                       )}
@@ -1392,7 +1392,7 @@ export default function MyTPPage() {
                   <Button
                     onClick={performCompression}
                     disabled={compressLoading || trimWithAILoading}
-                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     {compressLoading ? (
                       <>
@@ -1410,7 +1410,7 @@ export default function MyTPPage() {
                   <Button
                     onClick={performTrimWithAI}
                     disabled={compressLoading || trimWithAILoading}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     {trimWithAILoading ? (
                       <>
@@ -1620,7 +1620,7 @@ export default function MyTPPage() {
                     <Button
                       onClick={saveCompressedTP}
                       disabled={compressLoading}
-                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       {compressLoading ? (
                         <>
@@ -1770,7 +1770,7 @@ export default function MyTPPage() {
                 <Button
                   onClick={restoreOriginalTP}
                   disabled={!restoreOriginalText.trim() || restoreLoading}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {restoreLoading ? (
                     <>
@@ -1979,7 +1979,7 @@ export default function MyTPPage() {
                       onClick={downloadTemplateXLSX}
                       variant="outline"
                       size="sm"
-                      className="bg-white hover:bg-green-50 border-green-300 text-green-700 hover:text-green-800 font-semibold"
+                      className="bg-white hover:bg-teal-50 border-teal-300 text-teal-800 hover:text-teal-900 font-semibold"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download Template

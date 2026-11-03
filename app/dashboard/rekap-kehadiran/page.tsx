@@ -582,7 +582,7 @@ export default function RekapKehadiranPage() {
                 <Button
                   onClick={handleSearch}
                   disabled={loading || !user}
-                  className="h-11 w-full rounded-2xl bg-blue-600 font-bold text-white shadow-sm hover:bg-blue-700"
+                  className="h-11 w-full rounded-2xl bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                   {loading ? 'Memuat Data...' : 'Tampilkan Data'}
@@ -699,10 +699,10 @@ export default function RekapKehadiranPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={exportToExcel} variant="outline" size="sm" className="rounded-full border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              <Button onClick={exportToExcel} variant="outline" size="sm" className="rounded-full border-teal-200 text-teal-800 hover:bg-teal-50 hover:text-teal-900">
                 <Download className="mr-2 h-4 w-4" /> Excel
               </Button>
-              <Button onClick={exportToPDF} variant="outline" size="sm" className="rounded-full border-rose-300 text-rose-700 hover:bg-rose-50">
+              <Button onClick={exportToPDF} variant="outline" size="sm" className="rounded-full border-teal-200 text-teal-800 hover:bg-teal-50 hover:text-teal-900">
                 <FileText className="mr-2 h-4 w-4" /> PDF
               </Button>
             </div>

@@ -521,7 +521,7 @@ export default function BankSoalPage() {
                 <Button variant="outline" onClick={() => { setSelectedSoal(null); setViewMode(false); }} className="rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
                   ← Kembali
                 </Button>
-                <Button onClick={() => startEdit(selectedSoal)} className="rounded-xl bg-teal-800 text-white hover:bg-teal-900">
+                <Button onClick={() => startEdit(selectedSoal)} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit Soal
                 </Button>
@@ -664,7 +664,7 @@ export default function BankSoalPage() {
               Tampilkan TP di file download
             </label>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button onClick={() => handleExportWord(false)} className="rounded-xl bg-violet-600 hover:bg-violet-700">
+              <Button onClick={() => handleExportWord(false)} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                 <Download className="mr-2 h-4 w-4" /> Download Soal
               </Button>
               <Button onClick={() => handleExportWord(true)} variant="outline" className="rounded-xl">
@@ -728,7 +728,7 @@ export default function BankSoalPage() {
             </p>
           </div>
 
-          <Button onClick={() => setUploadModalOpen(true)} className="rounded-2xl bg-teal-800 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-teal-900">
+          <Button onClick={() => setUploadModalOpen(true)} className="rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90">
             <UploadCloud className="mr-2 h-4 w-4" />
             Upload Soal PDF
           </Button>
@@ -1029,7 +1029,7 @@ export default function BankSoalPage() {
 
               <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 p-4">
                 <Button onClick={() => { setUploadModalOpen(false); setUploadDefaultTP(''); }} variant="outline" className="rounded-xl">Batal</Button>
-                <Button onClick={handleUploadManualSoal} disabled={uploadLoading} className="rounded-xl bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleUploadManualSoal} disabled={uploadLoading} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                   {uploadLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
                   Proses & Simpan
                 </Button>
@@ -1190,7 +1190,7 @@ function renderEditModal({
 
         <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-4">
           <Button onClick={onClose} variant="outline" className="rounded-xl">Batal</Button>
-          <Button onClick={onSave} disabled={loading} className="rounded-xl bg-blue-600 hover:bg-blue-700">
+          <Button onClick={onSave} disabled={loading} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Simpan Perubahan
           </Button>

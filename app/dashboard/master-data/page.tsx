@@ -610,7 +610,7 @@ export default function MasterDataPage() {
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  className="bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100 hover:text-teal-900"
                   onClick={() => setShowImportForm(!showImportForm)}
                 >
                   <Upload className="w-4 h-4 mr-1.5" /> Impor Excel (.xlsx)
@@ -631,11 +631,11 @@ export default function MasterDataPage() {
                   <p className="text-xs text-emerald-700">Unduh template terlebih dahulu, isi datanya sesuai format kolom, lalu unggah file ke sini.</p>
                   {importError && <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">{importError}</div>}
                   <div className="flex flex-wrap gap-3 items-center pt-2">
-                    <Button size="sm" variant="outline" className="bg-white text-emerald-800 border-emerald-300" onClick={downloadTemplateXLSX}>
+                    <Button size="sm" variant="outline" className="bg-white text-teal-800 border-teal-300 hover:bg-teal-50 hover:text-teal-900" onClick={downloadTemplateXLSX}>
                       <Download className="w-4 h-4 mr-2"/> Unduh Template Excel
                     </Button>
                     <label className="cursor-pointer">
-                      <Button size="sm" asChild disabled={actionLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                      <Button size="sm" asChild disabled={actionLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
                         <span>{actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2"/>} Pilih & Unggah File Excel</span>
                       </Button>
                       <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportXLSX} disabled={actionLoading} />
@@ -728,7 +728,7 @@ export default function MasterDataPage() {
               </div>
 
               <div className="flex flex-wrap gap-3 pt-3 border-t border-gray-100">
-                <Button onClick={handleSaveStudent} disabled={actionLoading || !selectedClass} className="bg-gray-800 hover:bg-gray-900 text-white shadow-sm">
+                <Button onClick={handleSaveStudent} disabled={actionLoading || !selectedClass} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
                   {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : (editingStudent ? 'Perbarui Data Siswa' : 'Simpan Siswa')}
                 </Button>
                 {editingStudent && (
@@ -785,10 +785,10 @@ export default function MasterDataPage() {
                             </TableCell>
                             <TableCell className="text-right pr-4">
                               <div className="flex gap-1 justify-end">
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-blue-600" onClick={() => setExpandedStudent(expandedStudent === student.id ? null : student.id)}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:bg-teal-50 hover:text-teal-800" onClick={() => setExpandedStudent(expandedStudent === student.id ? null : student.id)}>
                                   {expandedStudent === student.id ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4" />}
                                 </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-blue-600" onClick={() => handleEditStudent(student)}><Edit2 className="w-4 h-4" /></Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:bg-teal-50 hover:text-teal-800" onClick={() => handleEditStudent(student)}><Edit2 className="w-4 h-4" /></Button>
                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-red-600" onClick={() => handleDeleteStudent(selectedClass, student.id)}><Trash2 className="w-4 h-4" /></Button>
                               </div>
                             </TableCell>
@@ -829,7 +829,7 @@ export default function MasterDataPage() {
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Tingkat / Grade</label>
                 <Input placeholder="Misal: 2" value={classGrade} onChange={e => setClassGrade(e.target.value)} className="w-32 bg-gray-50" />
               </div>
-              <Button onClick={handleSaveClass} disabled={actionLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSaveClass} disabled={actionLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {actionLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Simpan Kelas
               </Button>
               {editingClass && <Button variant="outline" onClick={() => {setEditingClass(null); setClassName(''); setClassGrade('');}}>Batal</Button>}
@@ -860,7 +860,7 @@ export default function MasterDataPage() {
                         <TableCell className="font-medium text-gray-800">{cls.name}</TableCell>
                         <TableCell className="text-center text-gray-600">{cls.grade}</TableCell>
                         <TableCell className="text-right pr-4">
-                           <Button size="icon" variant="ghost" className="text-gray-400 hover:text-blue-600" onClick={() => handleEditClass(cls)}><Edit2 className="w-4 h-4" /></Button>
+                           <Button size="icon" variant="ghost" className="text-gray-400 hover:bg-teal-50 hover:text-teal-800" onClick={() => handleEditClass(cls)}><Edit2 className="w-4 h-4" /></Button>
                            <Button size="icon" variant="ghost" className="text-gray-400 hover:text-red-600" onClick={() => handleDeleteClass(cls.id)}><Trash2 className="w-4 h-4" /></Button>
                         </TableCell>
                       </TableRow>

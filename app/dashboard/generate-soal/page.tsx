@@ -1342,7 +1342,7 @@ export default function GenerateSoalPage() {
                         <Button
                           onClick={handleGenerate}
                           disabled={loading || !canGenerate}
-                          className="w-full rounded-2xl bg-slate-950 py-6 text-sm font-black hover:bg-slate-800 disabled:opacity-50"
+                          className="w-full rounded-2xl bg-primary py-6 text-sm font-black text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                           size="lg"
                         >
                           {loading ? (
@@ -1561,7 +1561,7 @@ export default function GenerateSoalPage() {
                   onClick={handleSaveToBankSoal}
                   disabled={saving}
                   size="lg"
-                  className="rounded-xl bg-slate-950 hover:bg-slate-800"
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {saving ? (
                     <>

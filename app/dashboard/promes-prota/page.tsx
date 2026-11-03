@@ -443,7 +443,7 @@ Struktur Dokumen:
                 </div>
               </div>
 
-              <Button className="w-full rounded-xl bg-[#0b3d33] hover:bg-[#0f5244] text-white font-bold py-3 mt-4" disabled={loading} onClick={handleGenerate}>
+              <Button className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold py-3 mt-4" disabled={loading} onClick={handleGenerate}>
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : <Sparkles className="w-4 h-4 mr-2"/>}
                 Buat Prota & Promes (Sync DB)
               </Button>
@@ -471,7 +471,7 @@ Struktur Dokumen:
                     <Button onClick={() => handleExportWord(generatedDoc)} className="bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg h-9 px-3 text-xs font-bold">
                       <Download className="w-4 h-4 mr-1.5"/> Ekspor Word (.docx)
                     </Button>
-                    <Button className="bg-[#0b3d33] hover:bg-[#0f5244] text-white rounded-lg h-9 px-3 text-xs font-bold" onClick={handleSaveDoc}>
+                    <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg h-9 px-3 text-xs font-bold" onClick={handleSaveDoc}>
                       Simpan Dokumen
                     </Button>
                   </div>

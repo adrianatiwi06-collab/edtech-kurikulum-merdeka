@@ -492,7 +492,7 @@ export default function AnalisisNilaiSiswaPage() {
                 <Button onClick={handlePrint} variant="outline" className="border-slate-300 hover:bg-slate-100 h-11">
                   <Printer className="w-4 h-4 mr-2" /> Cetak Laporan
                 </Button>
-                <Button onClick={handleExportExcel} className="bg-emerald-600 hover:bg-emerald-700 text-white h-11">
+                <Button onClick={handleExportExcel} className="bg-primary text-primary-foreground hover:bg-primary/90 h-11">
                   <Download className="w-4 h-4 mr-2" /> Export Excel
                 </Button>
               </div>
